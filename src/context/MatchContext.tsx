@@ -4,6 +4,7 @@ import { Match, League } from '../types';
 import { CONFIG } from '../constants/config';
 import { schedulePushNotification, registerForPushNotificationsAsync } from '../services/notifications';
 import { clearCache } from '../utils/clearCache';
+import { useFavorites } from './FavoritesContext';
 
 interface MatchContextData {
   liveMatches: Match[];
@@ -21,6 +22,7 @@ export const MatchProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [leagues, setLeagues] = useState<League[]>([]);
   const [loading, setLoading] = useState(true);
   const prevLiveMatchesRef = useRef<Match[]>([]);
+  const { favoriteTeams } = useFavorites();
 
   const fetchLeagues = async () => {
     const data = await api.getLeagues();
@@ -33,8 +35,30 @@ export const MatchProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       const leagueIds = Object.values(CONFIG.LEAGUE_IDS) as string[];
       console.log('[MatchContext] Fetching matches for leagues:', leagueIds);
       
-      // Fetch Live Matches
-      const live = await api.getLiveMatches(leagueIds);
+      let allFixtures: Match[] = [];
+      
+      for (const id of leagueIds) {
+        // Add small delay between requests to avoid 429 errors
+        if (allFixtures.length > 0) {
+          await new Promise(resolve => setTimeout(resolve, 1100));
+        }
+        const fixtures = await api.getFixtures(id);
+        allFixtures = [...allFixtures, ...fixtures];
+      }
+
+      // Filter matches to ensure they are from "today" in local time
+      // This fixes the issue where late night games from yesterday (UTC today) appear
+      const todayLocal = new Date().toLocaleDateString('pt-BR');
+      
+      const filteredFixtures = allFixtures.filter(m => {
+        const matchDate = new Date(m.fixture.date).toLocaleDateString('pt-BR');
+        return matchDate === todayLocal;
+      });
+
+      // Derive Live Matches from filtered fixtures
+      const live = filteredFixtures.filter(m => 
+        ['1H', '2H', 'HT', 'ET', 'P', 'BT'].includes(m.fixture.status.short)
+      );
       
       // Check for score changes
       if (prevLiveMatchesRef.current.length > 0) {
@@ -45,29 +69,27 @@ export const MatchProvider: React.FC<{ children: ReactNode }> = ({ children }) =
             const awayScoreChanged = (newMatch.goals.away ?? 0) > (oldMatch.goals.away ?? 0);
             
             if (homeScoreChanged || awayScoreChanged) {
-              const scorer = homeScoreChanged ? newMatch.teams.home.name : newMatch.teams.away.name;
-              const title = `⚽ GOL do ${scorer}!`;
-              const body = `${newMatch.teams.home.name} ${newMatch.goals.home} x ${newMatch.goals.away} ${newMatch.teams.away.name}\n${newMatch.league.name}`;
-              schedulePushNotification(title, body);
+              const isHomeFavorite = favoriteTeams.includes(newMatch.teams.home.id);
+              const isAwayFavorite = favoriteTeams.includes(newMatch.teams.away.id);
+
+              if (isHomeFavorite || isAwayFavorite) {
+                const scorer = homeScoreChanged ? newMatch.teams.home.name : newMatch.teams.away.name;
+                const title = `⚽ GOL do ${scorer}!`;
+                const body = `${newMatch.teams.home.name} ${newMatch.goals.home} x ${newMatch.goals.away} ${newMatch.teams.away.name}\n${newMatch.league.name}`;
+                schedulePushNotification(title, body);
+              }
             }
           }
         });
       }
       prevLiveMatchesRef.current = live;
       setLiveMatches(live);
-
-      // Fetch Upcoming/Today's matches for each league
-      let allFixtures: Match[] = [];
-      for (const id of leagueIds) {
-        const fixtures = await api.getFixtures(id);
-        allFixtures = [...allFixtures, ...fixtures];
-      }
       
       console.log('[MatchContext] Total fixtures fetched:', allFixtures.length);
+      console.log('[MatchContext] Filtered (Local Date):', filteredFixtures.length);
       console.log('[MatchContext] Live matches:', live.length);
       
-      // Filter out finished matches from upcoming if needed, or just show all for today
-      setTodaysMatches(allFixtures);
+      setTodaysMatches(filteredFixtures);
       
     } catch (error) {
       console.error('Error fetching matches', error);

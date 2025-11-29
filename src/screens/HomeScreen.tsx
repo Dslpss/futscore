@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, SafeAreaView, StatusBar, TouchableOpacity, Dimensions, Platform } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, SafeAreaView, StatusBar, TouchableOpacity, Dimensions, Platform, ScrollView } from 'react-native';
 import { useMatches } from '../context/MatchContext';
+import { useFavorites } from '../context/FavoritesContext';
 import { MatchCard } from '../components/MatchCard';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -8,12 +9,16 @@ const { width } = Dimensions.get('window');
 
 export const HomeScreen = () => {
   const { liveMatches, todaysMatches, loading, refreshMatches } = useMatches();
+  const { favoriteTeams } = useFavorites();
   const [selectedLeague, setSelectedLeague] = useState<string>('ALL');
 
   const leagues = [
     { code: 'ALL', name: 'Todos' },
+    { code: 'FAV', name: 'Favoritos' },
     { code: 'BSA', name: 'Brasileirão' },
     { code: 'CL', name: 'Champions' },
+    { code: 'PD', name: 'La Liga' },
+    { code: 'FINISHED', name: 'Finalizados' },
   ];
 
   const renderHeader = () => (
@@ -24,13 +29,13 @@ export const HomeScreen = () => {
       />
       
       <View style={styles.topBar}>
-        <View>
+        <View style={{ flex: 1, marginRight: 16 }}>
           <Text style={styles.dateText}>
             {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase()}
           </Text>
           <View style={styles.titleContainer}>
-            <Text style={styles.titleHighlight}>On</Text>
-            <Text style={styles.title}>FootBall</Text>
+            <Text style={styles.titleHighlight}>Fut</Text>
+            <Text style={styles.title}>Score</Text>
             <View style={styles.liveDotHeader} />
           </View>
         </View>
@@ -47,7 +52,11 @@ export const HomeScreen = () => {
       
       {/* League Selector */}
       <View style={styles.leagueSelectorWrapper}>
-        <View style={styles.leagueSelectorContainer}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.leagueSelectorContainer}
+        >
           {leagues.map((league) => (
             <TouchableOpacity
               key={league.code}
@@ -74,15 +83,32 @@ export const HomeScreen = () => {
               </Text>
             </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
       </View>
     </View>
   );
 
   // Filter matches by selected league
-  const filteredMatches = selectedLeague === 'ALL' 
-    ? [...liveMatches, ...todaysMatches]
-    : [...liveMatches, ...todaysMatches].filter(m => m.league.id === selectedLeague);
+  const filteredMatches = (() => {
+    let matches = [];
+    if (selectedLeague === 'ALL') {
+      matches = [...liveMatches, ...todaysMatches];
+    } else if (selectedLeague === 'FAV') {
+      matches = [...liveMatches, ...todaysMatches].filter(m => 
+        favoriteTeams.includes(m.teams.home.id) || favoriteTeams.includes(m.teams.away.id)
+      );
+    } else if (selectedLeague === 'FINISHED') {
+      matches = [...liveMatches, ...todaysMatches].filter(m => 
+        ['FT', 'AET', 'PEN'].includes(m.fixture.status.short)
+      );
+    } else {
+      matches = [...liveMatches, ...todaysMatches].filter(m => m.league.id === selectedLeague);
+    }
+
+    // Deduplicate matches
+    const uniqueMatches = Array.from(new Map(matches.map(item => [item.fixture.id, item])).values());
+    return uniqueMatches;
+  })();
 
   // Group matches
   const finishedMatches = filteredMatches.filter(m => ['FT', 'AET', 'PEN'].includes(m.fixture.status.short));
@@ -188,10 +214,10 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   dateText: {
-    color: '#22c55e',
+    color: '#e4e4e7',
     fontSize: 11,
     fontWeight: '700',
-    letterSpacing: 1.5,
+    // letterSpacing: 1.5, // Removed to prevent truncation
     marginBottom: 4,
   },
   titleContainer: {
@@ -245,6 +271,7 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.05)',
+    minWidth: '100%', // Ensure it takes full width if content is small
   },
   leagueButton: {
     paddingVertical: 10,

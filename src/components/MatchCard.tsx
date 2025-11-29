@@ -1,8 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { Match } from '../types';
 import { format } from 'date-fns';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Star } from 'lucide-react-native';
+import { useFavorites } from '../context/FavoritesContext';
+import { MatchStatsModal } from './MatchStatsModal';
 
 interface MatchCardProps {
   match: Match;
@@ -10,71 +13,94 @@ interface MatchCardProps {
 
 export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
   const isLive = match.fixture.status.short === '1H' || match.fixture.status.short === '2H' || match.fixture.status.short === 'HT';
+  const { isFavoriteTeam, toggleFavoriteTeam } = useFavorites();
+  const [modalVisible, setModalVisible] = React.useState(false);
   
+  const isHomeFavorite = isFavoriteTeam(match.teams.home.id);
+  const isAwayFavorite = isFavoriteTeam(match.teams.away.id);
+
   return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={['#1c1c1e', '#121212']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.card}
+    <>
+      <TouchableOpacity 
+        style={styles.container} 
+        activeOpacity={0.9}
+        onPress={() => setModalVisible(true)}
       >
-        {/* Header: League & Status */}
-        <View style={styles.header}>
-          <View style={styles.leagueContainer}>
-              <Image source={{ uri: match.league.logo }} style={styles.leagueLogo} />
-              <Text style={styles.league}>{match.league.name}</Text>
-          </View>
-          {isLive ? (
-              <View style={styles.liveBadge}>
-                  <View style={styles.liveDot} />
-                  <Text style={styles.liveText}>AO VIVO • {match.fixture.status.elapsed}'</Text>
-              </View>
-          ) : (
-              <View style={styles.timeContainer}>
-                <Text style={styles.status}>{format(new Date(match.fixture.date), 'HH:mm')}</Text>
-              </View>
-          )}
-        </View>
-        
-        {/* Match Content */}
-        <View style={styles.matchContent}>
-          {/* Home Team */}
-          <View style={styles.teamContainer}>
-            <View style={styles.logoContainer}>
-              <Image source={{ uri: match.teams.home.logo }} style={styles.teamLogo} />
+        <LinearGradient
+          colors={['#1c1c1e', '#121212']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.card}
+        >
+          {/* Header: League & Status */}
+          <View style={styles.header}>
+            <View style={styles.leagueContainer}>
+                <Image source={{ uri: match.league.logo }} style={styles.leagueLogo} />
+                <Text style={styles.league}>{match.league.name}</Text>
             </View>
-            <Text style={styles.teamName} numberOfLines={2}>{match.teams.home.name}</Text>
-          </View>
-
-          {/* Score / VS */}
-          <View style={styles.scoreContainer}>
-            {['NS', 'TBD', 'TIMED', 'PST', 'CANC', 'ABD', 'WO'].includes(match.fixture.status.short) ? (
-               <Text style={styles.vsText}>VS</Text>
+            {isLive ? (
+                <View style={styles.liveBadge}>
+                    <View style={styles.liveDot} />
+                    <Text style={styles.liveText}>AO VIVO • {match.fixture.status.elapsed}'</Text>
+                </View>
             ) : (
-              <View style={styles.scoreBoard}>
-                <Text style={[styles.score, isLive && styles.liveScore]}>
-                  {match.goals.home ?? 0}
-                </Text>
-                <Text style={[styles.scoreDivider, isLive && styles.liveScore]}>:</Text>
-                <Text style={[styles.score, isLive && styles.liveScore]}>
-                  {match.goals.away ?? 0}
-                </Text>
-              </View>
+                <View style={styles.timeContainer}>
+                  <Text style={styles.status}>{format(new Date(match.fixture.date), 'HH:mm')}</Text>
+                </View>
             )}
-            <Text style={styles.statusText}>{match.fixture.status.long}</Text>
           </View>
-
-          {/* Away Team */}
-          <View style={styles.teamContainer}>
-            <View style={styles.logoContainer}>
-              <Image source={{ uri: match.teams.away.logo }} style={styles.teamLogo} />
+          
+          {/* Match Content */}
+          <View style={styles.matchContent}>
+            {/* Home Team */}
+            <View style={styles.teamContainer}>
+              <TouchableOpacity onPress={() => toggleFavoriteTeam(match.teams.home.id)} style={styles.favoriteButton}>
+                 <Star size={16} color={isHomeFavorite ? "#FBBF24" : "rgba(255,255,255,0.2)"} fill={isHomeFavorite ? "#FBBF24" : "transparent"} />
+              </TouchableOpacity>
+              <View style={styles.logoContainer}>
+                <Image source={{ uri: match.teams.home.logo }} style={styles.teamLogo} />
+              </View>
+              <Text style={styles.teamName} numberOfLines={2}>{match.teams.home.name}</Text>
             </View>
-            <Text style={styles.teamName} numberOfLines={2}>{match.teams.away.name}</Text>
+
+            {/* Score / VS */}
+            <View style={styles.scoreContainer}>
+              {['NS', 'TBD', 'TIMED', 'PST', 'CANC', 'ABD', 'WO'].includes(match.fixture.status.short) ? (
+                 <Text style={styles.vsText}>VS</Text>
+              ) : (
+                <View style={styles.scoreBoard}>
+                  <Text style={[styles.score, isLive && styles.liveScore]}>
+                    {match.goals.home ?? 0}
+                  </Text>
+                  <Text style={[styles.scoreDivider, isLive && styles.liveScore]}>:</Text>
+                  <Text style={[styles.score, isLive && styles.liveScore]}>
+                    {match.goals.away ?? 0}
+                  </Text>
+                </View>
+              )}
+              <Text style={styles.statusText}>{match.fixture.status.long}</Text>
+            </View>
+
+            {/* Away Team */}
+            <View style={styles.teamContainer}>
+              <TouchableOpacity onPress={() => toggleFavoriteTeam(match.teams.away.id)} style={styles.favoriteButton}>
+                 <Star size={16} color={isAwayFavorite ? "#FBBF24" : "rgba(255,255,255,0.2)"} fill={isAwayFavorite ? "#FBBF24" : "transparent"} />
+              </TouchableOpacity>
+              <View style={styles.logoContainer}>
+                <Image source={{ uri: match.teams.away.logo }} style={styles.teamLogo} />
+              </View>
+              <Text style={styles.teamName} numberOfLines={2}>{match.teams.away.name}</Text>
+            </View>
           </View>
-        </View>
-      </LinearGradient>
-    </View>
+        </LinearGradient>
+      </TouchableOpacity>
+
+      <MatchStatsModal 
+        visible={modalVisible} 
+        onClose={() => setModalVisible(false)} 
+        matchId={match.fixture.id} 
+      />
+    </>
   );
 };
 
@@ -120,14 +146,19 @@ const styles = StyleSheet.create({
   },
   timeContainer: {
     backgroundColor: 'rgba(255,255,255,0.05)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 6,
     borderRadius: 8,
+    width: 80, // Fixed width
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
   status: {
     color: '#e4e4e7',
     fontSize: 13,
     fontWeight: '700',
+    textAlign: 'center', // Ensure text is centered
+    width: '100%', // Ensure text takes full width of container
   },
   liveBadge: {
       flexDirection: 'row',
@@ -161,6 +192,14 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'flex-start',
+    position: 'relative',
+  },
+  favoriteButton: {
+    position: 'absolute',
+    top: -10,
+    right: 10,
+    zIndex: 20,
+    padding: 4,
   },
   logoContainer: {
     width: 64,

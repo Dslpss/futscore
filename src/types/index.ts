@@ -12,6 +12,18 @@ export interface Team {
   logo: string;
 }
 
+export interface Statistics {
+  team: {
+    id: number;
+    name: string;
+    logo: string;
+  };
+  statistics: {
+    type: string;
+    value: any;
+  }[];
+}
+
 export interface Match {
   fixture: {
     id: number;
@@ -21,6 +33,11 @@ export interface Match {
       short: string;
       elapsed?: number;
     };
+    venue?: {
+      name: string;
+      city: string;
+    };
+    referee?: string;
   };
   league: League;
   teams: {
@@ -31,6 +48,17 @@ export interface Match {
     home: number | null;
     away: number | null;
   };
+  score?: {
+    halftime: {
+      home: number | null;
+      away: number | null;
+    };
+    fulltime: {
+      home: number | null;
+      away: number | null;
+    };
+  };
+  statistics?: Statistics[];
 }
 
 export interface ApiResponse<T> {

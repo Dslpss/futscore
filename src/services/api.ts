@@ -63,6 +63,12 @@ export const api = {
         name: 'UEFA Champions League',
         logo: 'https://crests.football-data.org/CL.png',
         country: 'Europe'
+      },
+      {
+        id: 'PD' as any,
+        name: 'La Liga',
+        logo: 'https://crests.football-data.org/PD.png',
+        country: 'Spain'
       }
     ];
       
@@ -133,7 +139,9 @@ export const api = {
       }));
       
       console.log(`[API] Transformed ${matches.length} matches for cache`);
-      await setCachedData(cacheKey, matches, CONFIG.CACHE_DURATION.FIXTURES);
+      
+      const cacheDuration = queryDate === today ? CONFIG.CACHE_DURATION.TODAY_FIXTURES : CONFIG.CACHE_DURATION.FIXTURES;
+      await setCachedData(cacheKey, matches, cacheDuration);
       return matches;
     } catch (error) {
       console.error('[API] Error fetching fixtures:', error);
@@ -179,5 +187,86 @@ export const api = {
   getLeaguesByCountry: async (countryName: string): Promise<League[]> => {
     console.warn('getLeaguesByCountry not available with football-data.org');
     return [];
-  }
+  },
+  getMatchDetails: async (matchId: number): Promise<Match | null> => {
+    const cacheKey = `match_${matchId}`;
+    const cached = await getCachedData<Match>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      // football-data.org endpoint for single match
+      const response = await apiClient.get(`/matches/${matchId}`);
+
+      if (!response.data) {
+        return null;
+      }
+
+      const matchData = response.data;
+      
+      // Transform football-data.org format to our format
+      const match: Match = {
+        fixture: {
+          id: matchData.id,
+          date: matchData.utcDate,
+          status: {
+            long: matchData.status === 'FINISHED' ? 'Partida Encerrada' : 
+                   matchData.status === 'IN_PLAY' ? 'Em Andamento' :
+                   matchData.status === 'PAUSED' ? 'Intervalo' : 'Não Iniciado',
+            short: matchData.status === 'FINISHED' ? 'FT' :
+                   matchData.status === 'IN_PLAY' ? '1H' :
+                   matchData.status === 'PAUSED' ? 'HT' : 'NS',
+            elapsed: matchData.minute || null,
+          },
+          venue: {
+            name: matchData.venue || 'Estádio',
+            city: '', // football-data.org often doesn't provide city in this endpoint
+          },
+          referee: matchData.referees?.[0]?.name,
+        },
+        league: {
+          id: matchData.competition.code as any,
+          name: matchData.competition.name,
+          logo: matchData.competition.emblem || '',
+          country: matchData.area.name,
+        },
+        teams: {
+          home: {
+            id: matchData.homeTeam.id,
+            name: matchData.homeTeam.name,
+            logo: matchData.homeTeam.crest || '',
+          },
+          away: {
+            id: matchData.awayTeam.id,
+            name: matchData.awayTeam.name,
+            logo: matchData.awayTeam.crest || '',
+          },
+        },
+        goals: {
+          home: matchData.score.fullTime.home,
+          away: matchData.score.fullTime.away,
+        },
+        score: {
+          halftime: {
+            home: matchData.score.halfTime.home,
+            away: matchData.score.halfTime.away,
+          },
+          fulltime: {
+            home: matchData.score.fullTime.home,
+            away: matchData.score.fullTime.away,
+          },
+        },
+        // football-data.org free tier might not provide detailed stats here, 
+        // but if they do, it's usually under a different structure or endpoint.
+        // For now, we'll map what we can or leave empty if not present.
+        statistics: [], 
+      };
+
+      // Cache for a short time (e.g., 5 minutes)
+      await setCachedData(cacheKey, match, 5 * 60 * 1000);
+      return match;
+    } catch (error) {
+      console.error('[API] Error fetching match details:', error);
+      return null;
+    }
+  },
 };
