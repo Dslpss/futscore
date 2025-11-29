@@ -1,0 +1,343 @@
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, FlatList, RefreshControl, SafeAreaView, StatusBar, TouchableOpacity, Dimensions, Platform } from 'react-native';
+import { useMatches } from '../context/MatchContext';
+import { MatchCard } from '../components/MatchCard';
+import { LinearGradient } from 'expo-linear-gradient';
+
+const { width } = Dimensions.get('window');
+
+export const HomeScreen = () => {
+  const { liveMatches, todaysMatches, loading, refreshMatches } = useMatches();
+  const [selectedLeague, setSelectedLeague] = useState<string>('ALL');
+
+  const leagues = [
+    { code: 'ALL', name: 'Todos' },
+    { code: 'BSA', name: 'Brasileirão' },
+    { code: 'CL', name: 'Champions' },
+  ];
+
+  const renderHeader = () => (
+    <View style={styles.headerContainer}>
+      <LinearGradient
+        colors={['rgba(34, 197, 94, 0.1)', 'transparent']}
+        style={styles.headerGradient}
+      />
+      
+      <View style={styles.topBar}>
+        <View>
+          <Text style={styles.dateText}>
+            {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase()}
+          </Text>
+          <View style={styles.titleContainer}>
+            <Text style={styles.titleHighlight}>On</Text>
+            <Text style={styles.title}>FootBall</Text>
+            <View style={styles.liveDotHeader} />
+          </View>
+        </View>
+        
+        <TouchableOpacity style={styles.profileButton}>
+           <LinearGradient
+             colors={['#2a2a2a', '#1a1a1a']}
+             style={styles.profileGradient}
+           >
+             <Text style={{ fontSize: 24 }}>⚽</Text>
+           </LinearGradient>
+        </TouchableOpacity>
+      </View>
+      
+      {/* League Selector */}
+      <View style={styles.leagueSelectorWrapper}>
+        <View style={styles.leagueSelectorContainer}>
+          {leagues.map((league) => (
+            <TouchableOpacity
+              key={league.code}
+              style={[
+                styles.leagueButton,
+                selectedLeague === league.code && styles.leagueButtonActive
+              ]}
+              onPress={() => setSelectedLeague(league.code)}
+              activeOpacity={0.8}
+            >
+              {selectedLeague === league.code && (
+                <LinearGradient
+                  colors={['#22c55e', '#16a34a']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={StyleSheet.absoluteFillObject}
+                />
+              )}
+              <Text style={[
+                styles.leagueButtonText,
+                selectedLeague === league.code && styles.leagueButtonTextActive
+              ]}>
+                {league.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+    </View>
+  );
+
+  // Filter matches by selected league
+  const filteredMatches = selectedLeague === 'ALL' 
+    ? [...liveMatches, ...todaysMatches]
+    : [...liveMatches, ...todaysMatches].filter(m => m.league.id === selectedLeague);
+
+  // Group matches
+  const finishedMatches = filteredMatches.filter(m => ['FT', 'AET', 'PEN'].includes(m.fixture.status.short));
+  const scheduledMatches = filteredMatches.filter(m => ['NS', 'TBD', 'TIMED'].includes(m.fixture.status.short));
+  const live = filteredMatches.filter(m => ['1H', '2H', 'HT'].includes(m.fixture.status.short));
+
+  const sections = [
+    { title: 'AO VIVO', data: live, type: 'live' },
+    { title: 'Agendados', data: scheduledMatches, type: 'scheduled' },
+    { title: 'Finalizados', data: finishedMatches, type: 'finished' },
+  ].filter(section => section.data.length > 0);
+
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#09090b" />
+      <LinearGradient
+        colors={['#09090b', '#18181b', '#09090b']}
+        style={styles.background}
+      />
+      
+      <SafeAreaView style={styles.safeArea}>
+        <FlatList
+          data={sections}
+          keyExtractor={(item) => item.title}
+          renderItem={({ item }) => (
+            <View style={styles.sectionContainer}>
+              <View style={styles.sectionHeader}>
+                 {item.type === 'live' && (
+                   <View style={styles.liveIndicatorContainer}>
+                     <View style={styles.pulsingDot} />
+                   </View>
+                 )}
+                 <Text style={[styles.sectionTitle, item.type === 'live' && styles.liveTitle]}>
+                   {item.title}
+                 </Text>
+                 <View style={styles.sectionLine} />
+              </View>
+              {item.data.map(match => (
+                <MatchCard key={match.fixture.id} match={match} />
+              ))}
+            </View>
+          )}
+          contentContainerStyle={styles.listContent}
+          ListHeaderComponent={renderHeader}
+          refreshControl={
+            <RefreshControl refreshing={loading} onRefresh={refreshMatches} tintColor="#22c55e" />
+          }
+          ListEmptyComponent={
+            !loading ? (
+              <View style={styles.emptyContainer}>
+                <View style={styles.emptyIconContainer}>
+                  <Text style={styles.emptyIcon}>⚽</Text>
+                </View>
+                <Text style={styles.emptyTitle}>Nenhum Jogo Encontrado</Text>
+                <Text style={styles.emptyText}>
+                  Não há partidas para a seleção atual.
+                </Text>
+              </View>
+            ) : null
+          }
+        />
+      </SafeAreaView>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#09090b',
+  },
+  background: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+  },
+  safeArea: {
+    flex: 1,
+  },
+  listContent: {
+    padding: 20,
+    paddingTop: 10,
+  },
+  headerContainer: {
+    marginBottom: 32,
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 20 : 10,
+    position: 'relative',
+  },
+  headerGradient: {
+    position: 'absolute',
+    top: -100,
+    left: -20,
+    right: -20,
+    height: 200,
+    opacity: 0.5,
+  },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 28,
+  },
+  dateText: {
+    color: '#22c55e',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+    marginBottom: 4,
+  },
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  titleHighlight: {
+    fontSize: 32,
+    fontWeight: '300',
+    color: '#fff',
+    letterSpacing: -1,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#fff',
+    letterSpacing: -1,
+  },
+  liveDotHeader: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#22c55e',
+    marginLeft: 4,
+    marginBottom: 6,
+  },
+  profileButton: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  profileGradient: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+
+  leagueSelectorWrapper: {
+    marginHorizontal: -4,
+  },
+  leagueSelectorContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#18181b',
+    padding: 4,
+    borderRadius: 40,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+  },
+  leagueButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderRadius: 34,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  leagueButtonActive: {
+    backgroundColor: 'transparent',
+    borderColor: 'transparent',
+    shadowColor: 'transparent',
+    elevation: 0,
+  },
+  leagueButtonText: {
+    color: '#71717a',
+    fontSize: 13,
+    fontWeight: '600',
+    zIndex: 1,
+  },
+  leagueButtonTextActive: {
+    color: '#fff',
+    fontWeight: '800',
+  },
+  sectionContainer: {
+    marginBottom: 32,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#e4e4e7',
+    letterSpacing: 0.5,
+    marginRight: 12,
+  },
+  liveTitle: {
+    color: '#22c55e',
+  },
+  liveIndicatorContainer: {
+    marginRight: 8,
+    width: 8,
+    height: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pulsingDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: '#22c55e',
+      shadowColor: '#22c55e',
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 1,
+      shadowRadius: 4,
+  },
+  sectionLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  emptyContainer: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 40,
+  },
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+  },
+  emptyIcon: {
+    fontSize: 32,
+  },
+  emptyTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  emptyText: {
+    color: '#71717a',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+});
