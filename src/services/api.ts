@@ -215,10 +215,10 @@ export const api = {
                    matchData.status === 'PAUSED' ? 'HT' : 'NS',
             elapsed: matchData.minute || null,
           },
-          venue: {
-            name: matchData.venue || 'Estádio',
-            city: '', // football-data.org often doesn't provide city in this endpoint
-          },
+          venue: matchData.venue ? {
+            name: matchData.venue.name || matchData.venue || 'Estádio não informado',
+            city: matchData.venue.city || '',
+          } : undefined,
           referee: matchData.referees?.[0]?.name,
         },
         league: {
@@ -253,36 +253,38 @@ export const api = {
             away: matchData.score.fullTime.away,
           },
         },
-        // football-data.org free tier might not provide detailed stats here, 
-        // but if they do, it's usually under a different structure or endpoint.
-        // For now, we'll map what we can or leave empty if not present.
-        statistics: [],
+        // Statistics might not be available for all matches
+        statistics: matchData.statistics || [],
         lineups: matchData.lineups ? matchData.lineups.map((lineup: any) => ({
           team: {
-            id: lineup.team.id,
-            name: lineup.team.name,
-            logo: lineup.team.logo || '',
-            colors: lineup.team.colors,
+            id: lineup.team?.id || 0,
+            name: lineup.team?.name || '',
+            logo: lineup.team?.crest || '',
+            colors: lineup.team?.colors,
           },
-          coach: {
-            id: lineup.coach.id,
-            name: lineup.coach.name,
-            photo: lineup.coach.photo,
+          coach: lineup.coach ? {
+            id: lineup.coach.id || 0,
+            name: lineup.coach.name || 'Não informado',
+            photo: lineup.coach.photo || null,
+          } : {
+            id: 0,
+            name: 'Não informado',
+            photo: null,
           },
-          formation: lineup.formation,
-          startXI: lineup.startXI.map((player: any) => ({
-            id: player.player.id,
-            name: player.player.name,
-            number: player.player.number,
-            pos: player.player.pos,
-            grid: player.player.grid,
+          formation: lineup.formation || '',
+          startXI: (lineup.startXI || []).map((p: any) => ({
+            id: p.player?.id || p.id || 0,
+            name: p.player?.name || p.name || 'Desconhecido',
+            number: p.player?.shirtNumber || p.shirtNumber || 0,
+            pos: p.player?.position || p.position || '',
+            grid: p.player?.grid || null,
           })),
-          substitutes: lineup.substitutes.map((player: any) => ({
-            id: player.player.id,
-            name: player.player.name,
-            number: player.player.number,
-            pos: player.player.pos,
-            grid: player.player.grid,
+          substitutes: (lineup.substitutes || []).map((p: any) => ({
+            id: p.player?.id || p.id || 0,
+            name: p.player?.name || p.name || 'Desconhecido',
+            number: p.player?.shirtNumber || p.shirtNumber || 0,
+            pos: p.player?.position || p.position || '',
+            grid: p.player?.grid || null,
           })),
         })) : [],
       };

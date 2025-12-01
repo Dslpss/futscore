@@ -94,8 +94,11 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({ visible, onClo
                       </View>
                   </View>
                   
-                  {match.fixture.venue && (
-                      <Text style={styles.venue}>🏟️ {match.fixture.venue.name}, {match.fixture.venue.city}</Text>
+                  
+                  {match.fixture.venue && match.fixture.venue.name && match.fixture.venue.name !== 'Estádio não informado' && (
+                      <Text style={styles.venue}>
+                          🏟️ {match.fixture.venue.name}{match.fixture.venue.city ? ', ' + match.fixture.venue.city : ''}
+                      </Text>
                   )}
               </LinearGradient>
 
