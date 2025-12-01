@@ -90,4 +90,28 @@ router.get('/competitions/:code/teams', async (req, res) => {
   }
 });
 
+// GET /api/football/teams/:id
+// Proxy for fetching team details including squad
+router.get('/teams/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    console.log(`[Football API] Fetching team details for ${id}`);
+
+    const response = await footballClient.get(`/teams/${id}`);
+
+    res.json(response.data);
+  } catch (error) {
+    console.error('[Football API] Error fetching team details:', error.response?.data || error.message);
+    
+    if (error.response) {
+      res.status(error.response.status).json({
+        error: error.response.data.message || 'Error fetching team details',
+      });
+    } else {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+});
+
 module.exports = router;

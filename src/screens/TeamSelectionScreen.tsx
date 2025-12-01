@@ -9,6 +9,8 @@ import {
   ActivityIndicator,
   SafeAreaView,
   Alert,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +18,7 @@ import { api } from '../services/api';
 import { authApi, FavoriteTeam } from '../services/authApi';
 import { useAuth } from '../context/AuthContext';
 import { TeamCard } from '../components/TeamCard';
+import { TeamDetailsModal } from '../components/TeamDetailsModal';
 
 interface TeamWithCountry {
   id: number;
@@ -32,9 +35,12 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({ navigation 
   const [favoriteTeams, setFavoriteTeams] = useState<FavoriteTeam[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [selectedTeam, setSelectedTeam] = useState<TeamWithCountry | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
 
   const leagues = [
     { code: 'all', name: 'Todas' },
+    { code: 'favorites', name: 'Favoritos' },
     { code: 'BSA', name: 'Brasileirão' },
     { code: 'CL', name: 'Champions' },
     { code: 'PD', name: 'La Liga' },
@@ -124,6 +130,8 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({ navigation 
     try {
       if (leagueCode === 'all') {
         await loadAllTeams();
+      } else if (leagueCode === 'favorites') {
+        setTeams(favoriteTeams);
       } else {
         const leagueTeams = await api.getTeamsByLeague(leagueCode);
         const leagueInfo = await api.getLeagues();
@@ -165,6 +173,11 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({ navigation 
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleTeamPress = (team: TeamWithCountry) => {
+    setSelectedTeam(team);
+    setModalVisible(true);
   };
 
   const filteredTeams = teams;
@@ -260,6 +273,7 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({ navigation 
                 team={item}
                 isFavorite={favoriteTeams.some(fav => fav.id === item.id)}
                 onToggleFavorite={() => toggleFavorite(item)}
+                onPress={() => handleTeamPress(item)}
               />
             )}
             ListEmptyComponent={
@@ -270,6 +284,12 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({ navigation 
             }
           />
         )}
+
+        <TeamDetailsModal
+          visible={modalVisible}
+          onClose={() => setModalVisible(false)}
+          team={selectedTeam}
+        />
       </LinearGradient>
     </SafeAreaView>
   );
@@ -289,6 +309,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 16,
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 16 : 16,
   },
   backButton: {
     padding: 8,

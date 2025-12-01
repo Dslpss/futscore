@@ -12,13 +12,14 @@ interface TeamCardProps {
   };
   isFavorite: boolean;
   onToggleFavorite: () => void;
+  onPress: () => void;
 }
 
-export const TeamCard: React.FC<TeamCardProps> = ({ team, isFavorite, onToggleFavorite }) => {
+export const TeamCard: React.FC<TeamCardProps> = ({ team, isFavorite, onToggleFavorite, onPress }) => {
   return (
     <TouchableOpacity 
       style={styles.container}
-      onPress={onToggleFavorite}
+      onPress={onPress}
       activeOpacity={0.8}
     >
       <LinearGradient
@@ -41,13 +42,13 @@ export const TeamCard: React.FC<TeamCardProps> = ({ team, isFavorite, onToggleFa
           </Text>
         </View>
         
-        <View style={styles.favoriteIcon}>
+        <TouchableOpacity style={styles.favoriteIcon} onPress={onToggleFavorite}>
           <Ionicons 
             name={isFavorite ? "heart" : "heart-outline"} 
             size={24} 
             color={isFavorite ? "#FFD700" : "#FFFFFF"} 
           />
-        </View>
+        </TouchableOpacity>
       </LinearGradient>
     </TouchableOpacity>
   );

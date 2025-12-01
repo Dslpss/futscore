@@ -1,7 +1,7 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CONFIG } from '../constants/config';
-import { League, Match, Team } from '../types';
+import { League, Match, Team, Player } from '../types';
 import { Country } from '../types/country';
 
 // Backend API client (proxies to football-data.org)
@@ -364,6 +364,34 @@ export const api = {
       return uniqueTeams;
     } catch (error) {
       console.error('[API] Error searching teams:', error);
+      return [];
+    }
+  },
+
+  getSquad: async (teamId: number): Promise<Player[]> => {
+    const cacheKey = `squad_${teamId}`;
+    const cached = await getCachedData<Player[]>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const response = await apiClient.get(`/teams/${teamId}`);
+      
+      if (!response.data || !response.data.squad) {
+        return [];
+      }
+
+      const squad: Player[] = response.data.squad.map((player: any) => ({
+        id: player.id,
+        name: player.name,
+        number: player.shirtNumber,
+        pos: player.position,
+        grid: null
+      }));
+
+      await setCachedData(cacheKey, squad, 24 * 60 * 60 * 1000);
+      return squad;
+    } catch (error) {
+      console.error('[API] Error fetching squad:', error);
       return [];
     }
   },
