@@ -7,6 +7,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { WarningCard } from '../components/WarningCard';
 import { UpdateModal } from '../components/UpdateModal';
 import axios from 'axios';
+import { api } from '../services/api';
+import { CONFIG } from '../constants/config';
+import { Match } from '../types';
 
 const { width } = Dimensions.get('window');
 
@@ -18,12 +21,63 @@ interface Warning {
 }
 
 export const HomeScreen = () => {
-  const { liveMatches, todaysMatches, loading, refreshMatches } = useMatches();
+  const { liveMatches, todaysMatches, loading: contextLoading, refreshMatches: contextRefresh } = useMatches();
   const { favoriteTeams } = useFavorites();
   const [selectedLeague, setSelectedLeague] = useState<string>('ALL');
   const [warnings, setWarnings] = useState<Warning[]>([]);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<any>(null);
+  
+  // Date Selection State
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [customMatches, setCustomMatches] = useState<Match[]>([]);
+  const [loadingCustom, setLoadingCustom] = useState(false);
+
+  const isToday = (date: Date) => {
+    const today = new Date();
+    return date.getDate() === today.getDate() &&
+           date.getMonth() === today.getMonth() &&
+           date.getFullYear() === today.getFullYear();
+  };
+
+  const loading = isToday(selectedDate) ? contextLoading : loadingCustom;
+
+  const refreshMatches = async () => {
+    if (isToday(selectedDate)) {
+      await contextRefresh();
+    } else {
+      await fetchMatchesForDate(selectedDate);
+    }
+  };
+
+  useEffect(() => {
+    if (!isToday(selectedDate)) {
+      fetchMatchesForDate(selectedDate);
+    }
+  }, [selectedDate]);
+
+  const fetchMatchesForDate = async (date: Date) => {
+    setLoadingCustom(true);
+    try {
+      const dateStr = date.toISOString().split('T')[0];
+      const leagueIds = Object.values(CONFIG.LEAGUE_IDS) as string[];
+      
+      let allMatches: Match[] = [];
+      // Fetch in parallel for better performance
+      const promises = leagueIds.map(id => api.getFixtures(id, dateStr));
+      const results = await Promise.all(promises);
+      
+      results.forEach(matches => {
+        allMatches = [...allMatches, ...matches];
+      });
+      
+      setCustomMatches(allMatches);
+    } catch (error) {
+      console.error('Error fetching custom matches', error);
+    } finally {
+      setLoadingCustom(false);
+    }
+  };
 
   useEffect(() => {
     fetchWarnings();
@@ -63,6 +117,18 @@ export const HomeScreen = () => {
     { code: 'FINISHED', name: 'Finalizados' },
   ];
 
+  const generateDates = () => {
+    const dates = [];
+    for (let i = 0; i < 7; i++) {
+      const date = new Date();
+      date.setDate(date.getDate() + i);
+      dates.push(date);
+    }
+    return dates;
+  };
+
+  const dates = generateDates();
+
   const renderHeader = () => (
     <View style={styles.headerContainer}>
       <LinearGradient
@@ -73,7 +139,7 @@ export const HomeScreen = () => {
       <View style={styles.topBar}>
         <View style={{ flex: 1, marginRight: 16 }}>
           <Text style={styles.dateText}>
-            {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase()}
+            {selectedDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase()}
           </Text>
           <View style={styles.titleContainer}>
             <Text style={styles.titleHighlight}>Fut</Text>
@@ -90,6 +156,54 @@ export const HomeScreen = () => {
              <Text style={{ fontSize: 24 }}>⚽</Text>
            </LinearGradient>
         </TouchableOpacity>
+      </View>
+
+      {/* Date Selector */}
+      <View style={styles.dateSelectorWrapper}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.dateSelectorContainer}
+        >
+          {dates.map((date, index) => {
+            const isSelected = date.getDate() === selectedDate.getDate() && 
+                             date.getMonth() === selectedDate.getMonth();
+            const isDateToday = isToday(date);
+            
+            return (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.dateButton,
+                  isSelected && styles.dateButtonActive
+                ]}
+                onPress={() => setSelectedDate(date)}
+                activeOpacity={0.7}
+              >
+                {isSelected && (
+                  <LinearGradient
+                    colors={['#22c55e', '#16a34a']}
+                    style={StyleSheet.absoluteFillObject}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  />
+                )}
+                <Text style={[
+                  styles.dateDayText,
+                  isSelected && styles.dateTextActive
+                ]}>
+                  {isDateToday ? 'HOJE' : date.toLocaleDateString('pt-BR', { weekday: 'short' }).toUpperCase().replace('.', '')}
+                </Text>
+                <Text style={[
+                  styles.dateNumberText,
+                  isSelected && styles.dateTextActive
+                ]}>
+                  {date.getDate()}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
       </View>
       
       {/* League Selector */}
@@ -133,18 +247,20 @@ export const HomeScreen = () => {
   // Filter matches by selected league
   const filteredMatches = (() => {
     let matches = [];
+    const sourceMatches = isToday(selectedDate) ? [...liveMatches, ...todaysMatches] : customMatches;
+
     if (selectedLeague === 'ALL') {
-      matches = [...liveMatches, ...todaysMatches];
+      matches = sourceMatches;
     } else if (selectedLeague === 'FAV') {
-      matches = [...liveMatches, ...todaysMatches].filter(m => 
+      matches = sourceMatches.filter(m => 
         favoriteTeams.includes(m.teams.home.id) || favoriteTeams.includes(m.teams.away.id)
       );
     } else if (selectedLeague === 'FINISHED') {
-      matches = [...liveMatches, ...todaysMatches].filter(m => 
+      matches = sourceMatches.filter(m => 
         ['FT', 'AET', 'PEN'].includes(m.fixture.status.short)
       );
     } else {
-      matches = [...liveMatches, ...todaysMatches].filter(m => m.league.id === selectedLeague);
+      matches = sourceMatches.filter(m => m.league.id === selectedLeague);
     }
 
     // Deduplicate matches
@@ -318,8 +434,45 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
+  },
+
+  dateSelectorWrapper: {
+    marginBottom: 20,
+    marginHorizontal: -4,
+  },
+  dateSelectorContainer: {
+    paddingHorizontal: 4,
+  },
+  dateButton: {
+    width: 56,
+    height: 64,
+    borderRadius: 16,
+    backgroundColor: '#18181b',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+    overflow: 'hidden',
+  },
+  dateButtonActive: {
+    backgroundColor: '#22c55e',
+    borderColor: 'transparent',
+  },
+  dateDayText: {
+    color: '#71717a',
+    fontSize: 10,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  dateNumberText: {
+    color: '#e4e4e7',
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  dateTextActive: {
+    color: '#fff',
   },
 
   leagueSelectorWrapper: {
