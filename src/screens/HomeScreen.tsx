@@ -32,7 +32,7 @@ export const HomeScreen = () => {
 
   const fetchWarnings = async () => {
     try {
-      const response = await axios.get('http://192.168.100.54:5000/admin/warnings');
+      const response = await axios.get('https://futscore-production.up.railway.app/admin/warnings');
       setWarnings(response.data);
     } catch (error) {
       console.error('Error fetching warnings', error);
@@ -41,7 +41,7 @@ export const HomeScreen = () => {
 
   const checkUpdate = async () => {
     try {
-      const response = await axios.get('http://192.168.100.54:5000/admin/version');
+      const response = await axios.get('https://futscore-production.up.railway.app/admin/version');
       const latestVersion = response.data;
       const currentVersion = '1.0.0';
 

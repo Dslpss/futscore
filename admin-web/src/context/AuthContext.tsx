@@ -2,8 +2,8 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import type { ReactNode } from 'react';
 import axios from 'axios';
 
-// Configure axios base URL
-export const API_URL = 'http://localhost:5000';
+// Backend URL - Railway Production
+export const API_URL = 'https://futscore-production.up.railway.app';
 axios.defaults.baseURL = API_URL;
 
 interface User {

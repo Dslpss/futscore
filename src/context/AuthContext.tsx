@@ -2,11 +2,8 @@ import React, { createContext, useState, useEffect, useContext, ReactNode } from
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 
-// REPLACE WITH YOUR IP ADDRESS
-// Android Emulator: http://10.0.2.2:5000/auth
-// Physical Device: http://YOUR_PC_IP:5000/auth (e.g., 192.168.1.5)
-// Web: http://localhost:5000/auth
-export const API_URL = 'http://192.168.100.54:5000/auth'; 
+// Backend URL - Railway Production
+export const API_URL = 'https://futscore-production.up.railway.app/auth'; 
 
 interface User {
   id: string;
