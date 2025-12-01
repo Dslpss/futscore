@@ -1,16 +1,58 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, SafeAreaView, StatusBar, TouchableOpacity, Dimensions, Platform, ScrollView } from 'react-native';
 import { useMatches } from '../context/MatchContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { MatchCard } from '../components/MatchCard';
 import { LinearGradient } from 'expo-linear-gradient';
+import { WarningCard } from '../components/WarningCard';
+import { UpdateModal } from '../components/UpdateModal';
+import axios from 'axios';
 
 const { width } = Dimensions.get('window');
+
+interface Warning {
+  _id: string;
+  title: string;
+  message: string;
+  type: 'info' | 'warning' | 'danger';
+}
 
 export const HomeScreen = () => {
   const { liveMatches, todaysMatches, loading, refreshMatches } = useMatches();
   const { favoriteTeams } = useFavorites();
   const [selectedLeague, setSelectedLeague] = useState<string>('ALL');
+  const [warnings, setWarnings] = useState<Warning[]>([]);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState<any>(null);
+
+  useEffect(() => {
+    fetchWarnings();
+    checkUpdate();
+  }, []);
+
+  const fetchWarnings = async () => {
+    try {
+      const response = await axios.get('http://192.168.100.54:5000/admin/warnings');
+      setWarnings(response.data);
+    } catch (error) {
+      console.error('Error fetching warnings', error);
+    }
+  };
+
+  const checkUpdate = async () => {
+    try {
+      const response = await axios.get('http://192.168.100.54:5000/admin/version');
+      const latestVersion = response.data;
+      const currentVersion = '1.0.0';
+
+      if (latestVersion && latestVersion.active && latestVersion.version > currentVersion) {
+        setUpdateInfo(latestVersion);
+        setShowUpdateModal(true);
+      }
+    } catch (error) {
+      console.error('Error checking update', error);
+    }
+  };
 
   const leagues = [
     { code: 'ALL', name: 'Todos' },
@@ -130,6 +172,14 @@ export const HomeScreen = () => {
       />
       
       <SafeAreaView style={styles.safeArea}>
+        {warnings.map(warning => (
+          <WarningCard
+            key={warning._id}
+            title={warning.title}
+            message={warning.message}
+            type={warning.type}
+          />
+        ))}
         <FlatList
           data={sections}
           keyExtractor={(item) => item.title}
@@ -171,6 +221,17 @@ export const HomeScreen = () => {
           }
         />
       </SafeAreaView>
+
+      {updateInfo && (
+        <UpdateModal
+          visible={showUpdateModal}
+          version={updateInfo.version}
+          downloadLink={updateInfo.downloadLink}
+          forceUpdate={updateInfo.forceUpdate}
+          notes={updateInfo.notes}
+          onClose={() => setShowUpdateModal(false)}
+        />
+      )}
     </View>
   );
 };

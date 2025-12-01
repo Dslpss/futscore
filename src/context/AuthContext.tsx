@@ -1,0 +1,94 @@
+import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
+
+// REPLACE WITH YOUR IP ADDRESS
+// Android Emulator: http://10.0.2.2:5000/auth
+// Physical Device: http://YOUR_PC_IP:5000/auth (e.g., 192.168.1.5)
+// Web: http://localhost:5000/auth
+export const API_URL = 'http://192.168.100.54:5000/auth'; 
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  isAdmin?: boolean;
+}
+
+interface AuthContextData {
+  user: User | null;
+  token: string | null;
+  loading: boolean;
+  signIn: (token: string, user: User) => Promise<void>;
+  signOut: () => Promise<void>;
+  isAuthenticated: boolean;
+}
+
+const AuthContext = createContext<AuthContextData>({} as AuthContextData);
+
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadStorageData();
+  }, []);
+
+  async function loadStorageData() {
+    try {
+      const storedUser = await AsyncStorage.getItem('@FutScore:user');
+      const storedToken = await AsyncStorage.getItem('@FutScore:token');
+
+      if (storedUser && storedToken) {
+        setUser(JSON.parse(storedUser));
+        setToken(storedToken);
+        // Configure axios defaults
+        axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+      }
+    } catch (error) {
+      console.error('Error loading auth data', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function signIn(newToken: string, newUser: User) {
+    try {
+      setUser(newUser);
+      setToken(newToken);
+      
+      axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+
+      await AsyncStorage.setItem('@FutScore:user', JSON.stringify(newUser));
+      await AsyncStorage.setItem('@FutScore:token', newToken);
+    } catch (error) {
+      console.error('Error signing in', error);
+    }
+  }
+
+  async function signOut() {
+    try {
+      setUser(null);
+      setToken(null);
+      await AsyncStorage.clear();
+    } catch (error) {
+      console.error('Error signing out', error);
+    }
+  }
+
+  return (
+    <AuthContext.Provider value={{ 
+      user, 
+      token, 
+      loading, 
+      signIn, 
+      signOut,
+      isAuthenticated: !!user 
+    }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => useContext(AuthContext);

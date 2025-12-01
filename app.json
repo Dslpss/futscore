@@ -29,7 +29,25 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-font"
-    ]
+      "expo-font",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/splash-icon.png",
+          "color": "#22c55e"
+        }
+      ],
+      [
+        "expo-background-fetch",
+        {
+          "minimumInterval": 120
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "c060407a-d600-45dd-88b2-f4dcd4ee3eed"
+      }
+    }
   }
 }
