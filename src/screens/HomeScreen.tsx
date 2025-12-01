@@ -349,7 +349,7 @@ export const HomeScreen = ({ navigation }: any) => {
                  <View style={styles.sectionLine} />
               </View>
               {item.data.map(match => (
-                <MatchCard key={match.fixture.id} match={match} />
+                <MatchCard key={`${item.type}-${match.fixture.id}`} match={match} />
               ))}
             </View>
           )}

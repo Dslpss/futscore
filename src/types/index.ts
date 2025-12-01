@@ -24,6 +24,42 @@ export interface Statistics {
   }[];
 }
 
+export interface Player {
+  id: number;
+  name: string;
+  number: number;
+  pos: string | null;
+  grid: string | null;
+}
+
+export interface Lineup {
+  team: {
+    id: number;
+    name: string;
+    logo: string;
+    colors?: {
+        player: {
+            primary: string;
+            number: string;
+            border: string;
+        };
+        goalkeeper: {
+            primary: string;
+            number: string;
+            border: string;
+        };
+    };
+  };
+  coach: {
+    id: number;
+    name: string;
+    photo?: string;
+  };
+  formation: string;
+  startXI: Player[];
+  substitutes: Player[];
+}
+
 export interface Match {
   fixture: {
     id: number;
@@ -59,6 +95,7 @@ export interface Match {
     };
   };
   statistics?: Statistics[];
+  lineups?: Lineup[];
 }
 
 export interface ApiResponse<T> {

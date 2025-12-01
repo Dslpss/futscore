@@ -17,6 +17,7 @@ const { width } = Dimensions.get('window');
 export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({ visible, onClose, matchId }) => {
   const [match, setMatch] = useState<Match | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'stats' | 'lineups'>('stats');
 
   useEffect(() => {
     if (visible && matchId) {
@@ -98,38 +99,132 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({ visible, onClo
                   )}
               </LinearGradient>
 
-              {/* Statistics */}
-              {match.statistics && match.statistics.length > 0 ? (
-                  <View style={styles.statsContainer}>
-                      <Text style={styles.sectionTitle}>Estatísticas</Text>
-                      {match.statistics[0].statistics.map((stat, index) => {
-                          const homeValue = stat.value ?? 0;
-                          const awayValue = match.statistics?.[1].statistics[index].value ?? 0;
-                          
-                          // Calculate percentages for bar
-                          const total = (typeof homeValue === 'number' ? homeValue : 0) + (typeof awayValue === 'number' ? awayValue : 0);
-                          const homePercent = total === 0 ? 50 : ((typeof homeValue === 'number' ? homeValue : 0) / total) * 100;
-                          const awayPercent = total === 0 ? 50 : ((typeof awayValue === 'number' ? awayValue : 0) / total) * 100;
+              {/* Tabs */}
+              <View style={styles.tabContainer}>
+                  <TouchableOpacity 
+                      style={[styles.tabButton, activeTab === 'stats' && styles.activeTabButton]}
+                      onPress={() => setActiveTab('stats')}
+                  >
+                      <Text style={[styles.tabText, activeTab === 'stats' && styles.activeTabText]}>Estatísticas</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                      style={[styles.tabButton, activeTab === 'lineups' && styles.activeTabButton]}
+                      onPress={() => setActiveTab('lineups')}
+                  >
+                      <Text style={[styles.tabText, activeTab === 'lineups' && styles.activeTabText]}>Escalações</Text>
+                  </TouchableOpacity>
+              </View>
 
-                          return (
-                              <View key={index} style={styles.statRow}>
-                                  <View style={styles.statValues}>
-                                      <Text style={styles.statValue}>{homeValue}</Text>
-                                      <Text style={styles.statLabel}>{stat.type}</Text>
-                                      <Text style={styles.statValue}>{awayValue}</Text>
+              {activeTab === 'stats' ? (
+                  /* Statistics */
+                  match.statistics && match.statistics.length > 0 ? (
+                      <View style={styles.statsContainer}>
+                          <Text style={styles.sectionTitle}>Estatísticas</Text>
+                          {match.statistics[0].statistics.map((stat, index) => {
+                              const homeValue = stat.value ?? 0;
+                              const awayValue = match.statistics?.[1].statistics[index].value ?? 0;
+                              
+                              // Calculate percentages for bar
+                              const total = (typeof homeValue === 'number' ? homeValue : 0) + (typeof awayValue === 'number' ? awayValue : 0);
+                              const homePercent = total === 0 ? 50 : ((typeof homeValue === 'number' ? homeValue : 0) / total) * 100;
+                              const awayPercent = total === 0 ? 50 : ((typeof awayValue === 'number' ? awayValue : 0) / total) * 100;
+
+                              return (
+                                  <View key={index} style={styles.statRow}>
+                                      <View style={styles.statValues}>
+                                          <Text style={styles.statValue}>{homeValue}</Text>
+                                          <Text style={styles.statLabel}>{stat.type}</Text>
+                                          <Text style={styles.statValue}>{awayValue}</Text>
+                                      </View>
+                                      <View style={styles.statBarContainer}>
+                                          <View style={[styles.statBar, { width: `${homePercent}%`, backgroundColor: '#22c55e', borderTopLeftRadius: 4, borderBottomLeftRadius: 4 }]} />
+                                          <View style={[styles.statBar, { width: `${awayPercent}%`, backgroundColor: '#ef4444', borderTopRightRadius: 4, borderBottomRightRadius: 4 }]} />
+                                      </View>
                                   </View>
-                                  <View style={styles.statBarContainer}>
-                                      <View style={[styles.statBar, { width: `${homePercent}%`, backgroundColor: '#22c55e', borderTopLeftRadius: 4, borderBottomLeftRadius: 4 }]} />
-                                      <View style={[styles.statBar, { width: `${awayPercent}%`, backgroundColor: '#ef4444', borderTopRightRadius: 4, borderBottomRightRadius: 4 }]} />
-                                  </View>
-                              </View>
-                          );
-                      })}
-                  </View>
+                              );
+                          })}
+                      </View>
+                  ) : (
+                      <View style={styles.noStatsContainer}>
+                          <Text style={styles.noStatsText}>Estatísticas não disponíveis para este jogo.</Text>
+                      </View>
+                  )
               ) : (
-                  <View style={styles.noStatsContainer}>
-                      <Text style={styles.noStatsText}>Estatísticas não disponíveis para este jogo.</Text>
-                  </View>
+                  /* Lineups */
+                  match.lineups && match.lineups.length > 0 ? (
+                      <View style={styles.lineupsContainer}>
+                          {/* Home Team Lineup */}
+                          <View style={styles.teamLineup}>
+                              <View style={styles.lineupHeader}>
+                                  <Image source={{ uri: match.teams.home.logo }} style={styles.smallTeamLogo} />
+                                  <Text style={styles.lineupTeamName}>{match.teams.home.name}</Text>
+                                  <Text style={styles.formation}>{match.lineups[0].formation}</Text>
+                              </View>
+                              
+                              <Text style={styles.lineupSectionTitle}>Titulares</Text>
+                              {match.lineups[0].startXI.map((player) => (
+                                  <View key={player.id} style={styles.playerRow}>
+                                      <Text style={styles.playerNumber}>{player.number}</Text>
+                                      <Text style={styles.playerName}>{player.name}</Text>
+                                      <Text style={styles.playerPosition}>{player.pos}</Text>
+                                  </View>
+                              ))}
+
+                              <Text style={styles.lineupSectionTitle}>Reservas</Text>
+                              {match.lineups[0].substitutes.map((player) => (
+                                  <View key={player.id} style={styles.playerRow}>
+                                      <Text style={styles.playerNumber}>{player.number}</Text>
+                                      <Text style={styles.playerName}>{player.name}</Text>
+                                      <Text style={styles.playerPosition}>{player.pos}</Text>
+                                  </View>
+                              ))}
+                              
+                              <View style={styles.coachContainer}>
+                                  <Text style={styles.coachLabel}>Técnico:</Text>
+                                  <Text style={styles.coachName}>{match.lineups[0].coach.name}</Text>
+                              </View>
+                          </View>
+
+                          {/* Divider */}
+                          <View style={styles.lineupDivider} />
+
+                          {/* Away Team Lineup */}
+                          <View style={styles.teamLineup}>
+                              <View style={styles.lineupHeader}>
+                                  <Image source={{ uri: match.teams.away.logo }} style={styles.smallTeamLogo} />
+                                  <Text style={styles.lineupTeamName}>{match.teams.away.name}</Text>
+                                  <Text style={styles.formation}>{match.lineups[1].formation}</Text>
+                              </View>
+
+                              <Text style={styles.lineupSectionTitle}>Titulares</Text>
+                              {match.lineups[1].startXI.map((player) => (
+                                  <View key={player.id} style={styles.playerRow}>
+                                      <Text style={styles.playerNumber}>{player.number}</Text>
+                                      <Text style={styles.playerName}>{player.name}</Text>
+                                      <Text style={styles.playerPosition}>{player.pos}</Text>
+                                  </View>
+                              ))}
+
+                              <Text style={styles.lineupSectionTitle}>Reservas</Text>
+                              {match.lineups[1].substitutes.map((player) => (
+                                  <View key={player.id} style={styles.playerRow}>
+                                      <Text style={styles.playerNumber}>{player.number}</Text>
+                                      <Text style={styles.playerName}>{player.name}</Text>
+                                      <Text style={styles.playerPosition}>{player.pos}</Text>
+                                  </View>
+                              ))}
+
+                               <View style={styles.coachContainer}>
+                                  <Text style={styles.coachLabel}>Técnico:</Text>
+                                  <Text style={styles.coachName}>{match.lineups[1].coach.name}</Text>
+                              </View>
+                          </View>
+                      </View>
+                  ) : (
+                      <View style={styles.noStatsContainer}>
+                          <Text style={styles.noStatsText}>Escalações não disponíveis para este jogo.</Text>
+                      </View>
+                  )
               )}
 
             </ScrollView>
@@ -321,5 +416,118 @@ const styles = StyleSheet.create({
   errorText: {
       color: '#ef4444',
       fontSize: 16,
+  },
+  tabContainer: {
+      flexDirection: 'row',
+      marginHorizontal: 20,
+      marginBottom: 20,
+      backgroundColor: 'rgba(255,255,255,0.05)',
+      borderRadius: 12,
+      padding: 4,
+  },
+  tabButton: {
+      flex: 1,
+      paddingVertical: 10,
+      alignItems: 'center',
+      borderRadius: 8,
+  },
+  activeTabButton: {
+      backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  tabText: {
+      color: '#71717a',
+      fontSize: 14,
+      fontWeight: '600',
+  },
+  activeTabText: {
+      color: '#fff',
+  },
+  lineupsContainer: {
+      paddingHorizontal: 20,
+  },
+  teamLineup: {
+      marginBottom: 24,
+  },
+  lineupHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 16,
+      backgroundColor: 'rgba(255,255,255,0.03)',
+      padding: 12,
+      borderRadius: 12,
+  },
+  smallTeamLogo: {
+      width: 24,
+      height: 24,
+      marginRight: 10,
+      resizeMode: 'contain',
+  },
+  lineupTeamName: {
+      color: '#fff',
+      fontSize: 16,
+      fontWeight: '700',
+      flex: 1,
+  },
+  formation: {
+      color: '#a1a1aa',
+      fontSize: 14,
+      fontWeight: '600',
+  },
+  lineupSectionTitle: {
+      color: '#22c55e',
+      fontSize: 12,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+      marginBottom: 12,
+      marginTop: 8,
+  },
+  playerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 8,
+      paddingVertical: 4,
+      borderBottomWidth: 1,
+      borderBottomColor: 'rgba(255,255,255,0.03)',
+  },
+  playerNumber: {
+      color: '#a1a1aa',
+      fontSize: 14,
+      fontWeight: '700',
+      width: 30,
+  },
+  playerName: {
+      color: '#fff',
+      fontSize: 14,
+      flex: 1,
+  },
+  playerPosition: {
+      color: '#71717a',
+      fontSize: 12,
+      fontWeight: '600',
+      width: 30,
+      textAlign: 'right',
+  },
+  lineupDivider: {
+      height: 1,
+      backgroundColor: 'rgba(255,255,255,0.1)',
+      marginVertical: 24,
+  },
+  coachContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 16,
+      paddingTop: 16,
+      borderTopWidth: 1,
+      borderTopColor: 'rgba(255,255,255,0.05)',
+  },
+  coachLabel: {
+      color: '#a1a1aa',
+      fontSize: 14,
+      marginRight: 8,
+  },
+  coachName: {
+      color: '#fff',
+      fontSize: 14,
+      fontWeight: '600',
   },
 });

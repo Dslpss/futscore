@@ -13,7 +13,7 @@ const authClient = axios.create({
 // Add token to requests
 authClient.interceptors.request.use(
   async (config) => {
-    const token = await AsyncStorage.getItem('userToken');
+    const token = await AsyncStorage.getItem('@FutScore:token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -55,7 +55,7 @@ export const authApi = {
       });
       
       // Save token
-      await AsyncStorage.setItem('userToken', response.data.token);
+      await AsyncStorage.setItem('@FutScore:token', response.data.token);
       
       return response.data;
     } catch (error: any) {
@@ -72,7 +72,7 @@ export const authApi = {
       });
       
       // Save token
-      await AsyncStorage.setItem('userToken', response.data.token);
+      await AsyncStorage.setItem('@FutScore:token', response.data.token);
       
       return response.data;
     } catch (error: any) {
@@ -82,7 +82,7 @@ export const authApi = {
 
   // Logout user
   logout: async (): Promise<void> => {
-    await AsyncStorage.removeItem('userToken');
+    await AsyncStorage.removeItem('@FutScore:token');
   },
 
   // Get user's favorite teams

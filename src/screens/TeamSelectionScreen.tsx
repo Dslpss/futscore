@@ -14,6 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../services/api';
 import { authApi, FavoriteTeam } from '../services/authApi';
+import { useAuth } from '../context/AuthContext';
 import { TeamCard } from '../components/TeamCard';
 
 interface TeamWithCountry {
@@ -24,6 +25,7 @@ interface TeamWithCountry {
 }
 
 export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
+  const { user, signOut } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLeague, setSelectedLeague] = useState<string>('all');
   const [teams, setTeams] = useState<TeamWithCountry[]>([]);
@@ -39,16 +41,23 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({ navigation 
   ];
 
   useEffect(() => {
-    loadFavoriteTeams();
+    if (user) {
+      loadFavoriteTeams();
+    }
     loadAllTeams();
-  }, []);
+  }, [user]);
 
   const loadFavoriteTeams = async () => {
     try {
       const favorites = await authApi.getFavoriteTeams();
       setFavoriteTeams(favorites);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading favorites:', error);
+      if (error.message.includes('401') || error.message.includes('authorization denied')) {
+          Alert.alert('Sessão Expirada', 'Por favor, faça login novamente.');
+          signOut();
+          navigation.goBack();
+      }
     }
   };
 
@@ -71,7 +80,12 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({ navigation 
         allTeams = [...allTeams, ...teamsWithCountry];
       }
 
-      setTeams(allTeams);
+      // Deduplicate teams by ID
+      const uniqueTeams = Array.from(
+          new Map(allTeams.map(team => [team.id, team])).values()
+      );
+
+      setTeams(uniqueTeams);
     } catch (error) {
       console.error('Error loading teams:', error);
       Alert.alert('Erro', 'Não foi possível carregar os times');

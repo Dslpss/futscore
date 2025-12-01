@@ -256,7 +256,35 @@ export const api = {
         // football-data.org free tier might not provide detailed stats here, 
         // but if they do, it's usually under a different structure or endpoint.
         // For now, we'll map what we can or leave empty if not present.
-        statistics: [], 
+        statistics: [],
+        lineups: matchData.lineups ? matchData.lineups.map((lineup: any) => ({
+          team: {
+            id: lineup.team.id,
+            name: lineup.team.name,
+            logo: lineup.team.logo || '',
+            colors: lineup.team.colors,
+          },
+          coach: {
+            id: lineup.coach.id,
+            name: lineup.coach.name,
+            photo: lineup.coach.photo,
+          },
+          formation: lineup.formation,
+          startXI: lineup.startXI.map((player: any) => ({
+            id: player.player.id,
+            name: player.player.name,
+            number: player.player.number,
+            pos: player.player.pos,
+            grid: player.player.grid,
+          })),
+          substitutes: lineup.substitutes.map((player: any) => ({
+            id: player.player.id,
+            name: player.player.name,
+            number: player.player.number,
+            pos: player.player.pos,
+            grid: player.player.grid,
+          })),
+        })) : [],
       };
 
       // Cache for a short time (e.g., 5 minutes)
