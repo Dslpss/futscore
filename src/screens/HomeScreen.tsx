@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Constants from 'expo-constants';
 import { View, Text, StyleSheet, FlatList, RefreshControl, SafeAreaView, StatusBar, TouchableOpacity, Dimensions, Platform, ScrollView, Modal, Alert } from 'react-native';
 import { useMatches } from '../context/MatchContext';
 import { useFavorites } from '../context/FavoritesContext';
@@ -102,7 +103,7 @@ export const HomeScreen = ({ navigation }: any) => {
     try {
       const response = await axios.get(`${CONFIG.BACKEND_URL}/admin/version`);
       const latestVersion = response.data;
-      const currentVersion = '1.0.0';
+      const currentVersion = Constants.expoConfig?.version || '1.0.0';
 
       if (latestVersion && latestVersion.active && latestVersion.version > currentVersion) {
         setUpdateInfo(latestVersion);
