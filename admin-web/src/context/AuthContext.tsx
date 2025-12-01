@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import axios from 'axios';
 
 // Backend URL - Railway Production
-export const API_URL = 'https://futscore-production.up.railway.app';
+export const API_URL = import.meta.env.VITE_API_URL || 'https://futscore-production.up.railway.app';
 axios.defaults.baseURL = API_URL;
 
 interface User {

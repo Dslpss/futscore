@@ -1,7 +1,7 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CONFIG } from '../constants/config';
-import { League, Match } from '../types';
+import { League, Match, Team } from '../types';
 import { Country } from '../types/country';
 
 const apiClient = axios.create({
@@ -267,6 +267,78 @@ export const api = {
     } catch (error) {
       console.error('[API] Error fetching match details:', error);
       return null;
+    }
+  },
+
+  // Get all teams from a specific league/competition
+  getTeamsByLeague: async (leagueCode: string): Promise<Team[]> => {
+    const cacheKey = `teams_${leagueCode}`;
+    const cached = await getCachedData<Team[]>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const response = await apiClient.get(`/competitions/${leagueCode}/teams`);
+      
+      if (!response.data.teams || response.data.teams.length === 0) {
+        return [];
+      }
+
+      const teams: Team[] = response.data.teams.map((team: any) => ({
+        id: team.id,
+        name: team.name,
+        logo: team.crest || '',
+      }));
+
+      // Cache for 7 days
+      await setCachedData(cacheKey, teams, 7 * 24 * 60 * 60 * 1000);
+      return teams;
+    } catch (error) {
+      console.error('[API] Error fetching teams:', error);
+      return [];
+    }
+  },
+
+  // Search teams across multiple leagues
+  searchTeams: async (query: string, leagueCodes?: string[]): Promise<Array<Team & { country: string }>> => {
+    if (!query || query.length < 2) {
+      return [];
+    }
+
+    try {
+      const leagues = leagueCodes || ['BSA', 'CL', 'PD'];
+      let allTeams: Array<Team & { country: string }> = [];
+
+      for (const code of leagues) {
+        const teams = await api.getTeamsByLeague(code);
+        const leagueInfo = await api.getLeagues();
+        const league = leagueInfo.find(l => l.id === code);
+        
+        const teamsWithCountry = teams.map(team => ({
+          ...team,
+          country: league?.country || 'Unknown',
+        }));
+
+        allTeams = [...allTeams, ...teamsWithCountry];
+      }
+
+      // Filter teams by search query
+      const searchLower = query.toLowerCase();
+      const filtered = allTeams.filter(team => 
+        team.name.toLowerCase().includes(searchLower)
+      );
+
+      // Remove duplicates by team ID
+      const uniqueTeams = filtered.reduce((acc, team) => {
+        if (!acc.find((t: Team & { country: string }) => t.id === team.id)) {
+          acc.push(team);
+        }
+        return acc;
+      }, [] as Array<Team & { country: string }>);
+
+      return uniqueTeams;
+    } catch (error) {
+      console.error('[API] Error searching teams:', error);
+      return [];
     }
   },
 };

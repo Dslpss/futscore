@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, SafeAreaView, StatusBar, TouchableOpacity, Dimensions, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, SafeAreaView, StatusBar, TouchableOpacity, Dimensions, Platform, ScrollView, Modal, Alert } from 'react-native';
 import { useMatches } from '../context/MatchContext';
 import { useFavorites } from '../context/FavoritesContext';
+import { useAuth } from '../context/AuthContext';
 import { MatchCard } from '../components/MatchCard';
 import { LinearGradient } from 'expo-linear-gradient';
 import { WarningCard } from '../components/WarningCard';
@@ -20,13 +21,15 @@ interface Warning {
   type: 'info' | 'warning' | 'danger';
 }
 
-export const HomeScreen = () => {
+export const HomeScreen = ({ navigation }: any) => {
   const { liveMatches, todaysMatches, loading: contextLoading, refreshMatches: contextRefresh } = useMatches();
   const { favoriteTeams } = useFavorites();
+  const { user, signOut } = useAuth();
   const [selectedLeague, setSelectedLeague] = useState<string>('ALL');
   const [warnings, setWarnings] = useState<Warning[]>([]);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<any>(null);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   
   // Date Selection State
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -86,8 +89,10 @@ export const HomeScreen = () => {
 
   const fetchWarnings = async () => {
     try {
-      const response = await axios.get('https://futscore-production.up.railway.app/admin/warnings');
-      setWarnings(response.data);
+      const response = await axios.get(`${CONFIG.BACKEND_URL}/admin/warnings`);
+      // Deduplicate warnings
+      const uniqueWarnings = Array.from(new Map(response.data.map((w: Warning) => [w._id, w])).values());
+      setWarnings(uniqueWarnings as Warning[]);
     } catch (error) {
       console.error('Error fetching warnings', error);
     }
@@ -95,7 +100,7 @@ export const HomeScreen = () => {
 
   const checkUpdate = async () => {
     try {
-      const response = await axios.get('https://futscore-production.up.railway.app/admin/version');
+      const response = await axios.get(`${CONFIG.BACKEND_URL}/admin/version`);
       const latestVersion = response.data;
       const currentVersion = '1.0.0';
 
@@ -148,12 +153,16 @@ export const HomeScreen = () => {
           </View>
         </View>
         
-        <TouchableOpacity style={styles.profileButton}>
+        <TouchableOpacity 
+          style={styles.profileButton}
+          onPress={() => setShowProfileModal(true)}
+          activeOpacity={0.8}
+        >
            <LinearGradient
              colors={['#2a2a2a', '#1a1a1a']}
              style={styles.profileGradient}
            >
-             <Text style={{ fontSize: 24 }}>⚽</Text>
+             <Text style={{ fontSize: 20 }}>👤</Text>
            </LinearGradient>
         </TouchableOpacity>
       </View>
@@ -206,6 +215,25 @@ export const HomeScreen = () => {
         </ScrollView>
       </View>
       
+      {/* Favorites Button - Centered */}
+      <View style={styles.favoritesButtonContainer}>
+        <TouchableOpacity 
+          style={styles.favoritesButtonCentered}
+          onPress={() => navigation.navigate('TeamSelection')}
+          activeOpacity={0.8}
+        >
+           <LinearGradient
+             colors={['#22c55e', '#16a34a']}
+             start={{ x: 0, y: 0 }}
+             end={{ x: 1, y: 1 }}
+             style={styles.favoritesGradient}
+           >
+             <Text style={styles.favoritesIcon}>⭐</Text>
+             <Text style={styles.favoritesText}>Times Favoritos</Text>
+           </LinearGradient>
+        </TouchableOpacity>
+      </View>
+      
       {/* League Selector */}
       <View style={styles.leagueSelectorWrapper}>
         <ScrollView 
@@ -241,6 +269,16 @@ export const HomeScreen = () => {
           ))}
         </ScrollView>
       </View>
+
+      {/* System Warnings */}
+      {warnings.map(warning => (
+        <WarningCard
+          key={warning._id}
+          title={warning.title}
+          message={warning.message}
+          type={warning.type}
+        />
+      ))}
     </View>
   );
 
@@ -263,8 +301,14 @@ export const HomeScreen = () => {
       matches = sourceMatches.filter(m => m.league.id === selectedLeague);
     }
 
-    // Deduplicate matches
-    const uniqueMatches = Array.from(new Map(matches.map(item => [item.fixture.id, item])).values());
+    // Deduplicate matches and ensure valid ID
+    const uniqueMatches = Array.from(
+      new Map(
+        matches
+          .filter(item => item?.fixture?.id)
+          .map(item => [item.fixture.id, item])
+      ).values()
+    );
     return uniqueMatches;
   })();
 
@@ -288,14 +332,6 @@ export const HomeScreen = () => {
       />
       
       <SafeAreaView style={styles.safeArea}>
-        {warnings.map(warning => (
-          <WarningCard
-            key={warning._id}
-            title={warning.title}
-            message={warning.message}
-            type={warning.type}
-          />
-        ))}
         <FlatList
           data={sections}
           keyExtractor={(item) => item.title}
@@ -348,6 +384,81 @@ export const HomeScreen = () => {
           onClose={() => setShowUpdateModal(false)}
         />
       )}
+
+      {/* Profile Modal */}
+      <Modal
+        visible={showProfileModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowProfileModal(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowProfileModal(false)}
+        >
+          <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
+            <LinearGradient
+              colors={['#1a1a2e', '#16213e']}
+              style={styles.profileModalGradient}
+            >
+              <View style={styles.profileModalHeader}>
+                <View style={styles.profileAvatar}>
+                  <Text style={styles.profileAvatarText}>
+                    {user?.name?.charAt(0).toUpperCase() || '?'}
+                  </Text>
+                </View>
+                <Text style={styles.profileName}>{user?.name || 'Usuário'}</Text>
+                <Text style={styles.profileEmail}>{user?.email || ''}</Text>
+              </View>
+
+              <View style={styles.profileModalDivider} />
+
+              <TouchableOpacity
+                style={styles.logoutButton}
+                onPress={() => {
+                  setShowProfileModal(false);
+                  Alert.alert(
+                    'Sair da Conta',
+                    'Tem certeza que deseja sair?',
+                    [
+                      {
+                        text: 'Cancelar',
+                        style: 'cancel',
+                      },
+                      {
+                        text: 'Sair',
+                        style: 'destructive',
+                        onPress: async () => {
+                          await signOut();
+                        },
+                      },
+                    ]
+                  );
+                }}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={['#ef4444', '#dc2626']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.logoutGradient}
+                >
+                  <Text style={styles.logoutIcon}>🚪</Text>
+                  <Text style={styles.logoutText}>Sair da Conta</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.closeModalButton}
+                onPress={() => setShowProfileModal(false)}
+              >
+                <Text style={styles.closeModalText}>Fechar</Text>
+              </TouchableOpacity>
+            </LinearGradient>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 };
@@ -421,6 +532,47 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     marginBottom: 6,
   },
+  favoritesButtonContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+    marginTop: 4,
+  },
+  favoritesButtonCentered: {
+    shadowColor: '#22c55e',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  favoritesButton: {
+    shadowColor: '#FF6B6B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  favoritesGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 24,
+    gap: 6,
+  },
+  favoritesIcon: {
+    fontSize: 16,
+  },
+  favoritesText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   profileButton: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -434,7 +586,91 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    borderColor: 'rgba(255,255,255,0.1)',
+  },
+
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: 24,
+    overflow: 'hidden',
+  },
+  profileModalGradient: {
+    padding: 24,
+  },
+  profileModalHeader: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  profileAvatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#22c55e',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  profileAvatarText: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  profileName: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  profileEmail: {
+    fontSize: 14,
+    color: '#9CA3AF',
+  },
+  profileModalDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    marginBottom: 24,
+  },
+  logoutButton: {
+    marginBottom: 16,
+    shadowColor: '#ef4444',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  logoutGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    gap: 8,
+  },
+  logoutIcon: {
+    fontSize: 18,
+  },
+  logoutText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  closeModalButton: {
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  closeModalText: {
+    color: '#9CA3AF',
+    fontSize: 14,
+    fontWeight: '600',
   },
 
   dateSelectorWrapper: {

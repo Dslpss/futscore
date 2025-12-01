@@ -41,6 +41,7 @@ router.post('/register', async (req, res) => {
         name: user.name,
         email: user.email,
         isAdmin: user.isAdmin || false,
+        favoriteTeams: user.favoriteTeams || [],
       },
     });
   } catch (error) {
@@ -78,6 +79,7 @@ router.post('/login', async (req, res) => {
         name: user.name,
         email: user.email,
         isAdmin: user.isAdmin || false,
+        favoriteTeams: user.favoriteTeams || [],
       },
     });
   } catch (error) {

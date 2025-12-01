@@ -17,9 +17,9 @@ mongoose.connect(process.env.MONGO_URI)
   .catch((err) => console.error('MongoDB connection error:', err));
 
 // Routes
-// Routes
 app.use('/auth', authRoutes);
 app.use('/admin', require('./routes/admin'));
+app.use('/user', require('./routes/user'));
 
 app.get('/', (req, res) => {
   res.send('FutScore API is running');

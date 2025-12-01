@@ -18,6 +18,24 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  favoriteTeams: [{
+    id: {
+      type: Number,
+      required: true,
+    },
+    name: {
+      type: String,
+      required: true,
+    },
+    logo: {
+      type: String,
+      required: true,
+    },
+    country: {
+      type: String,
+      required: true,
+    },
+  }],
   createdAt: {
     type: Date,
     default: Date.now,
