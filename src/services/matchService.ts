@@ -1,7 +1,7 @@
 import { api } from './api';
 import { Match } from '../types';
 import { CONFIG } from '../constants/config';
-import { schedulePushNotification } from './notifications';
+import { schedulePushNotification, scheduleMatchStartNotification } from './notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const LAST_KNOWN_SCORES_KEY = 'futscore_last_known_scores';
@@ -39,6 +39,15 @@ export const matchService = {
       // Check for score changes if we have favorites
       if (favoriteTeams.length > 0 && liveMatches.length > 0) {
         await checkScoreChanges(liveMatches, favoriteTeams);
+      }
+
+      // Schedule start notifications for ALL upcoming matches today
+      const upcomingMatches = filteredFixtures.filter(m => 
+        ['NS', 'TBD'].includes(m.fixture.status.short)
+      );
+      
+      for (const match of upcomingMatches) {
+        await scheduleMatchStartNotification(match);
       }
 
       return {
