@@ -11,8 +11,6 @@
     "preview": {
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_KEY": "fb4b2a4426bb4498bf38992b4c8aa11d",
-        "EXPO_PUBLIC_API_URL": "https://api.football-data.org/v4",
         "EXPO_PUBLIC_BACKEND_URL": "https://futscore-production.up.railway.app"
       }
     },

@@ -1,6 +1,4 @@
 export const CONFIG = {
-  API_KEY: process.env.EXPO_PUBLIC_API_KEY || '',
-  API_URL: process.env.EXPO_PUBLIC_API_URL || 'https://v3.football.api-sports.io',
   BACKEND_URL: process.env.EXPO_PUBLIC_BACKEND_URL || 'https://futscore-production.up.railway.app',
   CACHE_DURATION: {
     LEAGUES: 7 * 24 * 60 * 60 * 1000, // 7 days

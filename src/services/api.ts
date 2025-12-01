@@ -4,11 +4,9 @@ import { CONFIG } from '../constants/config';
 import { League, Match, Team } from '../types';
 import { Country } from '../types/country';
 
+// Backend API client (proxies to football-data.org)
 const apiClient = axios.create({
-  baseURL: CONFIG.API_URL,
-  headers: {
-    'X-Auth-Token': CONFIG.API_KEY,
-  },
+  baseURL: `${CONFIG.BACKEND_URL}/api/football`,
 });
 
 const CACHE_PREFIX = 'futscore_cache_';
