@@ -64,18 +64,59 @@ export const HomeScreen = ({ navigation }: any) => {
     setLoadingCustom(true);
     try {
       const dateStr = date.toISOString().split('T')[0];
-      const leagueIds = Object.values(CONFIG.LEAGUE_IDS) as string[];
       
-      let allMatches: Match[] = [];
-      // Fetch in parallel for better performance
-      const promises = leagueIds.map(id => api.getFixtures(id, dateStr));
-      const results = await Promise.all(promises);
+      // 1. Fetch from football-data.org (Brasileirão, Champions, La Liga)
+      const footballDataIds = ['BSA', 'CL', 'PD'];
+      let footballDataMatches: Match[] = [];
       
-      results.forEach(matches => {
-        allMatches = [...allMatches, ...matches];
+      const footballDataPromises = footballDataIds.map(id => api.getFixtures(id, dateStr));
+      const footballDataResults = await Promise.all(footballDataPromises);
+      
+      footballDataResults.forEach(matches => {
+        footballDataMatches = [...footballDataMatches, ...matches];
+      });
+
+      // 2. Fetch from MSN Sports API (Premier League, Bundesliga, etc.)
+      // Note: MSN Sports returns matches around the specified datetime
+      const { msnSportsApi } = await import('../services/msnSportsApi');
+      const { transformMsnGameToMatch } = await import('../utils/msnTransformer');
+      
+      const msnLeagueIds = [
+        'Soccer_BrazilBrasileiroSerieA',  // Brasileirão
+        'Soccer_EnglandPremierLeague',
+        'Soccer_GermanyBundesliga',
+        'Soccer_ItalySerieA',
+        'Soccer_FranceLigue1',
+        'Soccer_PortugalPrimeiraLiga',
+        'Basketball_NBA',
+      ];
+      
+      let msnMatches: Match[] = [];
+      
+      for (const leagueId of msnLeagueIds) {
+        try {
+          const sport = leagueId.includes('Basketball') ? 'Basketball' : 'Soccer';
+          const games = await msnSportsApi.getLiveAroundLeague(leagueId, sport);
+          
+          const transformedGames = games.map((game: any) => transformMsnGameToMatch(game));
+          msnMatches = [...msnMatches, ...transformedGames];
+        } catch (error) {
+          console.error(`[HomeScreen] Error fetching MSN Sports for ${leagueId}:`, error);
+        }
+      }
+
+      // 3. Combine all matches and filter for selected date
+      const allMatches = [...footballDataMatches, ...msnMatches];
+      
+      // Filter for the selected date
+      const selectedDateStr = date.toLocaleDateString('pt-BR');
+      const filteredForDate = allMatches.filter(m => {
+        const matchDateStr = new Date(m.fixture.date).toLocaleDateString('pt-BR');
+        return matchDateStr === selectedDateStr;
       });
       
-      setCustomMatches(allMatches);
+      setCustomMatches(filteredForDate);
+      console.log(`[HomeScreen] Fetched ${filteredForDate.length} matches for ${selectedDateStr}`);
     } catch (error) {
       console.error('Error fetching custom matches', error);
     } finally {
@@ -120,6 +161,12 @@ export const HomeScreen = ({ navigation }: any) => {
     { code: 'BSA', name: 'Brasileirão' },
     { code: 'CL', name: 'Champions' },
     { code: 'PD', name: 'La Liga' },
+    { code: 'PL', name: 'Premier League' },
+    { code: 'BL1', name: 'Bundesliga' },
+    { code: 'SA', name: 'Serie A' },
+    { code: 'FL1', name: 'Ligue 1' },
+    { code: 'PPL', name: 'Liga Portugal' },
+    { code: 'NBA', name: 'NBA' },
     { code: 'FINISHED', name: 'Finalizados' },
   ];
 
@@ -216,10 +263,10 @@ export const HomeScreen = ({ navigation }: any) => {
         </ScrollView>
       </View>
       
-      {/* Favorites Button - Centered */}
-      <View style={styles.favoritesButtonContainer}>
+      {/* Action Buttons - Favorites and Leagues Explorer */}
+      <View style={styles.actionButtonsContainer}>
         <TouchableOpacity 
-          style={styles.favoritesButtonCentered}
+          style={styles.actionButton}
           onPress={() => navigation.navigate('TeamSelection')}
           activeOpacity={0.8}
         >
@@ -227,10 +274,26 @@ export const HomeScreen = ({ navigation }: any) => {
              colors={['#22c55e', '#16a34a']}
              start={{ x: 0, y: 0 }}
              end={{ x: 1, y: 1 }}
-             style={styles.favoritesGradient}
+             style={styles.actionButtonGradient}
            >
-             <Text style={styles.favoritesIcon}>⭐</Text>
-             <Text style={styles.favoritesText}>Times Favoritos</Text>
+             <Text style={styles.actionButtonIcon}>⭐</Text>
+             <Text style={styles.actionButtonText}>Times Favoritos</Text>
+           </LinearGradient>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={() => navigation.navigate('LeaguesExplorer')}
+          activeOpacity={0.8}
+        >
+           <LinearGradient
+             colors={['#3b82f6', '#2563eb']}
+             start={{ x: 0, y: 0 }}
+             end={{ x: 1, y: 1 }}
+             style={styles.actionButtonGradient}
+           >
+             <Text style={styles.actionButtonIcon}>🏆</Text>
+             <Text style={styles.actionButtonText}>Explorar Ligas</Text>
            </LinearGradient>
         </TouchableOpacity>
       </View>
@@ -299,7 +362,32 @@ export const HomeScreen = ({ navigation }: any) => {
         ['FT', 'AET', 'PEN'].includes(m.fixture.status.short)
       );
     } else {
-      matches = sourceMatches.filter(m => m.league.id === selectedLeague);
+      // Handle both API formats:
+      // football-data.org: league.id = "BSA", "CL", "PD"
+      // MSN Sports: league.id = "Soccer_EnglandPremierLeague", "Basketball_NBA", etc.
+      // We match either exact ID or if the league ID contains the selected code
+      matches = sourceMatches.filter(m => {
+        const leagueId = m.league.id?.toString() || '';
+        // Direct match
+        if (leagueId === selectedLeague) return true;
+        
+        // MSN Sports format mapping
+        const msnMapping: Record<string, string> = {
+          'BSA': 'BrazilBrasileiroSerieA',  // Brasileirão also in MSN
+          'PL': 'EnglandPremierLeague',
+          'BL1': 'GermanyBundesliga',
+          'SA': 'ItalySerieA',
+          'FL1': 'FranceLigue1',
+          'PPL': 'PortugalPrimeiraLiga',
+          'NBA': 'Basketball_NBA',
+        };
+        
+        if (msnMapping[selectedLeague]) {
+          return leagueId.includes(msnMapping[selectedLeague]);
+        }
+        
+        return false;
+      });
     }
 
     // Deduplicate matches and ensure valid ID
@@ -532,6 +620,39 @@ const styles = StyleSheet.create({
     backgroundColor: '#22c55e',
     marginLeft: 4,
     marginBottom: 6,
+  },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 20,
+    marginTop: 4,
+  },
+  actionButton: {
+    flex: 1,
+    shadowColor: '#22c55e',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  actionButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 24,
+    gap: 6,
+  },
+  actionButtonIcon: {
+    fontSize: 16,
+  },
+  actionButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   favoritesButtonContainer: {
     alignItems: 'center',

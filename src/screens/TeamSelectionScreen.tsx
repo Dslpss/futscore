@@ -44,6 +44,12 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({ navigation 
     { code: 'BSA', name: 'Brasileirão' },
     { code: 'CL', name: 'Champions' },
     { code: 'PD', name: 'La Liga' },
+    { code: 'PL', name: 'Premier League' },
+    { code: 'BL1', name: 'Bundesliga' },
+    { code: 'SA', name: 'Serie A' },
+    { code: 'FL1', name: 'Ligue 1' },
+    { code: 'PPL', name: 'Liga Portugal' },
+    { code: 'NBA', name: 'NBA' },
   ];
 
   useEffect(() => {
@@ -70,10 +76,11 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({ navigation 
   const loadAllTeams = async () => {
     setLoading(true);
     try {
-      const leagueCodes = ['BSA', 'CL', 'PD'];
+      // 1. Load teams from football-data.org
+      const footballDataCodes = ['BSA', 'CL', 'PD'];
       let allTeams: TeamWithCountry[] = [];
 
-      for (const code of leagueCodes) {
+      for (const code of footballDataCodes) {
         const leagueTeams = await api.getTeamsByLeague(code);
         const leagueInfo = await api.getLeagues();
         const league = leagueInfo.find(l => l.id === code);
@@ -84,6 +91,51 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({ navigation 
         }));
 
         allTeams = [...allTeams, ...teamsWithCountry];
+      }
+
+      // 2. Load teams from MSN Sports API (extract from matches)
+      const { msnSportsApi } = await import('../services/msnSportsApi');
+      
+      const msnLeagues = [
+        { id: 'Soccer_EnglandPremierLeague', sport: 'Soccer', name: 'PL', country: 'England' },
+        { id: 'Soccer_GermanyBundesliga', sport: 'Soccer', name: 'BL1', country: 'Germany' },
+        { id: 'Soccer_ItalySerieA', sport: 'Soccer', name: 'SA', country: 'Italy' },
+        { id: 'Soccer_FranceLigue1', sport: 'Soccer', name: 'FL1', country: 'France' },
+        { id: 'Soccer_PortugalPrimeiraLiga', sport: 'Soccer', name: 'PPL', country: 'Portugal' },
+        { id: 'Basketball_NBA', sport: 'Basketball', name: 'NBA', country: 'USA' },
+      ];
+
+      for (const league of msnLeagues) {
+        try {
+          const games = await msnSportsApi.getLiveAroundLeague(league.id, league.sport);
+          
+          // Extract unique teams from games
+          const teamsSet = new Map<number, TeamWithCountry>();
+          
+          games.forEach((game: any) => {
+            game.participants?.forEach((participant: any) => {
+              const team = participant.team;
+              if (team && team.id) {
+                const teamId = parseInt(team.id.split('_').pop() || '0');
+                const teamName = team.name?.localizedName || team.name?.rawName || 'Unknown';
+                const teamLogo = team.image?.id ? `https://www.bing.com/th?id=${team.image.id}&w=80&h=80` : '';
+                
+                if (!teamsSet.has(teamId)) {
+                  teamsSet.set(teamId, {
+                    id: teamId,
+                    name: teamName,
+                    logo: teamLogo,
+                    country: league.country,
+                  });
+                }
+              }
+            });
+          });
+          
+          allTeams = [...allTeams, ...Array.from(teamsSet.values())];
+        } catch (error) {
+          console.error(`Error loading teams from ${league.name}:`, error);
+        }
       }
 
       // Deduplicate teams by ID
@@ -111,7 +163,7 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({ navigation 
     setLoading(true);
     try {
       const leagueCodes = selectedLeague === 'all' 
-        ? ['BSA', 'CL', 'PD'] 
+        ? ['BSA', 'CL', 'PD', 'PL', 'BL1', 'SA', 'FL1', 'PPL', 'NBA'] 
         : [selectedLeague];
       
       const results = await api.searchTeams(query, leagueCodes);
@@ -133,16 +185,61 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({ navigation 
       } else if (leagueCode === 'favorites') {
         setTeams(favoriteTeams);
       } else {
-        const leagueTeams = await api.getTeamsByLeague(leagueCode);
-        const leagueInfo = await api.getLeagues();
-        const league = leagueInfo.find(l => l.id === leagueCode);
+        // Check if it's a football-data league or MSN league
+        const footballDataLeagues = ['BSA', 'CL', 'PD'];
+        const msnLeagueMap: Record<string, { id: string; sport: string; country: string }> = {
+          'PL': { id: 'Soccer_EnglandPremierLeague', sport: 'Soccer', country: 'England' },
+          'BL1': { id: 'Soccer_GermanyBundesliga', sport: 'Soccer', country: 'Germany' },
+          'SA': { id: 'Soccer_ItalySerieA', sport: 'Soccer', country: 'Italy' },
+          'FL1': { id: 'Soccer_FranceLigue1', sport: 'Soccer', country: 'France' },
+          'PPL': { id: 'Soccer_PortugalPrimeiraLiga', sport: 'Soccer', country: 'Portugal' },
+          'NBA': { id: 'Basketball_NBA', sport: 'Basketball', country: 'USA' },
+        };
         
-        const teamsWithCountry = leagueTeams.map(team => ({
-          ...team,
-          country: league?.country || 'Unknown',
-        }));
-        
-        setTeams(teamsWithCountry);
+        if (footballDataLeagues.includes(leagueCode)) {
+          // Load from football-data.org
+          const leagueTeams = await api.getTeamsByLeague(leagueCode);
+          const leagueInfo = await api.getLeagues();
+          const league = leagueInfo.find(l => l.id === leagueCode);
+          
+          const teamsWithCountry = leagueTeams.map(team => ({
+            ...team,
+            country: league?.country || 'Unknown',
+          }));
+          
+          setTeams(teamsWithCountry);
+        } else if (msnLeagueMap[leagueCode]) {
+          // Load from MSN Sports
+          const { msnSportsApi } = await import('../services/msnSportsApi');
+          const msnLeague = msnLeagueMap[leagueCode];
+          
+          const games = await msnSportsApi.getLiveAroundLeague(msnLeague.id, msnLeague.sport);
+          
+          // Extract unique teams from games
+          const teamsSet = new Map<number, TeamWithCountry>();
+          
+          games.forEach((game: any) => {
+            game.participants?.forEach((participant: any) => {
+              const team = participant.team;
+              if (team && team.id) {
+                const teamId = parseInt(team.id.split('_').pop() || '0');
+                const teamName = team.name?.localizedName || team.name?.rawName || 'Unknown';
+                const teamLogo = team.image?.id ? `https://www.bing.com/th?id=${team.image.id}&w=80&h=80` : '';
+                
+                if (!teamsSet.has(teamId)) {
+                  teamsSet.set(teamId, {
+                    id: teamId,
+                    name: teamName,
+                    logo: teamLogo,
+                    country: msnLeague.country,
+                  });
+                }
+              }
+            });
+          });
+          
+          setTeams(Array.from(teamsSet.values()));
+        }
       }
     } catch (error) {
       console.error('Error filtering teams:', error);

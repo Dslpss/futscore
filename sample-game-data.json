@@ -1,0 +1,165 @@
+{
+  "startDateTime": "1764712800000",
+  "gameState": {
+    "gameStatus": "PreGame",
+    "gameClock": {},
+    "detailedGameStatus": "PreGame"
+  },
+  "gameType": {
+    "simpleSeasonPhase": "RegularSeason",
+    "detailSeasonPhase": "RegularSeason"
+  },
+  "week": "37",
+  "startTimeToBeAnnounced": false,
+  "channels": [
+    {
+      "type": "TV",
+      "channelNames": [
+        "Premiere FC South America"
+      ]
+    }
+  ],
+  "participants": [
+    {
+      "playingPeriodScores": [
+        {
+          "playingPeriod": {
+            "number": "1"
+          },
+          "score": "-"
+        },
+        {
+          "playingPeriod": {
+            "number": "2"
+          },
+          "score": "-"
+        }
+      ],
+      "team": {
+        "shortName": {
+          "rawName": "Vasco da Gama",
+          "localizedName": "Vasco Gama"
+        },
+        "alias": "",
+        "abbreviation": "VDG",
+        "schoolName": "CR  RJ",
+        "id": "SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1974",
+        "seasonId": "SportRadar_Soccer_BrazilBrasileiroSerieA_2025",
+        "sport": "soccer",
+        "sportWithLeague": "Soccer_BrazilBrasileiroSerieA",
+        "name": {
+          "rawName": "CR Vasco da Gama RJ",
+          "localizedName": "CR Vasco da Gama RJ"
+        },
+        "image": {
+          "id": "OSB.VvsOG5IVF2NW9kHY5BNFeQ--.png"
+        },
+        "colors": {
+          "primaryColorHex": "111111"
+        },
+        "secondaryIds": [
+          {
+            "idType": "SatoriId",
+            "id": "8d1adf31-a14b-bc26-0c9d-522bab09b0b4"
+          },
+          {
+            "idType": "TriggeringId",
+            "id": "80201000000007281"
+          },
+          {
+            "idType": "InterestId",
+            "id": "Y_593d09f5-e7cb-4679-9a8d-ff278962099e"
+          }
+        ],
+        "navUrls": {
+          "teamSchedule": "esportes/futebol/brasileirao_serie_a/equipe/sp-id-8d1adf31-a14b-bc26-0c9d-522bab09b0b4"
+        }
+      },
+      "probabilities": [
+        {
+          "dataProvider": "SportRadar",
+          "winProbability": 44.8,
+          "tieProbability": 27.4
+        }
+      ],
+      "homeAwayStatus": "Home"
+    },
+    {
+      "playingPeriodScores": [
+        {
+          "playingPeriod": {
+            "number": "1"
+          },
+          "score": "-"
+        },
+        {
+          "playingPeriod": {
+            "number": "2"
+          },
+          "score": "-"
+        }
+      ],
+      "team": {
+        "shortName": {
+          "rawName": "Mirassol"
+        },
+        "alias": "",
+        "abbreviation": "MIR",
+        "schoolName": "FC SP",
+        "id": "SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_21982",
+        "seasonId": "SportRadar_Soccer_BrazilBrasileiroSerieA_2025",
+        "sport": "soccer",
+        "sportWithLeague": "Soccer_BrazilBrasileiroSerieA",
+        "name": {
+          "rawName": "Mirassol FC SP",
+          "localizedName": "Mirassol FC"
+        },
+        "image": {
+          "id": "OSB.hOQ1itRFg_MyMzuJMU|TEA--.png"
+        },
+        "secondaryIds": [
+          {
+            "idType": "SatoriId",
+            "id": "c36fd686-2f53-ac07-d6c7-1ede5b32fdd2"
+          },
+          {
+            "idType": "TriggeringId",
+            "id": "21982"
+          },
+          {
+            "idType": "InterestId",
+            "id": "Y_fc60bb1b-698e-4055-8c9e-930641083cfc"
+          }
+        ],
+        "navUrls": {
+          "teamSchedule": "esportes/futebol/brasileirao_serie_a/equipe/sp-id-c36fd686-2f53-ac07-d6c7-1ede5b32fdd2"
+        }
+      },
+      "probabilities": [
+        {
+          "dataProvider": "SportRadar",
+          "winProbability": 27.9,
+          "tieProbability": 27.4
+        }
+      ],
+      "homeAwayStatus": "Away"
+    }
+  ],
+  "leagueName": {
+    "rawName": "Brasileiro Serie A",
+    "localizedName": "Brasileiro Série A"
+  },
+  "isLineupAvailable": false,
+  "id": "SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Game_58053197",
+  "seasonId": "SportRadar_Soccer_BrazilBrasileiroSerieA_2025",
+  "sport": "Soccer",
+  "secondaryIds": [
+    {
+      "idType": "TriggeringId",
+      "id": "58053197"
+    }
+  ],
+  "navUrls": {
+    "gameCenter": "esportes/futebol/brasileirao_serie_a/central-de-jogos/sp-id-58053197"
+  }
+}

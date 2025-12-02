@@ -9,29 +9,128 @@ import { LinearGradient } from 'expo-linear-gradient';
 interface MatchStatsModalProps {
   visible: boolean;
   onClose: () => void;
-  matchId: number;
+  match: Match | null;
 }
 
 const { width } = Dimensions.get('window');
 
-export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({ visible, onClose, matchId }) => {
+export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({ visible, onClose, match: initialMatch }) => {
   const [match, setMatch] = useState<Match | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'stats' | 'lineups'>('stats');
+  const [activeTab, setActiveTab] = useState<'stats' | 'lineups' | 'goals'>('stats');
+  const [goals, setGoals] = useState<any[]>([]);
 
   useEffect(() => {
-    if (visible && matchId) {
+    if (visible && initialMatch) {
       loadMatchDetails();
     } else {
         setMatch(null);
     }
-  }, [visible, matchId]);
+  }, [visible, initialMatch]);
 
   const loadMatchDetails = async () => {
+    if (!initialMatch) return;
+    
     setLoading(true);
-    const data = await api.getMatchDetails(matchId);
-    setMatch(data);
-    setLoading(false);
+    try {
+      const leagueId = initialMatch.league.id?.toString() || '';
+      
+      // Check if this is an MSN Sports match
+      const isMsnMatch = leagueId.includes('Soccer_') || leagueId.includes('Basketball_');
+      
+      if (isMsnMatch) {
+        // For MSN matches, fetch lineups and statistics
+        console.log('[MatchStatsModal] MSN Sports match detected, fetching data...');
+        
+        let enhancedMatch = { ...initialMatch };
+        
+        try {
+          const { msnSportsApi } = await import('../services/msnSportsApi');
+          
+          // Fetch lineups
+          const { transformMsnLineupsToLineups } = await import('../utils/msnLineupsTransformer');
+          const gameId = initialMatch.fixture.msnGameId || initialMatch.fixture.id.toString();
+          const msnLineupsData = await msnSportsApi.getLineups(gameId);
+          
+          if (msnLineupsData && msnLineupsData.lineups) {
+            const lineups = transformMsnLineupsToLineups(msnLineupsData);
+            enhancedMatch.lineups = lineups;
+            console.log(`[MatchStatsModal] Fetched ${lineups.length} lineups from MSN`);
+          }
+          
+          // Fetch statistics
+          const { transformMsnStatsToStatistics } = await import('../utils/msnStatsTransformer');
+          const sport = leagueId.includes('Basketball') ? 'Basketball' : 'Soccer';
+          
+          // Extract clean league ID (remove SportRadar_ prefix and _2025 suffix)
+          // From: SportRadar_Soccer_SpainLaLiga_2025 -> Soccer_SpainLaLiga
+          const cleanLeagueId = leagueId
+            .replace(/^SportRadar_/, '')  // Remove SportRadar_ prefix
+            .replace(/_\d{4}$/, '');       // Remove _2025 suffix
+          
+          console.log(`[MatchStatsModal] Clean LeagueId: ${cleanLeagueId}`);
+          
+          const msnStatsData = await msnSportsApi.getStatistics(
+            gameId,
+            sport,
+            cleanLeagueId
+          );
+          
+          if (msnStatsData && msnStatsData.statistics) {
+            const homeTeamId = `SportRadar_${leagueId}_${new Date().getFullYear()}_Team_${initialMatch.teams.home.id}`;
+            const awayTeamId = `SportRadar_${leagueId}_${new Date().getFullYear()}_Team_${initialMatch.teams.away.id}`;
+            
+            // Try with full IDs first, if not found, try with just the numeric ID
+            let statistics = transformMsnStatsToStatistics(msnStatsData, homeTeamId, awayTeamId);
+            
+            if (statistics.length === 0) {
+              // Try finding by partial match on teamId
+              const homeStats = msnStatsData.statistics.find((s: any) => 
+                s.teamId && s.teamId.includes(`_${initialMatch.teams.home.id}`)
+              );
+              const awayStats = msnStatsData.statistics.find((s: any) => 
+                s.teamId && s.teamId.includes(`_${initialMatch.teams.away.id}`)
+              );
+              
+              if (homeStats && awayStats) {
+                statistics = transformMsnStatsToStatistics(msnStatsData, homeStats.teamId, awayStats.teamId);
+              }
+            }
+            
+            if (statistics.length > 0) {
+              enhancedMatch.statistics = statistics;
+              console.log(`[MatchStatsModal] Fetched ${statistics.length} statistics from MSN`);
+            }
+          }
+          
+          // Fetch timeline (goals, events)
+          const { transformMsnTimelineToGoals } = await import('../utils/msnTimelineTransformer');
+          const msnTimelineData = await msnSportsApi.getTimeline(gameId, sport);
+          
+          if (msnTimelineData) {
+            const goalEvents = transformMsnTimelineToGoals(msnTimelineData);
+            setGoals(goalEvents);
+            console.log(`[MatchStatsModal] Fetched ${goalEvents.length} goal events from MSN`);
+          }
+          
+        } catch (error) {
+          console.error('[MatchStatsModal] Error fetching MSN data:', error);
+        }
+        
+        setMatch(enhancedMatch);
+      } else {
+        // For football-data.org matches, fetch full details including stats and lineups
+        console.log('[MatchStatsModal] Football-data match, fetching full details...');
+        const data = await api.getMatchDetails(initialMatch.fixture.id);
+        setMatch(data || initialMatch);
+      }
+    } catch (error) {
+      console.error('[MatchStatsModal] Error loading match details:', error);
+      // Fallback to initial match data
+      setMatch(initialMatch);
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!visible) return null;
@@ -102,6 +201,39 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({ visible, onClo
                   )}
               </LinearGradient>
 
+              {/* Probabilities (if available from MSN Sports) */}
+              {match.probabilities && (
+                <View style={styles.probabilitiesCard}>
+                  <Text style={styles.probabilitiesTitle}>Probabilidades de Vitória</Text>
+                  <View style={styles.probabilitiesContainer}>
+                    <View style={styles.probabilityItem}>
+                      <Text style={styles.probabilityLabel}>{match.teams.home.name}</Text>
+                      <View style={styles.probabilityBarContainer}>
+                        <View style={[styles.probabilityBar, styles.homeBar, { width: `${match.probabilities.home}%` }]} />
+                      </View>
+                      <Text style={styles.probabilityValue}>{match.probabilities.home.toFixed(1)}%</Text>
+                    </View>
+                    
+                    <View style={styles.probabilityItem}>
+                      <Text style={styles.probabilityLabel}>Empate</Text>
+                      <View style={styles.probabilityBarContainer}>
+                        <View style={[styles.probabilityBar, styles.drawBar, { width: `${match.probabilities.draw}%` }]} />
+                      </View>
+                      <Text style={styles.probabilityValue}>{match.probabilities.draw.toFixed(1)}%</Text>
+                    </View>
+                    
+                    <View style={styles.probabilityItem}>
+                      <Text style={styles.probabilityLabel}>{match.teams.away.name}</Text>
+                      <View style={styles.probabilityBarContainer}>
+                        <View style={[styles.probabilityBar, styles.awayBar, { width: `${match.probabilities.away}%` }]} />
+                      </View>
+                      <Text style={styles.probabilityValue}>{match.probabilities.away.toFixed(1)}%</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.probabilitySource}>Fonte: SportRadar</Text>
+                </View>
+              )}
+
               {/* Tabs */}
               <View style={styles.tabContainer}>
                   <TouchableOpacity 
@@ -109,6 +241,12 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({ visible, onClo
                       onPress={() => setActiveTab('stats')}
                   >
                       <Text style={[styles.tabText, activeTab === 'stats' && styles.activeTabText]}>Estatísticas</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                      style={[styles.tabButton, activeTab === 'goals' && styles.activeTabButton]}
+                      onPress={() => setActiveTab('goals')}
+                  >
+                      <Text style={[styles.tabText, activeTab === 'goals' && styles.activeTabText]}>Gols</Text>
                   </TouchableOpacity>
                   <TouchableOpacity 
                       style={[styles.tabButton, activeTab === 'lineups' && styles.activeTabButton]}
@@ -152,6 +290,36 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({ visible, onClo
                           <Text style={styles.noStatsText}>Estatísticas não disponíveis para este jogo.</Text>
                       </View>
                   )
+              ) : activeTab === 'goals' ? (
+                  /* Goals Tab */
+                  <View style={styles.statsContainer}>
+                    {goals && goals.length > 0 ? (
+                      <>
+                        <Text style={styles.sectionTitle}>Gols da Partida</Text>
+                        {goals.map((goal, index) => (
+                          <View key={index} style={styles.goalCard}>
+                            <View style={styles.goalHeader}>
+                              <Text style={styles.goalMinute}>{goal.minute}'</Text>
+                              <Text style={styles.goalIcon}>⚽</Text>
+                            </View>
+                            <Text style={styles.goalPlayer}>
+                              {goal.player.number}. {goal.player.name}
+                            </Text>
+                            {goal.assist && (
+                              <Text style={styles.goalAssist}>
+                                Assistência: {goal.assist.number}. {goal.assist.name}
+                              </Text>
+                            )}
+                            <Text style={styles.goalDescription}>{goal.description}</Text>
+                          </View>
+                        ))}
+                      </>
+                    ) : (
+                      <View style={styles.noStatsContainer}>
+                        <Text style={styles.noStatsText}>Nenhum gol marcado nesta partida</Text>
+                      </View>
+                    )}
+                  </View>
               ) : (
                   /* Lineups */
                   match.lineups && match.lineups.length > 0 ? (
@@ -532,5 +700,102 @@ const styles = StyleSheet.create({
       color: '#fff',
       fontSize: 14,
       fontWeight: '600',
+  },
+  probabilitiesCard: {
+    marginHorizontal: 20,
+    marginBottom: 20,
+    padding: 16,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  probabilitiesTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  probabilitiesContainer: {
+    gap: 12,
+  },
+  probabilityItem: {
+    gap: 6,
+  },
+  probabilityLabel: {
+    color: '#a1a1aa',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  probabilityBarContainer: {
+    height: 24,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  probabilityBar: {
+    height: '100%',
+    borderRadius: 12,
+  },
+  homeBar: {
+    backgroundColor: '#22c55e',
+  },
+  drawBar: {
+    backgroundColor: '#f59e0b',
+  },
+  awayBar: {
+    backgroundColor: '#ef4444',
+  },
+  probabilityValue: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'right',
+  },
+  probabilitySource: {
+    color: '#71717a',
+    fontSize: 11,
+    textAlign: 'center',
+    marginTop: 12,
+    fontStyle: 'italic',
+  },
+  goalCard: {
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#22c55e',
+  },
+  goalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 8,
+  },
+  goalMinute: {
+    color: '#22c55e',
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  goalIcon: {
+    fontSize: 20,
+  },
+  goalPlayer: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  goalAssist: {
+    color: '#a1a1aa',
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  goalDescription: {
+    color: '#71717a',
+    fontSize: 13,
+    fontStyle: 'italic',
   },
 });

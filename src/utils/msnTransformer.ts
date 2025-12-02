@@ -1,0 +1,125 @@
+import { Match, Team } from '../types';
+
+/**
+ * Transform MSN Sports game data to app Match format
+ */
+export function transformMsnGameToMatch(game: any, leagueInfo?: any): Match {
+  const homeParticipant = game.participants?.find((p: any) => p.homeAwayStatus === 'Home');
+  const awayParticipant = game.participants?.find((p: any) => p.homeAwayStatus === 'Away');
+  
+  // Determine match status
+  let statusShort = 'NS'; // Not Started
+  let statusLong = 'Não Iniciado';
+  
+  if (game.gameState?.gameStatus === 'Final') {
+    statusShort = 'FT';
+    statusLong = 'Partida Encerrada';
+  } else if (game.gameState?.gameStatus === 'InProgress') {
+    statusShort = '1H'; // Assume first half if in progress
+    statusLong = 'Em Andamento';
+  } else if (game.gameState?.gameStatus === 'PreGame') {
+    statusShort = 'NS';
+    statusLong = 'Não Iniciado';
+  }
+
+  // Parse start date from timestamp
+  const startDate = game.startDateTime ? new Date(parseInt(game.startDateTime)).toISOString() : new Date().toISOString();
+
+  // Get scores
+  const homeScore: number | null = homeParticipant?.result?.score ? parseInt(homeParticipant.result.score) : null;
+  const awayScore: number | null = awayParticipant?.result?.score ? parseInt(awayParticipant.result.score) : null;
+
+  // Get halftime scores if available
+  const homeHalftime = homeParticipant?.playingPeriodScores?.find((s: any) => s.playingPeriod?.number === '1')?.score;
+  const awayHalftime = awayParticipant?.playingPeriodScores?.find((s: any) => s.playingPeriod?.number === '1')?.score;
+
+  const match: Match = {
+    fixture: {
+      id: game.id ? parseInt(game.id.split('_').pop() || '0') : Math.floor(Math.random() * 1000000),
+      date: startDate,
+      status: {
+        long: statusLong,
+        short: statusShort,
+      },
+      // Store the full MSN game ID for later use (statistics, lineups)
+      msnGameId: game.id,
+    },
+    league: {
+      id: leagueInfo?.id || game.seasonId || 'unknown',
+      name: game.leagueName?.localizedName || game.leagueName?.rawName || 'Unknown League',
+      logo: leagueInfo?.image?.id ? `https://img-s-msn-com.akamaized.net/tenant/amp/entityid/${leagueInfo.image.id}` : '',
+      country: leagueInfo?.country || 'International',
+    },
+    teams: {
+      home: {
+        id: homeParticipant?.team?.id ? parseInt(homeParticipant.team.id.split('_').pop() || '0') : 0,
+        name: homeParticipant?.team?.name?.localizedName || homeParticipant?.team?.name?.rawName || 'Unknown',
+        logo: homeParticipant?.team?.image?.id ? `https://www.bing.com/th?id=${homeParticipant.team.image.id}&w=80&h=80` : '',
+      },
+      away: {
+        id: awayParticipant?.team?.id ? parseInt(awayParticipant.team.id.split('_').pop() || '0') : 0,
+        name: awayParticipant?.team?.name?.localizedName || awayParticipant?.team?.name?.rawName || 'Unknown',
+        logo: awayParticipant?.team?.image?.id ? `https://www.bing.com/th?id=${awayParticipant.team.image.id}&w=80&h=80` : '',
+      },
+    },
+    goals: {
+      home: homeScore,
+      away: awayScore,
+    },
+    score: {
+      halftime: {
+        home: homeHalftime !== '-' && homeHalftime ? parseInt(homeHalftime) : null,
+        away: awayHalftime !== '-' && awayHalftime ? parseInt(awayHalftime) : null,
+      },
+      fulltime: {
+        home: homeScore,
+        away: awayScore,
+      },
+    },
+    // Add probabilities if available
+    probabilities: homeParticipant?.probabilities?.[0] || awayParticipant?.probabilities?.[0] ? {
+      home: homeParticipant?.probabilities?.[0]?.winProbability || 0,
+      draw: homeParticipant?.probabilities?.[0]?.tieProbability || awayParticipant?.probabilities?.[0]?.tieProbability || 0,
+      away: awayParticipant?.probabilities?.[0]?.winProbability || 0,
+    } : undefined,
+  };
+
+  return match;
+}
+
+/**
+ * Map league IDs from MSN Sports format to app format
+ */
+export const MSN_LEAGUE_MAP: Record<string, { id: string; sport: string; name: string }> = {
+  'Soccer_EnglandPremierLeague': { id: 'PL', sport: 'Soccer', name: 'Premier League' },
+  'Soccer_GermanyBundesliga': { id: 'BL1', sport: 'Soccer', name: 'Bundesliga' },
+  'Soccer_ItalySerieA': { id: 'SA', sport: 'Soccer', name: 'Serie A' },
+  'Soccer_FranceLigue1': { id: 'FL1', sport: 'Soccer', name: 'Ligue 1' },
+  'Soccer_PortugalPrimeiraLiga': { id: 'PPL', sport: 'Soccer', name: 'Liga Portugal' },
+  'Soccer_InternationalClubsUEFAChampionsLeague': { id: 'CL', sport: 'Soccer', name: 'Champions League' },
+  'Soccer_UEFAEuropaLeague': { id: 'EL', sport: 'Soccer', name: 'Europa League' },
+  'Soccer_BrazilBrasileiroSerieA': { id: 'BSA', sport: 'Soccer', name: 'Brasileirão' },
+  'Basketball_NBA': { id: 'NBA', sport: 'Basketball', name: 'NBA' },
+};
+
+/**
+ * Get list of leagues that should use MSN Sports API
+ * (leagues not available in football-data.org)
+ */
+export function getMsnLeagueIds(): string[] {
+  return [
+    'Soccer_EnglandPremierLeague',
+    'Soccer_GermanyBundesliga',
+    'Soccer_ItalySerieA',
+    'Soccer_FranceLigue1',
+    'Soccer_PortugalPrimeiraLiga',
+    'Basketball_NBA',
+  ];
+}
+
+/**
+ * Get list of leagues that should use football-data.org API
+ */
+export function getFootballDataLeagueIds(): string[] {
+  return ['BSA', 'CL', 'PD']; // Brasileirão, Champions, La Liga
+}

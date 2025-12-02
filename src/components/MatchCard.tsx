@@ -98,7 +98,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
       <MatchStatsModal 
         visible={modalVisible} 
         onClose={() => setModalVisible(false)} 
-        matchId={match.fixture.id} 
+        match={match} 
       />
     </>
   );

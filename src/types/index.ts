@@ -74,6 +74,7 @@ export interface Match {
       city: string;
     };
     referee?: string;
+    msnGameId?: string; // Full MSN Sports game ID for API calls
   };
   league: League;
   teams: {
@@ -94,6 +95,11 @@ export interface Match {
       away: number | null;
     };
   };
+  probabilities?: {
+    home: number;
+    draw: number;
+    away: number;
+  };
   statistics?: Statistics[];
   lineups?: Lineup[];
 }
@@ -109,3 +115,90 @@ export interface ApiResponse<T> {
   };
   response: T[];
 }
+
+// MSN Sports API Types
+export interface MsnLeague {
+  id: string;
+  sport: string;
+  sportWithLeague: string;
+  name: {
+    rawName: string;
+    localizedName: string;
+  };
+  image: {
+    id: string;
+  };
+  secondaryIds: Array<{
+    idType: string;
+    id: string;
+  }>;
+  navUrls: {
+    schedule: string;
+    leagueHome: string;
+  };
+}
+
+export interface MsnPersonalizationStrip {
+  items: Array<{
+    itemType: string;
+    league: MsnLeague;
+  }>;
+  version: string;
+}
+
+export interface MsnEntityHeader {
+  league: {
+    seasonYear: number;
+    currentSeasonPhase: string;
+    currentDetailedSeasonPhase: string;
+    seasonStart: string;
+    seasonEnd: string;
+    isRegularSeasonScheduleAvailable: boolean;
+    isRegularSeasonStandingsAvailable: boolean;
+    isRegularSeasonStatisticsAvailable: boolean;
+    isPlayerStatisticsAvailable: boolean;
+    id: string;
+    sport: string;
+    sportWithLeague: string;
+    name: {
+      rawName: string;
+      localizedName: string;
+    };
+    image: {
+      id: string;
+      secondaryImages?: Array<{
+        type: string;
+        id: string;
+      }>;
+    };
+    colors?: {
+      primaryColorHex: string;
+    };
+    secondaryIds: Array<{
+      idType: string;
+      id: string;
+    }>;
+    navUrls: {
+      schedule: string;
+      leagueHome: string;
+    };
+  };
+  urls: {
+    leagueId: string;
+    name: {
+      rawName: string;
+      localizedName: string;
+    };
+    urlTemplates: {
+      leagueHome: string;
+      scores?: string;
+      schedule: string;
+      standings?: string;
+      team?: string;
+      gameCenter?: string;
+      headlines?: string;
+    };
+  };
+  version: string;
+}
+
