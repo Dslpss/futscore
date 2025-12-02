@@ -234,168 +234,182 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({ visible, onClo
                 </View>
               )}
 
-              {/* Tabs */}
-              <View style={styles.tabContainer}>
-                  <TouchableOpacity 
-                      style={[styles.tabButton, activeTab === 'stats' && styles.activeTabButton]}
-                      onPress={() => setActiveTab('stats')}
-                  >
-                      <Text style={[styles.tabText, activeTab === 'stats' && styles.activeTabText]}>Estatísticas</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                      style={[styles.tabButton, activeTab === 'goals' && styles.activeTabButton]}
-                      onPress={() => setActiveTab('goals')}
-                  >
-                      <Text style={[styles.tabText, activeTab === 'goals' && styles.activeTabText]}>Gols</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                      style={[styles.tabButton, activeTab === 'lineups' && styles.activeTabButton]}
-                      onPress={() => setActiveTab('lineups')}
-                  >
-                      <Text style={[styles.tabText, activeTab === 'lineups' && styles.activeTabText]}>Escalações</Text>
-                  </TouchableOpacity>
-              </View>
-
-              {activeTab === 'stats' ? (
-                  /* Statistics */
-                  match.statistics && match.statistics.length > 0 ? (
-                      <View style={styles.statsContainer}>
-                          <Text style={styles.sectionTitle}>Estatísticas</Text>
-                          {match.statistics[0].statistics.map((stat, index) => {
-                              const homeValue = stat.value ?? 0;
-                              const awayValue = match.statistics?.[1].statistics[index].value ?? 0;
-                              
-                              // Calculate percentages for bar
-                              const total = (typeof homeValue === 'number' ? homeValue : 0) + (typeof awayValue === 'number' ? awayValue : 0);
-                              const homePercent = total === 0 ? 50 : ((typeof homeValue === 'number' ? homeValue : 0) / total) * 100;
-                              const awayPercent = total === 0 ? 50 : ((typeof awayValue === 'number' ? awayValue : 0) / total) * 100;
-
-                              return (
-                                  <View key={index} style={styles.statRow}>
-                                      <View style={styles.statValues}>
-                                          <Text style={styles.statValue}>{homeValue}</Text>
-                                          <Text style={styles.statLabel}>{stat.type}</Text>
-                                          <Text style={styles.statValue}>{awayValue}</Text>
-                                      </View>
-                                      <View style={styles.statBarContainer}>
-                                          <View style={[styles.statBar, { width: `${homePercent}%`, backgroundColor: '#22c55e', borderTopLeftRadius: 4, borderBottomLeftRadius: 4 }]} />
-                                          <View style={[styles.statBar, { width: `${awayPercent}%`, backgroundColor: '#ef4444', borderTopRightRadius: 4, borderBottomRightRadius: 4 }]} />
-                                      </View>
-                                  </View>
-                              );
-                          })}
-                      </View>
-                  ) : (
-                      <View style={styles.noStatsContainer}>
-                          <Text style={styles.noStatsText}>Estatísticas não disponíveis para este jogo.</Text>
-                      </View>
-                  )
-              ) : activeTab === 'goals' ? (
-                  /* Goals Tab */
-                  <View style={styles.statsContainer}>
-                    {goals && goals.length > 0 ? (
-                      <>
-                        <Text style={styles.sectionTitle}>Gols da Partida</Text>
-                        {goals.map((goal, index) => (
-                          <View key={index} style={styles.goalCard}>
-                            <View style={styles.goalHeader}>
-                              <Text style={styles.goalMinute}>{goal.minute}'</Text>
-                              <Text style={styles.goalIcon}>⚽</Text>
-                            </View>
-                            <Text style={styles.goalPlayer}>
-                              {goal.player.number}. {goal.player.name}
-                            </Text>
-                            {goal.assist && (
-                              <Text style={styles.goalAssist}>
-                                Assistência: {goal.assist.number}. {goal.assist.name}
-                              </Text>
-                            )}
-                            <Text style={styles.goalDescription}>{goal.description}</Text>
-                          </View>
-                        ))}
-                      </>
-                    ) : (
-                      <View style={styles.noStatsContainer}>
-                        <Text style={styles.noStatsText}>Nenhum gol marcado nesta partida</Text>
-                      </View>
-                    )}
+              {/* Tabs or Not Started Message */}
+              {['NS', 'TBD', 'PST'].includes(match.fixture.status.short) ? (
+                <View style={styles.noStatsContainer}>
+                  <View style={styles.emptyIconContainer}>
+                    <Text style={styles.emptyIcon}>⏳</Text>
                   </View>
+                  <Text style={styles.sectionTitle}>Aguardando Início</Text>
+                  <Text style={styles.noStatsText}>
+                    Estatísticas e escalações estarão disponíveis assim que a partida começar.
+                  </Text>
+                </View>
               ) : (
-                  /* Lineups */
-                  match.lineups && match.lineups.length > 0 ? (
-                      <View style={styles.lineupsContainer}>
-                          {/* Home Team Lineup */}
-                          <View style={styles.teamLineup}>
-                              <View style={styles.lineupHeader}>
-                                  <Image source={{ uri: match.teams.home.logo }} style={styles.smallTeamLogo} />
-                                  <Text style={styles.lineupTeamName}>{match.teams.home.name}</Text>
-                                  <Text style={styles.formation}>{match.lineups[0].formation}</Text>
-                              </View>
-                              
-                              <Text style={styles.lineupSectionTitle}>Titulares</Text>
-                              {match.lineups[0].startXI.map((player) => (
-                                  <View key={player.id} style={styles.playerRow}>
-                                      <Text style={styles.playerNumber}>{player.number}</Text>
-                                      <Text style={styles.playerName}>{player.name}</Text>
-                                      <Text style={styles.playerPosition}>{player.pos}</Text>
-                                  </View>
-                              ))}
+                <>
+                  {/* Tabs */}
+                  <View style={styles.tabContainer}>
+                      <TouchableOpacity 
+                          style={[styles.tabButton, activeTab === 'stats' && styles.activeTabButton]}
+                          onPress={() => setActiveTab('stats')}
+                      >
+                          <Text style={[styles.tabText, activeTab === 'stats' && styles.activeTabText]}>Estatísticas</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                          style={[styles.tabButton, activeTab === 'goals' && styles.activeTabButton]}
+                          onPress={() => setActiveTab('goals')}
+                      >
+                          <Text style={[styles.tabText, activeTab === 'goals' && styles.activeTabText]}>Gols</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                          style={[styles.tabButton, activeTab === 'lineups' && styles.activeTabButton]}
+                          onPress={() => setActiveTab('lineups')}
+                      >
+                          <Text style={[styles.tabText, activeTab === 'lineups' && styles.activeTabText]}>Escalações</Text>
+                      </TouchableOpacity>
+                  </View>
 
-                              <Text style={styles.lineupSectionTitle}>Reservas</Text>
-                              {match.lineups[0].substitutes.map((player) => (
-                                  <View key={player.id} style={styles.playerRow}>
-                                      <Text style={styles.playerNumber}>{player.number}</Text>
-                                      <Text style={styles.playerName}>{player.name}</Text>
-                                      <Text style={styles.playerPosition}>{player.pos}</Text>
-                                  </View>
-                              ))}
-                              
-                              <View style={styles.coachContainer}>
-                                  <Text style={styles.coachLabel}>Técnico:</Text>
-                                  <Text style={styles.coachName}>{match.lineups[0].coach.name}</Text>
-                              </View>
+                  {activeTab === 'stats' ? (
+                      /* Statistics */
+                      match.statistics && match.statistics.length > 0 ? (
+                          <View style={styles.statsContainer}>
+                              <Text style={styles.sectionTitle}>Estatísticas</Text>
+                              {match.statistics[0].statistics.map((stat, index) => {
+                                  const homeValue = stat.value ?? 0;
+                                  const awayValue = match.statistics?.[1].statistics[index].value ?? 0;
+                                  
+                                  // Calculate percentages for bar
+                                  const total = (typeof homeValue === 'number' ? homeValue : 0) + (typeof awayValue === 'number' ? awayValue : 0);
+                                  const homePercent = total === 0 ? 50 : ((typeof homeValue === 'number' ? homeValue : 0) / total) * 100;
+                                  const awayPercent = total === 0 ? 50 : ((typeof awayValue === 'number' ? awayValue : 0) / total) * 100;
+
+                                  return (
+                                      <View key={index} style={styles.statRow}>
+                                          <View style={styles.statValues}>
+                                              <Text style={styles.statValue}>{homeValue}</Text>
+                                              <Text style={styles.statLabel}>{stat.type}</Text>
+                                              <Text style={styles.statValue}>{awayValue}</Text>
+                                          </View>
+                                          <View style={styles.statBarContainer}>
+                                              <View style={[styles.statBar, { width: `${homePercent}%`, backgroundColor: '#22c55e', borderTopLeftRadius: 4, borderBottomLeftRadius: 4 }]} />
+                                              <View style={[styles.statBar, { width: `${awayPercent}%`, backgroundColor: '#ef4444', borderTopRightRadius: 4, borderBottomRightRadius: 4 }]} />
+                                          </View>
+                                      </View>
+                                  );
+                              })}
                           </View>
-
-                          {/* Divider */}
-                          <View style={styles.lineupDivider} />
-
-                          {/* Away Team Lineup */}
-                          <View style={styles.teamLineup}>
-                              <View style={styles.lineupHeader}>
-                                  <Image source={{ uri: match.teams.away.logo }} style={styles.smallTeamLogo} />
-                                  <Text style={styles.lineupTeamName}>{match.teams.away.name}</Text>
-                                  <Text style={styles.formation}>{match.lineups[1].formation}</Text>
-                              </View>
-
-                              <Text style={styles.lineupSectionTitle}>Titulares</Text>
-                              {match.lineups[1].startXI.map((player) => (
-                                  <View key={player.id} style={styles.playerRow}>
-                                      <Text style={styles.playerNumber}>{player.number}</Text>
-                                      <Text style={styles.playerName}>{player.name}</Text>
-                                      <Text style={styles.playerPosition}>{player.pos}</Text>
-                                  </View>
-                              ))}
-
-                              <Text style={styles.lineupSectionTitle}>Reservas</Text>
-                              {match.lineups[1].substitutes.map((player) => (
-                                  <View key={player.id} style={styles.playerRow}>
-                                      <Text style={styles.playerNumber}>{player.number}</Text>
-                                      <Text style={styles.playerName}>{player.name}</Text>
-                                      <Text style={styles.playerPosition}>{player.pos}</Text>
-                                  </View>
-                              ))}
-
-                               <View style={styles.coachContainer}>
-                                  <Text style={styles.coachLabel}>Técnico:</Text>
-                                  <Text style={styles.coachName}>{match.lineups[1].coach.name}</Text>
-                              </View>
+                      ) : (
+                          <View style={styles.noStatsContainer}>
+                              <Text style={styles.noStatsText}>Estatísticas não disponíveis para este jogo.</Text>
                           </View>
+                      )
+                  ) : activeTab === 'goals' ? (
+                      /* Goals Tab */
+                      <View style={styles.statsContainer}>
+                        {goals && goals.length > 0 ? (
+                          <>
+                            <Text style={styles.sectionTitle}>Gols da Partida</Text>
+                            {goals.map((goal, index) => (
+                              <View key={index} style={styles.goalCard}>
+                                <View style={styles.goalHeader}>
+                                  <Text style={styles.goalMinute}>{goal.minute}'</Text>
+                                  <Text style={styles.goalIcon}>⚽</Text>
+                                </View>
+                                <Text style={styles.goalPlayer}>
+                                  {goal.player.number}. {goal.player.name}
+                                </Text>
+                                {goal.assist && (
+                                  <Text style={styles.goalAssist}>
+                                    Assistência: {goal.assist.number}. {goal.assist.name}
+                                  </Text>
+                                )}
+                              </View>
+                            ))}
+                          </>
+                        ) : (
+                          <View style={styles.noStatsContainer}>
+                            <Text style={styles.noStatsText}>Nenhum gol marcado nesta partida</Text>
+                          </View>
+                        )}
                       </View>
                   ) : (
-                      <View style={styles.noStatsContainer}>
-                          <Text style={styles.noStatsText}>Escalações não disponíveis para este jogo.</Text>
-                      </View>
-                  )
+                      /* Lineups */
+                      match.lineups && match.lineups.length > 0 ? (
+                          <View style={styles.lineupsContainer}>
+                              {/* Home Team Lineup */}
+                              <View style={styles.teamLineup}>
+                                  <View style={styles.lineupHeader}>
+                                      <Image source={{ uri: match.teams.home.logo }} style={styles.smallTeamLogo} />
+                                      <Text style={styles.lineupTeamName}>{match.teams.home.name}</Text>
+                                      <Text style={styles.formation}>{match.lineups[0].formation}</Text>
+                                  </View>
+                                  
+                                  <Text style={styles.lineupSectionTitle}>Titulares</Text>
+                                  {match.lineups[0].startXI.map((player) => (
+                                      <View key={player.id} style={styles.playerRow}>
+                                          <Text style={styles.playerNumber}>{player.number}</Text>
+                                          <Text style={styles.playerName}>{player.name}</Text>
+                                          <Text style={styles.playerPosition}>{player.pos}</Text>
+                                      </View>
+                                  ))}
+
+                                  <Text style={styles.lineupSectionTitle}>Reservas</Text>
+                                  {match.lineups[0].substitutes.map((player) => (
+                                      <View key={player.id} style={styles.playerRow}>
+                                          <Text style={styles.playerNumber}>{player.number}</Text>
+                                          <Text style={styles.playerName}>{player.name}</Text>
+                                          <Text style={styles.playerPosition}>{player.pos}</Text>
+                                      </View>
+                                  ))}
+                                  
+                                  <View style={styles.coachContainer}>
+                                      <Text style={styles.coachLabel}>Técnico:</Text>
+                                      <Text style={styles.coachName}>{match.lineups[0].coach.name}</Text>
+                                  </View>
+                              </View>
+
+                              {/* Divider */}
+                              <View style={styles.lineupDivider} />
+
+                              {/* Away Team Lineup */}
+                              <View style={styles.teamLineup}>
+                                  <View style={styles.lineupHeader}>
+                                      <Image source={{ uri: match.teams.away.logo }} style={styles.smallTeamLogo} />
+                                      <Text style={styles.lineupTeamName}>{match.teams.away.name}</Text>
+                                      <Text style={styles.formation}>{match.lineups[1].formation}</Text>
+                                  </View>
+
+                                  <Text style={styles.lineupSectionTitle}>Titulares</Text>
+                                  {match.lineups[1].startXI.map((player) => (
+                                      <View key={player.id} style={styles.playerRow}>
+                                          <Text style={styles.playerNumber}>{player.number}</Text>
+                                          <Text style={styles.playerName}>{player.name}</Text>
+                                          <Text style={styles.playerPosition}>{player.pos}</Text>
+                                      </View>
+                                  ))}
+
+                                  <Text style={styles.lineupSectionTitle}>Reservas</Text>
+                                  {match.lineups[1].substitutes.map((player) => (
+                                      <View key={player.id} style={styles.playerRow}>
+                                          <Text style={styles.playerNumber}>{player.number}</Text>
+                                          <Text style={styles.playerName}>{player.name}</Text>
+                                          <Text style={styles.playerPosition}>{player.pos}</Text>
+                                      </View>
+                                  ))}
+
+                                   <View style={styles.coachContainer}>
+                                      <Text style={styles.coachLabel}>Técnico:</Text>
+                                      <Text style={styles.coachName}>{match.lineups[1].coach.name}</Text>
+                                  </View>
+                              </View>
+                          </View>
+                      ) : (
+                          <View style={styles.noStatsContainer}>
+                              <Text style={styles.noStatsText}>Escalações não disponíveis para este jogo.</Text>
+                          </View>
+                      )
+                  )}
+                </>
               )}
 
             </ScrollView>
@@ -797,5 +811,17 @@ const styles = StyleSheet.create({
     color: '#71717a',
     fontSize: 13,
     fontStyle: 'italic',
+  },
+  emptyIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  emptyIcon: {
+    fontSize: 32,
   },
 });

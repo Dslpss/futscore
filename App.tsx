@@ -9,6 +9,7 @@ import { LoginScreen } from './src/screens/LoginScreen';
 import { RegisterScreen } from './src/screens/RegisterScreen';
 import { TeamSelectionScreen } from './src/screens/TeamSelectionScreen';
 import { LeaguesExplorer } from './src/screens/LeaguesExplorer';
+import { StandingsScreen } from './src/screens/StandingsScreen';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator } from 'react-native';
 
@@ -32,6 +33,7 @@ function AppNavigation() {
           <Stack.Screen name="Home" component={HomeScreen} />
           <Stack.Screen name="TeamSelection" component={TeamSelectionScreen} />
           <Stack.Screen name="LeaguesExplorer" component={LeaguesExplorer} />
+          <Stack.Screen name="Standings" component={StandingsScreen} />
         </>
       ) : (
         <>

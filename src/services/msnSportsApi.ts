@@ -348,5 +348,47 @@ export const msnSportsApi = {
       return null;
     }
   },
+
+  /**
+   * Get league standings/classification table
+   * @param leagueId - League ID (e.g., "Soccer_EnglandPremierLeague")
+   */
+  getStandings: async (leagueId: string): Promise<any> => {
+    const cacheKey = `standings_${leagueId}`;
+    const cached = await getCachedData<any>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const params = {
+        ...CONFIG.MSN_SPORTS.BASE_PARAMS,
+        apikey: CONFIG.MSN_SPORTS.API_KEY,
+        activityId: generateActivityId(),
+        ocid: 'sports-league-standings',
+        id: leagueId,
+        idtype: 'league',
+        seasonPhase: 'regularSeason',
+      };
+
+      console.log(`[MSN API] Fetching standings for ${leagueId}...`);
+      
+      const response = await msnApiClient.get('/standings', { params });
+
+      if (!response.data || !response.data.value || response.data.value.length === 0) {
+        console.log('[MSN API] No standings data available');
+        return null;
+      }
+
+      const standingsData = response.data.value[0];
+      
+      // Cache for 1 hour (standings don't change frequently)
+      await setCachedData(cacheKey, standingsData, 60 * 60 * 1000);
+      
+      console.log(`[MSN API] Fetched standings successfully`);
+      return standingsData;
+    } catch (error) {
+      console.error('[MSN API] Error fetching standings:', error);
+      return null;
+    }
+  },
 };
 

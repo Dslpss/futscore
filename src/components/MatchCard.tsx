@@ -41,7 +41,12 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
             {isLive ? (
                 <View style={styles.liveBadge}>
                     <View style={styles.liveDot} />
-                    <Text style={styles.liveText}>AO VIVO • {match.fixture.status.elapsed}'</Text>
+                    <Text style={styles.liveText}>
+                      {match.fixture.status.short === 'HT' ? 'INT' : 
+                       match.fixture.status.short === '1H' ? '1T' : 
+                       match.fixture.status.short === '2H' ? '2T' : 'AO VIVO'} 
+                      {match.fixture.status.short !== 'HT' && match.fixture.status.elapsed ? ` • ${match.fixture.status.elapsed}'` : ''}
+                    </Text>
                 </View>
             ) : (
                 <View style={styles.timeContainer}>
@@ -78,7 +83,33 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
                   </Text>
                 </View>
               )}
-              <Text style={styles.statusText}>{match.fixture.status.long}</Text>
+              <Text style={styles.statusText}>
+                {(() => {
+                  const status = match.fixture.status.short;
+                  switch (status) {
+                    case 'TBD': return 'A Definir';
+                    case 'NS': return 'Não Iniciado';
+                    case '1H': return '1º Tempo';
+                    case 'HT': return 'Intervalo';
+                    case '2H': return '2º Tempo';
+                    case 'ET': return 'Prorrogação';
+                    case 'BT': return 'Pênaltis'; // Break Time (in penalties)
+                    case 'P': return 'Pênaltis';
+                    case 'SUSP': return 'Suspenso';
+                    case 'INT': return 'Interrompido';
+                    case 'FT': return 'Encerrado';
+                    case 'AET': return 'Encerrado (Prorr.)';
+                    case 'PEN': return 'Encerrado (Pên.)';
+                    case 'PST': return 'Adiado';
+                    case 'CANC': return 'Cancelado';
+                    case 'ABD': return 'Abandonado';
+                    case 'AWD': return 'W.O.';
+                    case 'WO': return 'W.O.';
+                    case 'LIVE': return 'Ao Vivo';
+                    default: return match.fixture.status.long; // Fallback
+                  }
+                })()}
+              </Text>
             </View>
 
             {/* Away Team */}

@@ -263,39 +263,46 @@ export const HomeScreen = ({ navigation }: any) => {
         </ScrollView>
       </View>
       
-      {/* Action Buttons - Favorites and Leagues Explorer */}
+      {/* Action Buttons - Favorites, Standings, and Leagues Explorer */}
       <View style={styles.actionButtonsContainer}>
-        <TouchableOpacity 
-          style={styles.actionButton}
-          onPress={() => navigation.navigate('TeamSelection')}
-          activeOpacity={0.8}
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.actionButtonsContent}
         >
-           <LinearGradient
-             colors={['#22c55e', '#16a34a']}
-             start={{ x: 0, y: 0 }}
-             end={{ x: 1, y: 1 }}
-             style={styles.actionButtonGradient}
-           >
-             <Text style={styles.actionButtonIcon}>⭐</Text>
-             <Text style={styles.actionButtonText}>Times Favoritos</Text>
-           </LinearGradient>
-        </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('TeamSelection')}
+            activeOpacity={0.7}
+          >
+             <View style={styles.actionButtonContent}>
+               <Text style={styles.actionButtonIcon}>⭐</Text>
+               <Text style={styles.actionButtonText}>Favoritos</Text>
+             </View>
+          </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={styles.actionButton}
-          onPress={() => navigation.navigate('LeaguesExplorer')}
-          activeOpacity={0.8}
-        >
-           <LinearGradient
-             colors={['#3b82f6', '#2563eb']}
-             start={{ x: 0, y: 0 }}
-             end={{ x: 1, y: 1 }}
-             style={styles.actionButtonGradient}
-           >
-             <Text style={styles.actionButtonIcon}>🏆</Text>
-             <Text style={styles.actionButtonText}>Explorar Ligas</Text>
-           </LinearGradient>
-        </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('Standings', { leagueId: selectedLeague !== 'ALL' ? selectedLeague : 'Soccer_EnglandPremierLeague' })}
+            activeOpacity={0.7}
+          >
+             <View style={styles.actionButtonContent}>
+               <Text style={styles.actionButtonIcon}>📊</Text>
+               <Text style={styles.actionButtonText}>Tabela</Text>
+             </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('LeaguesExplorer')}
+            activeOpacity={0.7}
+          >
+             <View style={styles.actionButtonContent}>
+               <Text style={styles.actionButtonIcon}>🏆</Text>
+               <Text style={styles.actionButtonText}>Ligas</Text>
+             </View>
+          </TouchableOpacity>
+        </ScrollView>
       </View>
       
       {/* League Selector */}
@@ -617,38 +624,6 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#22c55e',
-    marginLeft: 4,
-    marginBottom: 6,
-  },
-  actionButtonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-    marginBottom: 20,
-    marginTop: 4,
-  },
-  actionButton: {
-    flex: 1,
-    shadowColor: '#22c55e',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  actionButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 24,
-    gap: 6,
-  },
-  actionButtonIcon: {
-    fontSize: 16,
-  },
-  actionButtonText: {
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '700',
@@ -938,5 +913,35 @@ const styles = StyleSheet.create({
     color: '#71717a',
     fontSize: 14,
     textAlign: 'center',
+  },
+  actionButtonsContainer: {
+    marginBottom: 20,
+    marginHorizontal: -16,
+  },
+  actionButtonsContent: {
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  actionButton: {
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    overflow: 'hidden',
+  },
+  actionButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  actionButtonIcon: {
+    fontSize: 16,
+  },
+  actionButtonText: {
+    color: '#e4e4e7',
+    fontSize: 13,
+    fontWeight: '600',
   },
 });
