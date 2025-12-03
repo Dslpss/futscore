@@ -130,27 +130,34 @@ router.delete("/favorites/:teamId", authMiddleware, async (req, res) => {
 
 // Registrar Push Token do dispositivo
 router.post("/push-token", authMiddleware, async (req, res) => {
+  console.log(`[Push] POST /push-token recebido - userId: ${req.userId}`);
+  console.log(`[Push] Body:`, JSON.stringify(req.body));
+  
   try {
     const { pushToken } = req.body;
 
     if (!pushToken) {
+      console.log(`[Push] ❌ Push token não fornecido`);
       return res.status(400).json({ message: "Push token is required" });
     }
+
+    console.log(`[Push] Token recebido: ${pushToken.substring(0, 40)}...`);
 
     const user = await User.findByIdAndUpdate(
       req.userId,
       { pushToken },
       { new: true }
-    ).select("pushToken");
+    ).select("pushToken email");
 
     if (!user) {
+      console.log(`[Push] ❌ Usuário não encontrado: ${req.userId}`);
       return res.status(404).json({ message: "User not found" });
     }
 
-    console.log(`[Push] Token registrado para usuário ${req.userId}`);
+    console.log(`[Push] ✅ Token registrado para ${user.email}`);
     res.json({ success: true, message: "Push token registered" });
   } catch (error) {
-    console.error(error);
+    console.error(`[Push] ❌ Erro:`, error);
     res.status(500).json({ message: "Server error" });
   }
 });
