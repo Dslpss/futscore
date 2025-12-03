@@ -103,7 +103,15 @@ async function fetchLiveMatches() {
       }
 
       const data = await response.json();
-      const schedules = data?.value?.[0]?.schedules || [];
+      
+      // DEBUG: Log da estrutura da resposta
+      if (!data?.value?.[0]) {
+        console.log(`[Monitor] ${league.name}: Resposta sem value[0]`, JSON.stringify(data).substring(0, 200));
+        continue;
+      }
+      
+      const schedules = data.value[0].schedules || [];
+      let leagueGames = 0;
       
       for (const schedule of schedules) {
         const games = schedule.games || [];
