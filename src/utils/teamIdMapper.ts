@@ -5,29 +5,85 @@
 
 // Known team ID mappings (football-data.org ID → MSN Sports ID)
 const KNOWN_TEAM_MSN_IDS: Record<number, string> = {
-  // Brasileirão Serie A teams (examples from standings API)
-  // Note: Some teams have multiple IDs from different sources
-  1783: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_5981', // Flamengo (alt ID)
-  5981: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_5981', // Flamengo
-  2001: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_2001', // Ceará
-  1963: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1963', // Palmeiras
-  1954: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1954', // Cruzeiro
-  21982: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_21982', // Mirassol
-  1961: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1961', // Fluminense
-  1958: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1958', // Botafogo
-  1955: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1955', // Bahia
-  1981: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1981', // São Paulo
-  5926: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_5926', // Grêmio
-  1957: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1957', // Corinthians
-  1977: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1977', // Atlético Mineiro
-  1974: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1974', // Vasco da Gama
-  1999: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1999', // Bragantino
-  1962: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1962', // Vitória
-  1968: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1968', // Santos
-  1966: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1966', // Internacional
-  2020: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_2020', // Fortaleza
-  1980: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1980', // Juventude
-  1959: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1959', // Sport Recife
+  // Brasileirão Serie A teams
+  // Note: Some teams have multiple IDs from different sources (football-data.org vs MSN)
+  
+  // Flamengo
+  1783: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_5981',
+  5981: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_5981',
+  
+  // Palmeiras
+  1769: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1963',
+  1963: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1963',
+  
+  // Corinthians
+  1778: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1957',
+  1957: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1957',
+  
+  // São Paulo
+  1779: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1981',
+  1981: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1981',
+  
+  // Santos
+  1775: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1968',
+  1968: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1968',
+  
+  // Athletico Paranaense  
+  1776: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1977',
+  1977: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1977',
+  
+  // Atlético Mineiro
+  1764: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1977',
+  
+  // Fluminense
+  1772: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1961',
+  1961: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1961',
+  
+  // Botafogo
+  1765: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1958',
+  1958: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1958',
+  
+  // Vasco
+  1771: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1974',
+  1974: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1974',
+  
+  // Grêmio
+  1784: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_5926',
+  5926: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_5926',
+  
+  // Internacional
+  1785: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1966',
+  1966: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1966',
+  
+  // Bahia
+  1759: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1955',
+  1955: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1955',
+  
+  // Fortaleza
+  2020: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_2020',
+  
+  // Ceará
+  2001: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_2001',
+  
+  // Cruzeiro
+  1754: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1954',
+  1954: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1954',
+  
+  // Bragantino
+  1999: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1999',
+  
+  // Vitória
+  1962: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1962',
+  
+  // Juventude
+  1980: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1980',
+  
+  // Sport Recife
+  1959: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1959',
+  
+  // Mirassol
+  21982: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_21982',
+  
   // Add more as needed...
 };
 

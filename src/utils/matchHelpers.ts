@@ -50,6 +50,54 @@ export const getNextFavoriteMatch = (
 };
 
 /**
+ * Get next match for each favorite team
+ * @param allMatches - All available matches
+ * @param favoriteTeamIds - Array of favorite team IDs
+ * @returns Array of objects with teamId and their next match
+ */
+export function getNextMatchesForFavorites(
+  allMatches: Match[],
+  favoriteTeamIds: number[]
+): Array<{ teamId: number; match: Match }> {
+  if (!favoriteTeamIds || favoriteTeamIds.length === 0) {
+    return [];
+  }
+
+  const now = new Date();
+  const results: Array<{ teamId: number; match: Match }> = [];
+
+  // For each favorite team, find their next upcoming match
+  favoriteTeamIds.forEach((teamId) => {
+    const upcomingMatches = allMatches
+      .filter((match) => {
+        const matchDate = new Date(match.fixture.date);
+        const isUpcoming = matchDate > now && 
+          (match.fixture.status.short === 'NS' || match.fixture.status.short === 'TBD');
+        const isTeamInvolved = 
+          match.teams.home.id === teamId || 
+          match.teams.away.id === teamId;
+        
+        return isUpcoming && isTeamInvolved;
+      })
+      .sort((a, b) => 
+        new Date(a.fixture.date).getTime() - new Date(b.fixture.date).getTime()
+      );
+
+    if (upcomingMatches.length > 0) {
+      results.push({
+        teamId,
+        match: upcomingMatches[0]
+      });
+    }
+  });
+
+  // Sort by date (soonest first)
+  return results.sort((a, b) => 
+    new Date(a.match.fixture.date).getTime() - new Date(b.match.fixture.date).getTime()
+  );
+}
+
+/**
  * Verifica se há algum jogo ao vivo dos times favoritos
  * @param allMatches - Lista de todas as partidas disponíveis
  * @param favoriteTeamIds - IDs dos times favoritos do usuário

@@ -13,7 +13,7 @@ import axios from 'axios';
 import { api } from '../services/api';
 import { CONFIG } from '../constants/config';
 import { Match } from '../types';
-import { getNextFavoriteMatch } from '../utils/matchHelpers';
+import { getNextFavoriteMatch, getNextMatchesForFavorites } from '../utils/matchHelpers';
 
 const { width } = Dimensions.get('window');
 
@@ -267,19 +267,12 @@ export const HomeScreen = ({ navigation }: any) => {
       
       {/* Next Match Widget */}
       <NextMatchWidget 
-        match={(() => {
+        matches={(() => {
           const sourceMatches = isToday(selectedDate) ? [...liveMatches, ...todaysMatches] : customMatches;
-          return getNextFavoriteMatch(sourceMatches, favoriteTeams);
+          return getNextMatchesForFavorites(sourceMatches, favoriteTeams);
         })()}
-        onPress={() => {
-          const nextMatch = (() => {
-            const sourceMatches = isToday(selectedDate) ? [...liveMatches, ...todaysMatches] : customMatches;
-            return getNextFavoriteMatch(sourceMatches, favoriteTeams);
-          })();
-          if (nextMatch) {
-            // Could navigate to match details or open stats modal
-            console.log('Next match clicked:', nextMatch);
-          }
+        onPressMatch={(match) => {
+          console.log('Next match clicked:', match);
         }}
       />
       

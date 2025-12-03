@@ -1,19 +1,57 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Match } from '../types';
 
 interface NextMatchWidgetProps {
-  match: Match | null;
-  onPress?: () => void;
+  matches: Array<{ teamId: number; match: Match }>;
+  onPressMatch?: (match: Match) => void;
 }
 
-export const NextMatchWidget: React.FC<NextMatchWidgetProps> = ({ match, onPress }) => {
+export const NextMatchWidget: React.FC<NextMatchWidgetProps> = ({ matches, onPressMatch }) => {
+  if (!matches || matches.length === 0) {
+    return (
+      <View style={styles.emptyContainer}>
+        <LinearGradient
+          colors={['rgba(34, 197, 94, 0.05)', 'rgba(34, 197, 94, 0.02)']}
+          style={styles.emptyGradient}
+        >
+          <Text style={styles.emptyIcon}>⚽</Text>
+          <Text style={styles.emptyText}>Adicione times favoritos</Text>
+          <Text style={styles.emptySubText}>para ver os próximos jogos</Text>
+        </LinearGradient>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.widgetContainer}>
+      <View style={styles.widgetHeader}>
+        <View style={styles.headerLeft}>
+          <View style={styles.liveDot} />
+          <Text style={styles.headerTitle}>PRÓXIMOS JOGOS</Text>
+        </View>
+        <Text style={styles.matchCount}>{matches.length} {matches.length === 1 ? 'jogo' : 'jogos'}</Text>
+      </View>
+
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {matches.map(({ teamId, match }) => (
+          <MatchCard key={match.fixture.id} match={match} onPress={() => onPressMatch?.(match)} />
+        ))}
+      </ScrollView>
+    </View>
+  );
+};
+
+// Individual Match Card Component
+const MatchCard: React.FC<{ match: Match; onPress: () => void }> = ({ match, onPress }) => {
   const [timeRemaining, setTimeRemaining] = useState<string>('');
 
   useEffect(() => {
-    if (!match) return;
-
     const updateCountdown = () => {
       const now = new Date().getTime();
       const matchTime = new Date(match.fixture.date).getTime();
@@ -44,21 +82,6 @@ export const NextMatchWidget: React.FC<NextMatchWidgetProps> = ({ match, onPress
     return () => clearInterval(interval);
   }, [match]);
 
-  if (!match) {
-    return (
-      <View style={styles.emptyContainer}>
-        <LinearGradient
-          colors={['rgba(34, 197, 94, 0.05)', 'rgba(34, 197, 94, 0.02)']}
-          style={styles.emptyGradient}
-        >
-          <Text style={styles.emptyIcon}>⚽</Text>
-          <Text style={styles.emptyText}>Adicione times favoritos</Text>
-          <Text style={styles.emptySubText}>para ver o próximo jogo</Text>
-        </LinearGradient>
-      </View>
-    );
-  }
-
   const matchDate = new Date(match.fixture.date);
   const formattedDate = matchDate.toLocaleDateString('pt-BR', {
     day: '2-digit',
@@ -83,10 +106,6 @@ export const NextMatchWidget: React.FC<NextMatchWidgetProps> = ({ match, onPress
       >
         {/* Header */}
         <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <View style={styles.liveDot} />
-            <Text style={styles.headerTitle}>PRÓXIMO JOGO</Text>
-          </View>
           <View style={styles.leagueBadge}>
             <Text style={styles.leagueText}>{match.league.name}</Text>
           </View>
@@ -149,8 +168,29 @@ export const NextMatchWidget: React.FC<NextMatchWidgetProps> = ({ match, onPress
 };
 
 const styles = StyleSheet.create({
-  container: {
+  // Widget Container
+  widgetContainer: {
     marginBottom: 20,
+  },
+  widgetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
+  matchCount: {
+    color: '#71717a',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  scrollContent: {
+    gap: 12,
+  },
+
+  // Individual Card
+  container: {
+    width: 280,
     borderRadius: 20,
     overflow: 'hidden',
     shadowColor: '#22c55e',
