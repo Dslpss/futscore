@@ -132,7 +132,7 @@ router.delete("/favorites/:teamId", authMiddleware, async (req, res) => {
 router.post("/push-token", authMiddleware, async (req, res) => {
   console.log(`[Push] POST /push-token recebido - userId: ${req.userId}`);
   console.log(`[Push] Body:`, JSON.stringify(req.body));
-  
+
   try {
     const { pushToken } = req.body;
 
