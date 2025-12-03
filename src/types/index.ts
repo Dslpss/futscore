@@ -26,11 +26,18 @@ export interface Statistics {
 }
 
 export interface Player {
-  id: number;
+  id: number | string;
   name: string;
-  number: number;
+  number: number | null;
   pos: string | null;
-  grid: string | null;
+  grid?: string | null;
+  photo?: string;
+  stats?: {
+    goals?: number;
+    assists?: number;
+    yellowCards?: number;
+    minutesPlayed?: number;
+  };
 }
 
 export interface Lineup {
@@ -39,16 +46,16 @@ export interface Lineup {
     name: string;
     logo: string;
     colors?: {
-        player: {
-            primary: string;
-            number: string;
-            border: string;
-        };
-        goalkeeper: {
-            primary: string;
-            number: string;
-            border: string;
-        };
+      player: {
+        primary: string;
+        number: string;
+        border: string;
+      };
+      goalkeeper: {
+        primary: string;
+        number: string;
+        border: string;
+      };
     };
   };
   coach: {
@@ -202,4 +209,3 @@ export interface MsnEntityHeader {
   };
   version: string;
 }
-

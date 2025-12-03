@@ -1,19 +1,20 @@
-import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { CONFIG } from '../constants/config';
-import { MsnLeague, MsnPersonalizationStrip } from '../types';
+import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { CONFIG } from "../constants/config";
+import { MsnLeague, MsnPersonalizationStrip } from "../types";
 
 // MSN Sports API client
 const msnApiClient = axios.create({
   baseURL: CONFIG.MSN_SPORTS.BASE_URL,
   headers: {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-    'Accept': '*/*',
-    'Accept-Language': 'pt-BR,pt;q=0.8,en-US;q=0.5,en;q=0.3',
-  }
+    "User-Agent":
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    Accept: "*/*",
+    "Accept-Language": "pt-BR,pt;q=0.8,en-US;q=0.5,en;q=0.3",
+  },
 });
 
-const CACHE_PREFIX = 'msn_sports_cache_';
+const CACHE_PREFIX = "msn_sports_cache_";
 
 // Helper functions for caching
 const getCachedData = async <T>(key: string): Promise<T | null> => {
@@ -29,7 +30,7 @@ const getCachedData = async <T>(key: string): Promise<T | null> => {
       }
     }
   } catch (e) {
-    console.error('[MSN CACHE] Error reading cache', e);
+    console.error("[MSN CACHE] Error reading cache", e);
   }
   return null;
 };
@@ -43,17 +44,31 @@ const setCachedData = async (key: string, data: any, duration: number) => {
     };
     await AsyncStorage.setItem(CACHE_PREFIX + key, JSON.stringify(cacheEntry));
   } catch (e) {
-    console.error('[MSN CACHE] Error saving cache', e);
+    console.error("[MSN CACHE] Error saving cache", e);
   }
 };
 
 // Generate a unique activity ID for each request
 const generateActivityId = (): string => {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
+};
+
+// Helper to infer league ID from team ID
+// Team ID format: SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_2020
+const inferLeagueFromTeamId = (teamId: string): string => {
+  // Extract league part from team ID
+  // Example: SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_2020 -> Soccer_BrazilBrasileiroSerieA
+  const parts = teamId.split("_");
+  if (parts.length >= 3) {
+    // Format: SportRadar_Soccer_LeagueName_Year_Team_ID
+    // We want: Soccer_LeagueName
+    return `${parts[1]}_${parts[2]}`;
+  }
+  return "Soccer_BrazilBrasileiroSerieA"; // Default fallback
 };
 
 export const msnSportsApi = {
@@ -61,7 +76,7 @@ export const msnSportsApi = {
    * Get personalized leagues/competitions available
    */
   getPersonalizationStrip: async (): Promise<MsnLeague[]> => {
-    const cacheKey = 'personalization_strip';
+    const cacheKey = "personalization_strip";
     const cached = await getCachedData<MsnLeague[]>(cacheKey);
     if (cached) return cached;
 
@@ -70,21 +85,23 @@ export const msnSportsApi = {
         ...CONFIG.MSN_SPORTS.BASE_PARAMS,
         apikey: CONFIG.MSN_SPORTS.API_KEY,
         activityId: generateActivityId(),
-        type: 'SportsVertical',
+        type: "SportsVertical",
       };
 
-      console.log('[MSN API] Fetching personalization strip...');
-      
-      const response = await msnApiClient.get('/personalizationstrip', { params });
+      console.log("[MSN API] Fetching personalization strip...");
+
+      const response = await msnApiClient.get("/personalizationstrip", {
+        params,
+      });
 
       if (!response.data || !response.data.value || !response.data.value[0]) {
-        console.error('[MSN API] Invalid response structure');
+        console.error("[MSN API] Invalid response structure");
         return [];
       }
 
       const items = response.data.value[0].items || [];
       const leagues: MsnLeague[] = items
-        .filter((item: any) => item.itemType === 'League' && item.league)
+        .filter((item: any) => item.itemType === "League" && item.league)
         .map((item: any) => item.league);
 
       console.log(`[MSN API] Fetched ${leagues.length} leagues`);
@@ -93,7 +110,7 @@ export const msnSportsApi = {
       await setCachedData(cacheKey, leagues, CONFIG.CACHE_DURATION.MSN_LEAGUES);
       return leagues;
     } catch (error) {
-      console.error('[MSN API] Error fetching personalization strip:', error);
+      console.error("[MSN API] Error fetching personalization strip:", error);
       return [];
     }
   },
@@ -101,7 +118,10 @@ export const msnSportsApi = {
   /**
    * Get detailed entity header information for a specific league
    */
-  getEntityHeader: async (leagueId: string, type: string = 'League'): Promise<any> => {
+  getEntityHeader: async (
+    leagueId: string,
+    type: string = "League"
+  ): Promise<any> => {
     const cacheKey = `entity_header_${leagueId}`;
     const cached = await getCachedData<any>(cacheKey);
     if (cached) return cached;
@@ -113,16 +133,17 @@ export const msnSportsApi = {
         activityId: generateActivityId(),
         id: leagueId,
         type: type,
-        ocid: 'sports-league-landing',
-        pagetypes: 'LeagueHome,Scores,Schedule,Standings,Teams,Team,GameCenter,TeamRoster,Player,PlayerStats,TeamStats,Polls,Videos,TourCalendar,TourRankings,RaceCalendar,DriverStandings,ICCRankings,Rankings,Bracket,Statistics,Headlines,Tournament,Results,Medals,TeamSchedule,TeamMedals,TeamResults',
+        ocid: "sports-league-landing",
+        pagetypes:
+          "LeagueHome,Scores,Schedule,Standings,Teams,Team,GameCenter,TeamRoster,Player,PlayerStats,TeamStats,Polls,Videos,TourCalendar,TourRankings,RaceCalendar,DriverStandings,ICCRankings,Rankings,Bracket,Statistics,Headlines,Tournament,Results,Medals,TeamSchedule,TeamMedals,TeamResults",
       };
 
       console.log(`[MSN API] Fetching entity header for ${leagueId}...`);
-      
-      const response = await msnApiClient.get('/entityheader', { params });
+
+      const response = await msnApiClient.get("/entityheader", { params });
 
       if (!response.data || !response.data.value || !response.data.value[0]) {
-        console.error('[MSN API] Invalid entity header response structure');
+        console.error("[MSN API] Invalid entity header response structure");
         return null;
       }
 
@@ -133,7 +154,7 @@ export const msnSportsApi = {
       await setCachedData(cacheKey, entityHeader, 6 * 60 * 60 * 1000);
       return entityHeader;
     } catch (error) {
-      console.error('[MSN API] Error fetching entity header:', error);
+      console.error("[MSN API] Error fetching entity header:", error);
       return null;
     }
   },
@@ -141,7 +162,10 @@ export const msnSportsApi = {
   /**
    * Get live and upcoming matches for a specific league
    */
-  getLiveAroundLeague: async (leagueId: string, sport: string = 'Soccer'): Promise<any[]> => {
+  getLiveAroundLeague: async (
+    leagueId: string,
+    sport: string = "Soccer"
+  ): Promise<any[]> => {
     const cacheKey = `live_around_${leagueId}`;
     const cached = await getCachedData<any[]>(cacheKey);
     if (cached) return cached;
@@ -154,24 +178,26 @@ export const msnSportsApi = {
         activityId: generateActivityId(),
         id: leagueId,
         sport: sport,
-        datetime: now.toISOString().split('.')[0], // Remove milliseconds
+        datetime: now.toISOString().split(".")[0], // Remove milliseconds
         tzoffset: Math.floor(-now.getTimezoneOffset() / 60).toString(),
-        withleaguereco: 'true',
-        ocid: 'sports-league-landing',
+        withleaguereco: "true",
+        ocid: "sports-league-landing",
       };
 
       console.log(`[MSN API] Fetching live matches for ${leagueId}...`);
-      
-      const response = await msnApiClient.get('/livearoundtheleague', { params });
+
+      const response = await msnApiClient.get("/livearoundtheleague", {
+        params,
+      });
 
       if (!response.data || !response.data.value || !response.data.value[0]) {
-        console.error('[MSN API] Invalid live matches response structure');
+        console.error("[MSN API] Invalid live matches response structure");
         return [];
       }
 
       const schedules = response.data.value[0].schedules || [];
       const allGames: any[] = [];
-      
+
       schedules.forEach((schedule: any) => {
         if (schedule.games && Array.isArray(schedule.games)) {
           allGames.push(...schedule.games);
@@ -184,7 +210,7 @@ export const msnSportsApi = {
       await setCachedData(cacheKey, allGames, 2 * 60 * 1000);
       return allGames;
     } catch (error) {
-      console.error('[MSN API] Error fetching live matches:', error);
+      console.error("[MSN API] Error fetching live matches:", error);
       return [];
     }
   },
@@ -204,11 +230,11 @@ export const msnSportsApi = {
   clearCache: async (): Promise<void> => {
     try {
       const keys = await AsyncStorage.getAllKeys();
-      const msnKeys = keys.filter(key => key.startsWith(CACHE_PREFIX));
+      const msnKeys = keys.filter((key) => key.startsWith(CACHE_PREFIX));
       await AsyncStorage.multiRemove(msnKeys);
-      console.log('[MSN CACHE] Cleared all cache');
+      console.log("[MSN CACHE] Cleared all cache");
     } catch (error) {
-      console.error('[MSN CACHE] Error clearing cache:', error);
+      console.error("[MSN CACHE] Error clearing cache:", error);
     }
   },
 
@@ -218,7 +244,7 @@ export const msnSportsApi = {
    */
   getLineups: async (gameId: string): Promise<any> => {
     // Extract just the numeric ID from the full game ID
-    const numericId = gameId.split('_').pop() || gameId;
+    const numericId = gameId.split("_").pop() || gameId;
     const cacheKey = `lineups_${numericId}`;
     const cached = await getCachedData<any>(cacheKey);
     if (cached) return cached;
@@ -228,28 +254,32 @@ export const msnSportsApi = {
         ...CONFIG.MSN_SPORTS.BASE_PARAMS,
         apikey: CONFIG.MSN_SPORTS.API_KEY,
         activityId: generateActivityId(),
-        ocid: 'sports-gamecenter',
+        ocid: "sports-gamecenter",
         ids: numericId,
       };
 
       console.log(`[MSN API] Fetching lineups for game ${numericId}...`);
-      
-      const response = await msnApiClient.get('/lineups', { params });
 
-      if (!response.data || !response.data.value || response.data.value.length === 0) {
-        console.log('[MSN API] No lineups data available');
+      const response = await msnApiClient.get("/lineups", { params });
+
+      if (
+        !response.data ||
+        !response.data.value ||
+        response.data.value.length === 0
+      ) {
+        console.log("[MSN API] No lineups data available");
         return null;
       }
 
       const lineupsData = response.data.value[0];
-      
+
       // Cache for 1 hour
       await setCachedData(cacheKey, lineupsData, 60 * 60 * 1000);
-      
+
       console.log(`[MSN API] Fetched lineups successfully`);
       return lineupsData;
     } catch (error) {
-      console.error('[MSN API] Error fetching lineups:', error);
+      console.error("[MSN API] Error fetching lineups:", error);
       return null;
     }
   },
@@ -260,7 +290,11 @@ export const msnSportsApi = {
    * @param sport - Sport type (e.g., "Soccer", "Basketball")
    * @param leagueId - League ID (e.g., "Soccer_EnglandPremierLeague")
    */
-  getStatistics: async (gameId: string, sport: string = 'Soccer', leagueId: string): Promise<any> => {
+  getStatistics: async (
+    gameId: string,
+    sport: string = "Soccer",
+    leagueId: string
+  ): Promise<any> => {
     const cacheKey = `stats_${gameId}`;
     const cached = await getCachedData<any>(cacheKey);
     if (cached) return cached;
@@ -270,10 +304,10 @@ export const msnSportsApi = {
         ...CONFIG.MSN_SPORTS.BASE_PARAMS,
         apikey: CONFIG.MSN_SPORTS.API_KEY,
         activityId: generateActivityId(),
-        ocid: 'sports-gamecenter',
+        ocid: "sports-gamecenter",
         ids: gameId,
-        type: 'Game',
-        scope: 'Teamgame',
+        type: "Game",
+        scope: "Teamgame",
         sport: sport,
         leagueid: leagueId,
       };
@@ -282,23 +316,27 @@ export const msnSportsApi = {
       console.log(`[MSN API] GameId: ${gameId}`);
       console.log(`[MSN API] Sport: ${sport}`);
       console.log(`[MSN API] LeagueId: ${leagueId}`);
-      
-      const response = await msnApiClient.get('/statistics', { params });
 
-      if (!response.data || !response.data.value || response.data.value.length === 0) {
-        console.log('[MSN API] No statistics data available');
+      const response = await msnApiClient.get("/statistics", { params });
+
+      if (
+        !response.data ||
+        !response.data.value ||
+        response.data.value.length === 0
+      ) {
+        console.log("[MSN API] No statistics data available");
         return null;
       }
 
       const statsData = response.data.value[0];
-      
+
       // Cache for 5 minutes (stats change during live matches)
       await setCachedData(cacheKey, statsData, 5 * 60 * 1000);
-      
+
       console.log(`[MSN API] Fetched statistics successfully`);
       return statsData;
     } catch (error) {
-      console.error('[MSN API] Error fetching statistics:', error);
+      console.error("[MSN API] Error fetching statistics:", error);
       return null;
     }
   },
@@ -308,9 +346,12 @@ export const msnSportsApi = {
    * @param gameId - MSN Sports game ID (numeric part, e.g., "61300783")
    * @param sport - Sport type (e.g., "Soccer", "Basketball")
    */
-  getTimeline: async (gameId: string, sport: string = 'Soccer'): Promise<any> => {
+  getTimeline: async (
+    gameId: string,
+    sport: string = "Soccer"
+  ): Promise<any> => {
     // Extract just the numeric ID from the full game ID
-    const numericId = gameId.split('_').pop() || gameId;
+    const numericId = gameId.split("_").pop() || gameId;
     const cacheKey = `timeline_${numericId}`;
     const cached = await getCachedData<any>(cacheKey);
     if (cached) return cached;
@@ -320,31 +361,35 @@ export const msnSportsApi = {
         ...CONFIG.MSN_SPORTS.BASE_PARAMS,
         apikey: CONFIG.MSN_SPORTS.API_KEY,
         activityId: generateActivityId(),
-        ocid: 'sports-gamecenter',
+        ocid: "sports-gamecenter",
         ids: numericId,
         gameid: numericId,
         sport: sport,
-        scope: 'timeline',
+        scope: "timeline",
       };
 
       console.log(`[MSN API] Fetching timeline for game ${numericId}...`);
-      
-      const response = await msnApiClient.get('/timeline', { params });
 
-      if (!response.data || !response.data.value || response.data.value.length === 0) {
-        console.log('[MSN API] No timeline data available');
+      const response = await msnApiClient.get("/timeline", { params });
+
+      if (
+        !response.data ||
+        !response.data.value ||
+        response.data.value.length === 0
+      ) {
+        console.log("[MSN API] No timeline data available");
         return null;
       }
 
       const timelineData = response.data.value[0];
-      
+
       // Cache for 5 minutes (events change during live matches)
       await setCachedData(cacheKey, timelineData, 5 * 60 * 1000);
-      
+
       console.log(`[MSN API] Fetched timeline successfully`);
       return timelineData;
     } catch (error) {
-      console.error('[MSN API] Error fetching timeline:', error);
+      console.error("[MSN API] Error fetching timeline:", error);
       return null;
     }
   },
@@ -363,30 +408,34 @@ export const msnSportsApi = {
         ...CONFIG.MSN_SPORTS.BASE_PARAMS,
         apikey: CONFIG.MSN_SPORTS.API_KEY,
         activityId: generateActivityId(),
-        ocid: 'sports-league-standings',
+        ocid: "sports-league-standings",
         id: leagueId,
-        idtype: 'league',
-        seasonPhase: 'regularSeason',
+        idtype: "league",
+        seasonPhase: "regularSeason",
       };
 
       console.log(`[MSN API] Fetching standings for ${leagueId}...`);
-      
-      const response = await msnApiClient.get('/standings', { params });
 
-      if (!response.data || !response.data.value || response.data.value.length === 0) {
-        console.log('[MSN API] No standings data available');
+      const response = await msnApiClient.get("/standings", { params });
+
+      if (
+        !response.data ||
+        !response.data.value ||
+        response.data.value.length === 0
+      ) {
+        console.log("[MSN API] No standings data available");
         return null;
       }
 
       const standingsData = response.data.value[0];
-      
+
       // Cache for 1 hour (standings don't change frequently)
       await setCachedData(cacheKey, standingsData, 60 * 60 * 1000);
-      
+
       console.log(`[MSN API] Fetched standings successfully`);
       return standingsData;
     } catch (error) {
-      console.error('[MSN API] Error fetching standings:', error);
+      console.error("[MSN API] Error fetching standings:", error);
       return null;
     }
   },
@@ -397,7 +446,10 @@ export const msnSportsApi = {
    * @param teamId - Team ID from MSN Sports (e.g., "SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_2001")
    * @param take - Number of games to return (default: 7, includes past and future)
    */
-  getTeamLiveSchedule: async (teamId: string, take: number = 7): Promise<any[]> => {
+  getTeamLiveSchedule: async (
+    teamId: string,
+    take: number = 7
+  ): Promise<any[]> => {
     const cacheKey = `team_live_schedule_${teamId}_${take}`;
     const cached = await getCachedData<any[]>(cacheKey);
     if (cached) return cached;
@@ -408,47 +460,472 @@ export const msnSportsApi = {
         ...CONFIG.MSN_SPORTS.BASE_PARAMS,
         apikey: CONFIG.MSN_SPORTS.API_KEY,
         activityId: generateActivityId(),
-        ocid: 'sports-gamecenter',
-        type: 'TeamSchedule',
+        ocid: "sports-gamecenter",
+        type: "TeamSchedule",
         ids: teamId,
         take: take,
         tzoffset: Math.floor(-now.getTimezoneOffset() / 60).toString(),
       };
 
       console.log(`[MSN API] Fetching live schedule for team ${teamId}...`);
-      
-      const response = await msnApiClient.get('/liveschedules', { params });
 
-      if (!response.data || !response.data.value || response.data.value.length === 0) {
-        console.log(`[MSN API] No live schedule data available for team ${teamId}`);
+      const response = await msnApiClient.get("/liveschedules", { params });
+
+      if (
+        !response.data ||
+        !response.data.value ||
+        response.data.value.length === 0
+      ) {
+        console.log(
+          `[MSN API] No live schedule data available for team ${teamId}`
+        );
         return [];
       }
 
       const scheduleData = response.data.value[0];
-      
+
       if (!scheduleData.schedules || scheduleData.schedules.length === 0) {
-        console.log(`[MSN API] No games found in live schedule for team ${teamId}`);
+        console.log(
+          `[MSN API] No games found in live schedule for team ${teamId}`
+        );
         return [];
       }
 
       // Collect all games from schedules
       let allGames: any[] = [];
-      
+
       scheduleData.schedules.forEach((schedule: any) => {
         if (schedule.games && Array.isArray(schedule.games)) {
           allGames = [...allGames, ...schedule.games];
         }
       });
 
-      console.log(`[MSN API] Fetched ${allGames.length} games from live schedule for team ${teamId}`);
+      console.log(
+        `[MSN API] Fetched ${allGames.length} games from live schedule for team ${teamId}`
+      );
 
       // Cache for 30 minutes (live data changes frequently)
       await setCachedData(cacheKey, allGames, 30 * 60 * 1000);
       return allGames;
     } catch (error) {
-      console.error(`[MSN API] Error fetching live schedule for ${teamId}:`, error);
+      console.error(
+        `[MSN API] Error fetching live schedule for ${teamId}:`,
+        error
+      );
+      return [];
+    }
+  },
+
+  /**
+   * Get top players for a team with detailed statistics
+   * This endpoint provides player info including jersey number, position, photo, etc.
+   * @param teamId - Team ID from MSN Sports (e.g., "SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_2020")
+   * @param leagueId - League ID (e.g., "Soccer_BrazilBrasileiroSerieA")
+   * @returns Array of players with statistics
+   */
+  getTopPlayers: async (teamId: string, leagueId?: string): Promise<any[]> => {
+    const cacheKey = `top_players_${teamId}`;
+    const cached = await getCachedData<any[]>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      // Try to infer league ID from team ID if not provided
+      const inferredLeagueId = leagueId || inferLeagueFromTeamId(teamId);
+
+      const params = {
+        ...CONFIG.MSN_SPORTS.BASE_PARAMS,
+        apikey: CONFIG.MSN_SPORTS.API_KEY,
+        activityId: generateActivityId(),
+        ocid: "sports-gamecenter",
+        ids: teamId,
+        type: "Team",
+        sport: "Soccer",
+        leagueid: inferredLeagueId,
+      };
+
+      console.log(`[MSN API] Fetching top players for team ${teamId}...`);
+
+      const response = await msnApiClient.get("/topplayers", { params });
+
+      if (
+        !response.data ||
+        !response.data.value ||
+        response.data.value.length === 0
+      ) {
+        console.log(
+          `[MSN API] No top players data available for team ${teamId}`
+        );
+        return [];
+      }
+
+      const topPlayersData = response.data.value[0];
+
+      // Extract all unique players from all categories (Goals, Assists, Cards)
+      const playersMap = new Map<string, any>();
+
+      if (topPlayersData.topPlayers) {
+        for (const teamData of topPlayersData.topPlayers) {
+          if (teamData.categoryPlayerStatistics) {
+            for (const category of teamData.categoryPlayerStatistics) {
+              if (category.statistics) {
+                for (const stat of category.statistics) {
+                  if (stat.player && stat.player.id) {
+                    // Only add if not already in map (avoid duplicates)
+                    if (!playersMap.has(stat.player.id)) {
+                      playersMap.set(stat.player.id, {
+                        ...stat.player,
+                        stats: {
+                          goals: stat.goalsScored || 0,
+                          assists: stat.assists || 0,
+                          yellowCards: stat.yellowCards || 0,
+                          minutesPlayed: stat.minutesPlayed || 0,
+                        },
+                      });
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      const players = Array.from(playersMap.values());
+      console.log(
+        `[MSN API] Fetched ${players.length} top players for team ${teamId}`
+      );
+
+      // Cache for 6 hours (player stats don't change frequently)
+      await setCachedData(cacheKey, players, 6 * 60 * 60 * 1000);
+      return players;
+    } catch (error) {
+      console.error(
+        `[MSN API] Error fetching top players for ${teamId}:`,
+        error
+      );
+      return [];
+    }
+  },
+
+  /**
+   * Get full team squad from MSN Sports using the teamplayerstatistics endpoint
+   * This returns ALL players with their season statistics
+   * @param teamId - Team ID from MSN Sports
+   * @param leagueId - League ID (optional, will be inferred from teamId)
+   * @returns Array of all players
+   */
+  getFullSquad: async (teamId: string, leagueId?: string): Promise<any[]> => {
+    const cacheKey = `full_squad_${teamId}`;
+    const cached = await getCachedData<any[]>(cacheKey);
+    if (cached) return cached;
+
+    const inferredLeagueId = leagueId || inferLeagueFromTeamId(teamId);
+    const allPlayers: Map<string, any> = new Map();
+
+    // Helper to merge player into map (avoid duplicates)
+    const addPlayer = (player: any) => {
+      const id =
+        player.id ||
+        player.playerId ||
+        `${player.name?.rawName || player.displayName}`;
+      if (id && !allPlayers.has(String(id))) {
+        allPlayers.set(String(id), player);
+      } else if (id) {
+        // Merge data if player already exists (combine stats, add missing fields)
+        const existing = allPlayers.get(String(id));
+        allPlayers.set(String(id), {
+          ...existing,
+          ...player,
+          stats: { ...existing?.stats, ...player?.stats },
+        });
+      }
+    };
+
+    // Source 1 (PRIMARY): Try /statistics with scope=Playerleague - returns ALL players from the team
+    try {
+      const params1 = {
+        ...CONFIG.MSN_SPORTS.BASE_PARAMS,
+        apikey: CONFIG.MSN_SPORTS.API_KEY,
+        activityId: generateActivityId(),
+        ocid: "sports-gamecenter",
+        ids: teamId,
+        type: "Team",
+        sport: "Soccer",
+        leagueid: inferredLeagueId,
+        scope: "Playerleague",
+      };
+
+      console.log(
+        `[MSN API] Source 1: Fetching /statistics Playerleague for ${teamId}...`
+      );
+      const response = await msnApiClient.get("/statistics", {
+        params: params1,
+      });
+
+      if (response.data?.value?.[0]?.statistics?.[0]?.playerStatistics) {
+        const playerStats =
+          response.data.value[0].statistics[0].playerStatistics;
+        playerStats.forEach((stat: any) => {
+          addPlayer({
+            id: stat.player?.id || stat.id,
+            name: stat.player?.name || stat.name,
+            firstName: stat.player?.firstName,
+            lastName: stat.player?.lastName,
+            jerseyNumber: stat.player?.jerseyNumber,
+            playerPosition: stat.player?.playerPosition,
+            image: stat.player?.image,
+            country: stat.player?.country,
+            birthDate: stat.player?.birthDate,
+            height: stat.player?.height,
+            weight: stat.player?.weight,
+            stats: {
+              goals: stat.goalsScored || 0,
+              assists: stat.assists || 0,
+              yellowCards: stat.yellowCards || 0,
+              redCards: stat.redCards || 0,
+              minutesPlayed: stat.minutesPlayed || 0,
+              shotsOnTarget: stat.shotsOnTarget || 0,
+              shotsOffTarget: stat.shotsOffTarget || 0,
+            },
+          });
+        });
+        console.log(
+          `[MSN API] Source 1: Got ${playerStats.length} players from /statistics Playerleague`
+        );
+      }
+    } catch (error) {
+      console.log(`[MSN API] Source 1 failed: ${error}`);
+    }
+
+    // Source 2: Try /topplayers endpoint as fallback (returns top performers with detailed stats)
+    if (allPlayers.size === 0) {
+      try {
+        const params2 = {
+          ...CONFIG.MSN_SPORTS.BASE_PARAMS,
+          apikey: CONFIG.MSN_SPORTS.API_KEY,
+          activityId: generateActivityId(),
+          ocid: "sports-team-topplayers",
+          ids: teamId,
+          type: "Team",
+          sport: "Soccer",
+          leagueid: inferredLeagueId,
+          scope: "TopPlayers",
+        };
+
+        console.log(`[MSN API] Source 2: Fetching topplayers for ${teamId}...`);
+        const response = await msnApiClient.get("/topplayers", {
+          params: params2,
+        });
+
+        if (response.data?.value?.[0]?.topPlayers) {
+          const topPlayers = response.data.value[0].topPlayers;
+          topPlayers.forEach((player: any) => addPlayer(player));
+          console.log(
+            `[MSN API] Source 2: Got ${topPlayers.length} players from topplayers`
+          );
+        }
+      } catch (error) {
+        console.log(`[MSN API] Source 2 failed: ${error}`);
+      }
+    }
+
+    const players = Array.from(allPlayers.values());
+    console.log(
+      `[MSN API] Full squad total: ${players.length} unique players from all sources`
+    );
+
+    // Cache for 12 hours
+    if (players.length > 0) {
+      await setCachedData(cacheKey, players, 12 * 60 * 60 * 1000);
+    }
+
+    return players;
+  },
+
+  /**
+   * Get team roster (squad) from MSN Sports
+   * @param teamId - Team ID from MSN Sports (e.g., "SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_2001")
+   * @returns Array of players with position, number, name, etc.
+   */
+  getTeamRoster: async (teamId: string): Promise<any[]> => {
+    const cacheKey = `team_roster_${teamId}`;
+    const cached = await getCachedData<any[]>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const params = {
+        ...CONFIG.MSN_SPORTS.BASE_PARAMS,
+        apikey: CONFIG.MSN_SPORTS.API_KEY,
+        activityId: generateActivityId(),
+        ocid: "sports-team-roster",
+        ids: teamId,
+        type: "TeamRoster",
+      };
+
+      console.log(`[MSN API] Fetching roster for team ${teamId}...`);
+
+      const response = await msnApiClient.get("/roster", { params });
+
+      if (
+        !response.data ||
+        !response.data.value ||
+        response.data.value.length === 0
+      ) {
+        console.log(`[MSN API] No roster data available for team ${teamId}`);
+        return [];
+      }
+
+      const rosterData = response.data.value[0];
+
+      // Players might be in different structures based on the response
+      let players: any[] = [];
+
+      if (rosterData.players) {
+        players = rosterData.players;
+      } else if (rosterData.roster) {
+        players = rosterData.roster;
+      } else if (rosterData.groups) {
+        // Some responses group players by position
+        rosterData.groups.forEach((group: any) => {
+          if (group.players) {
+            players = [...players, ...group.players];
+          }
+        });
+      }
+
+      console.log(
+        `[MSN API] Fetched ${players.length} players from roster for team ${teamId}`
+      );
+
+      // Cache for 24 hours (rosters don't change frequently)
+      await setCachedData(cacheKey, players, 24 * 60 * 60 * 1000);
+      return players;
+    } catch (error) {
+      console.error(`[MSN API] Error fetching roster for ${teamId}:`, error);
+      return [];
+    }
+  },
+
+  /**
+   * Search for a team by name to find MSN Team ID
+   * @param teamName - Team name to search for
+   * @param leagueId - Optional league ID to filter results
+   * @returns Team data including MSN ID
+   */
+  searchTeam: async (
+    teamName: string,
+    leagueId?: string
+  ): Promise<any | null> => {
+    const cacheKey = `team_search_${teamName
+      .toLowerCase()
+      .replace(/\s/g, "_")}`;
+    const cached = await getCachedData<any>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const params = {
+        ...CONFIG.MSN_SPORTS.BASE_PARAMS,
+        apikey: CONFIG.MSN_SPORTS.API_KEY,
+        activityId: generateActivityId(),
+        ocid: "sports-search",
+        query: teamName,
+        type: "Team",
+        ...(leagueId && { leagueid: leagueId }),
+      };
+
+      console.log(`[MSN API] Searching for team: ${teamName}...`);
+
+      const response = await msnApiClient.get("/search", { params });
+
+      if (
+        !response.data ||
+        !response.data.value ||
+        response.data.value.length === 0
+      ) {
+        console.log(`[MSN API] No search results for team: ${teamName}`);
+        return null;
+      }
+
+      const searchResults = response.data.value;
+
+      // Try to find exact match
+      const exactMatch = searchResults.find(
+        (r: any) =>
+          r.team?.name?.rawName?.toLowerCase() === teamName.toLowerCase() ||
+          r.team?.name?.localizedName?.toLowerCase() === teamName.toLowerCase()
+      );
+
+      const result = exactMatch || searchResults[0];
+
+      // Cache for 7 days (team data doesn't change)
+      await setCachedData(cacheKey, result, 7 * 24 * 60 * 60 * 1000);
+
+      console.log(
+        `[MSN API] Found team: ${result?.team?.name?.localizedName || teamName}`
+      );
+      return result;
+    } catch (error) {
+      console.error(`[MSN API] Error searching for team ${teamName}:`, error);
+      return null;
+    }
+  },
+
+  /**
+   * Get all teams from a league
+   * @param leagueId - League ID (e.g., "Soccer_BrazilBrasileiroSerieA")
+   * @returns Array of teams with their MSN IDs
+   */
+  getLeagueTeams: async (leagueId: string): Promise<any[]> => {
+    const cacheKey = `league_teams_${leagueId}`;
+    const cached = await getCachedData<any[]>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const params = {
+        ...CONFIG.MSN_SPORTS.BASE_PARAMS,
+        apikey: CONFIG.MSN_SPORTS.API_KEY,
+        activityId: generateActivityId(),
+        ocid: "sports-league-teams",
+        id: leagueId,
+        type: "Teams",
+      };
+
+      console.log(`[MSN API] Fetching teams for league ${leagueId}...`);
+
+      const response = await msnApiClient.get("/teams", { params });
+
+      if (
+        !response.data ||
+        !response.data.value ||
+        response.data.value.length === 0
+      ) {
+        console.log(`[MSN API] No teams data for league ${leagueId}`);
+        return [];
+      }
+
+      const teamsData = response.data.value[0];
+      let teams: any[] = [];
+
+      if (teamsData.teams) {
+        teams = teamsData.teams;
+      } else if (teamsData.groups) {
+        teamsData.groups.forEach((group: any) => {
+          if (group.teams) {
+            teams = [...teams, ...group.teams];
+          }
+        });
+      }
+
+      console.log(
+        `[MSN API] Fetched ${teams.length} teams for league ${leagueId}`
+      );
+
+      // Cache for 24 hours
+      await setCachedData(cacheKey, teams, 24 * 60 * 60 * 1000);
+      return teams;
+    } catch (error) {
+      console.error(`[MSN API] Error fetching teams for ${leagueId}:`, error);
       return [];
     }
   },
 };
-

@@ -37,6 +37,7 @@ export interface FavoriteTeam {
   name: string;
   logo: string;
   country: string;
+  msnId?: string; // MSN Sports Team ID
 }
 
 export interface AuthResponse {
