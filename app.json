@@ -2,7 +2,7 @@
   "expo": {
     "name": "FutScore",
     "slug": "FutScore",
-    "version": "1.0.10",
+    "version": "1.0.11",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -23,7 +23,13 @@
       },
       "package": "com.futscore.app",
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "POST_NOTIFICATIONS"
+      ],
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -34,7 +40,8 @@
         "expo-notifications",
         {
           "icon": "./assets/splash-icon.png",
-          "color": "#22c55e"
+          "color": "#22c55e",
+          "defaultChannel": "match-alerts"
         }
       ],
       [
