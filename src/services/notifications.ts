@@ -196,7 +196,7 @@ export async function notifyGoal(
   if (isOwnGoal) goalType = " (Gol Contra)";
 
   const title = `${favoriteEmoji}⚽ GOOOOL${goalType}!`;
-  
+
   let body = `${match.teams.home.name} ${homeScore} x ${awayScore} ${match.teams.away.name}`;
   if (playerName) {
     body = `${playerName}${goalType}\n${body}`;
@@ -223,7 +223,7 @@ export async function notifyYellowCard(
 ) {
   const favoriteEmoji = isFavorite ? "⭐ " : "";
   const title = `${favoriteEmoji}🟨 Cartão Amarelo`;
-  
+
   let body = `${minute}' - ${playerName} (${teamName})`;
   if (reason) body += `\n${reason}`;
   body += `\n${match.teams.home.name} vs ${match.teams.away.name}`;
@@ -246,7 +246,7 @@ export async function notifyRedCard(
   const cardEmoji = isSecondYellow ? "🟨🟥" : "🟥";
   const cardType = isSecondYellow ? "Segundo Amarelo" : "Cartão Vermelho";
   const title = `${favoriteEmoji}${cardEmoji} ${cardType}!`;
-  
+
   let body = `${minute}' - ${playerName} EXPULSO! (${teamName})`;
   if (reason) body += `\n${reason}`;
   body += `\n${match.teams.home.name} vs ${match.teams.away.name}`;
@@ -323,14 +323,13 @@ export async function notifyMatchEnded(
   const body = `${match.teams.home.name} ${homeScore} x ${awayScore} ${match.teams.away.name}\n${resultText}`;
 
   await schedulePushNotification(title, body);
-  console.log(`[Notifications] Match Ended: ${match.teams.home.name} ${homeScore} x ${awayScore} ${match.teams.away.name}`);
+  console.log(
+    `[Notifications] Match Ended: ${match.teams.home.name} ${homeScore} x ${awayScore} ${match.teams.away.name}`
+  );
 }
 
 // Notificação de intervalo
-export async function notifyHalfTime(
-  match: any,
-  isFavorite: boolean = false
-) {
+export async function notifyHalfTime(match: any, isFavorite: boolean = false) {
   const favoriteEmoji = isFavorite ? "⭐ " : "";
   const homeScore = match.goals?.home ?? 0;
   const awayScore = match.goals?.away ?? 0;
@@ -339,5 +338,7 @@ export async function notifyHalfTime(
   const body = `${match.teams.home.name} ${homeScore} x ${awayScore} ${match.teams.away.name}`;
 
   await schedulePushNotification(title, body);
-  console.log(`[Notifications] Half Time: ${match.teams.home.name} ${homeScore} x ${awayScore} ${match.teams.away.name}`);
+  console.log(
+    `[Notifications] Half Time: ${match.teams.home.name} ${homeScore} x ${awayScore} ${match.teams.away.name}`
+  );
 }

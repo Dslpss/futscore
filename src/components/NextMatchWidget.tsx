@@ -1,22 +1,31 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Home, Plane } from 'lucide-react-native';
-import { Match } from '../types';
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  ScrollView,
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Home, Plane } from "lucide-react-native";
+import { Match } from "../types";
 
 interface NextMatchWidgetProps {
   matches: Array<{ teamId: number; match: Match }>;
   onPressMatch?: (match: Match) => void;
 }
 
-export const NextMatchWidget: React.FC<NextMatchWidgetProps> = ({ matches, onPressMatch }) => {
+export const NextMatchWidget: React.FC<NextMatchWidgetProps> = ({
+  matches,
+  onPressMatch,
+}) => {
   if (!matches || matches.length === 0) {
     return (
       <View style={styles.emptyContainer}>
         <LinearGradient
-          colors={['rgba(34, 197, 94, 0.05)', 'rgba(34, 197, 94, 0.02)']}
-          style={styles.emptyGradient}
-        >
+          colors={["rgba(34, 197, 94, 0.05)", "rgba(34, 197, 94, 0.02)"]}
+          style={styles.emptyGradient}>
           <Text style={styles.emptyIcon}>⚽</Text>
           <Text style={styles.emptyText}>Adicione times favoritos</Text>
           <Text style={styles.emptySubText}>para ver os próximos jogos</Text>
@@ -32,16 +41,21 @@ export const NextMatchWidget: React.FC<NextMatchWidgetProps> = ({ matches, onPre
           <View style={styles.liveDot} />
           <Text style={styles.headerTitle}>PRÓXIMOS JOGOS</Text>
         </View>
-        <Text style={styles.matchCount}>{matches.length} {matches.length === 1 ? 'jogo' : 'jogos'}</Text>
+        <Text style={styles.matchCount}>
+          {matches.length} {matches.length === 1 ? "jogo" : "jogos"}
+        </Text>
       </View>
 
-      <ScrollView 
-        horizontal 
+      <ScrollView
+        horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
+        contentContainerStyle={styles.scrollContent}>
         {matches.map(({ teamId, match }) => (
-          <MatchCard key={match.fixture.id} match={match} onPress={() => onPressMatch?.(match)} />
+          <MatchCard
+            key={match.fixture.id}
+            match={match}
+            onPress={() => onPressMatch?.(match)}
+          />
         ))}
       </ScrollView>
     </View>
@@ -49,8 +63,11 @@ export const NextMatchWidget: React.FC<NextMatchWidgetProps> = ({ matches, onPre
 };
 
 // Individual Match Card Component
-const MatchCard: React.FC<{ match: Match; onPress: () => void }> = ({ match, onPress }) => {
-  const [timeRemaining, setTimeRemaining] = useState<string>('');
+const MatchCard: React.FC<{ match: Match; onPress: () => void }> = ({
+  match,
+  onPress,
+}) => {
+  const [timeRemaining, setTimeRemaining] = useState<string>("");
 
   useEffect(() => {
     const updateCountdown = () => {
@@ -59,12 +76,14 @@ const MatchCard: React.FC<{ match: Match; onPress: () => void }> = ({ match, onP
       const difference = matchTime - now;
 
       if (difference <= 0) {
-        setTimeRemaining('Ao Vivo!');
+        setTimeRemaining("Ao Vivo!");
         return;
       }
 
       const days = Math.floor(difference / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const hours = Math.floor(
+        (difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+      );
       const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((difference % (1000 * 60)) / 1000);
 
@@ -84,27 +103,25 @@ const MatchCard: React.FC<{ match: Match; onPress: () => void }> = ({ match, onP
   }, [match]);
 
   const matchDate = new Date(match.fixture.date);
-  const formattedDate = matchDate.toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: 'short',
+  const formattedDate = matchDate.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "short",
   });
-  const formattedTime = matchDate.toLocaleTimeString('pt-BR', {
-    hour: '2-digit',
-    minute: '2-digit',
+  const formattedTime = matchDate.toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
   });
 
   return (
     <TouchableOpacity
       style={styles.container}
       onPress={onPress}
-      activeOpacity={0.9}
-    >
+      activeOpacity={0.9}>
       <LinearGradient
-        colors={['#1a1a2e', '#16213e', '#0f1419']}
+        colors={["#1a1a2e", "#16213e", "#0f1419"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.gradient}
-      >
+        style={styles.gradient}>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.leagueBadge}>
@@ -160,15 +177,16 @@ const MatchCard: React.FC<{ match: Match; onPress: () => void }> = ({ match, onP
         <View style={styles.footer}>
           <View style={styles.countdownContainer}>
             <LinearGradient
-              colors={['rgba(34, 197, 94, 0.2)', 'rgba(34, 197, 94, 0.1)']}
-              style={styles.countdownGradient}
-            >
+              colors={["rgba(34, 197, 94, 0.2)", "rgba(34, 197, 94, 0.1)"]}
+              style={styles.countdownGradient}>
               <Text style={styles.countdownIcon}>⏱️</Text>
               <Text style={styles.countdownText}>{timeRemaining}</Text>
             </LinearGradient>
           </View>
           <View style={styles.dateTimeContainer}>
-            <Text style={styles.dateText}>{formattedDate} • {formattedTime}</Text>
+            <Text style={styles.dateText}>
+              {formattedDate} • {formattedTime}
+            </Text>
           </View>
         </View>
       </LinearGradient>
@@ -182,16 +200,16 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   widgetHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 12,
     paddingHorizontal: 4,
   },
   matchCount: {
-    color: '#71717a',
+    color: "#71717a",
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   scrollContent: {
     gap: 12,
@@ -201,8 +219,8 @@ const styles = StyleSheet.create({
   container: {
     width: 280,
     borderRadius: 20,
-    overflow: 'hidden',
-    shadowColor: '#22c55e',
+    overflow: "hidden",
+    shadowColor: "#22c55e",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 16,
@@ -211,107 +229,107 @@ const styles = StyleSheet.create({
   gradient: {
     padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(34, 197, 94, 0.2)',
+    borderColor: "rgba(34, 197, 94, 0.2)",
     borderRadius: 20,
   },
-  
+
   // Header
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
   },
   headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
   },
   liveDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#22c55e',
+    backgroundColor: "#22c55e",
   },
   headerTitle: {
-    color: '#22c55e',
+    color: "#22c55e",
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: "800",
     letterSpacing: 1,
   },
   leagueBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
   },
   leagueText: {
-    color: '#e4e4e7',
+    color: "#e4e4e7",
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 
   // Teams
   teamsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
   },
   teamSection: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
     gap: 8,
   },
   teamLogoContainer: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 2,
-    borderColor: 'rgba(34, 197, 94, 0.3)',
+    borderColor: "rgba(34, 197, 94, 0.3)",
   },
   teamLogo: {
     width: 40,
     height: 40,
   },
   teamName: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 13,
-    fontWeight: '700',
-    textAlign: 'center',
+    fontWeight: "700",
+    textAlign: "center",
   },
   homeBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(34, 197, 94, 0.15)",
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 8,
     gap: 3,
   },
   homeBadgeText: {
-    color: '#22c55e',
+    color: "#22c55e",
     fontSize: 8,
-    fontWeight: '700',
-    textTransform: 'uppercase',
+    fontWeight: "700",
+    textTransform: "uppercase",
   },
   awayBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(245, 158, 11, 0.15)",
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 8,
     gap: 3,
   },
   awayBadgeText: {
-    color: '#f59e0b',
+    color: "#f59e0b",
     fontSize: 8,
-    fontWeight: '700',
-    textTransform: 'uppercase',
+    fontWeight: "700",
+    textTransform: "uppercase",
   },
 
   // VS
@@ -319,77 +337,77 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   vsText: {
-    color: '#71717a',
+    color: "#71717a",
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: "800",
     letterSpacing: 1,
   },
 
   // Footer
   footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.05)',
+    borderTopColor: "rgba(255, 255, 255, 0.05)",
   },
   countdownContainer: {
     flex: 1,
   },
   countdownGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 12,
     gap: 6,
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
   },
   countdownIcon: {
     fontSize: 14,
   },
   countdownText: {
-    color: '#22c55e',
+    color: "#22c55e",
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: "800",
     letterSpacing: 0.5,
   },
   dateTimeContainer: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
   dateText: {
-    color: '#9ca3af',
+    color: "#9ca3af",
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 
   // Empty State
   emptyContainer: {
     marginBottom: 20,
     borderRadius: 20,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   emptyGradient: {
     padding: 24,
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: 'rgba(34, 197, 94, 0.1)',
+    borderColor: "rgba(34, 197, 94, 0.1)",
     borderRadius: 20,
-    borderStyle: 'dashed',
+    borderStyle: "dashed",
   },
   emptyIcon: {
     fontSize: 32,
     marginBottom: 8,
   },
   emptyText: {
-    color: '#9ca3af',
+    color: "#9ca3af",
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   emptySubText: {
-    color: '#71717a',
+    color: "#71717a",
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: "500",
   },
 });

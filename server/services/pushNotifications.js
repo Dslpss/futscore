@@ -154,7 +154,14 @@ async function notifyMatchStarted(match) {
 /**
  * Notifica gol
  */
-async function notifyGoal(match, scorerTeam, playerName = null, minute = null, isPenalty = false, isOwnGoal = false) {
+async function notifyGoal(
+  match,
+  scorerTeam,
+  playerName = null,
+  minute = null,
+  isPenalty = false,
+  isOwnGoal = false
+) {
   let title = `⚽ GOOOOL`;
   if (isOwnGoal) {
     title = `⚽ GOL CONTRA`;
@@ -209,11 +216,17 @@ async function notifyYellowCard(match, playerName, teamName, minute = null) {
 /**
  * Notifica cartão vermelho
  */
-async function notifyRedCard(match, playerName, teamName, minute = null, isSecondYellow = false) {
-  const title = isSecondYellow 
-    ? `🟨🟥 Segundo Amarelo - ${teamName}` 
+async function notifyRedCard(
+  match,
+  playerName,
+  teamName,
+  minute = null,
+  isSecondYellow = false
+) {
+  const title = isSecondYellow
+    ? `🟨🟥 Segundo Amarelo - ${teamName}`
     : `🟥 Cartão Vermelho - ${teamName}`;
-  
+
   let body = `${playerName} foi expulso`;
   if (isSecondYellow) {
     body += ` (segundo amarelo)`;
@@ -238,20 +251,30 @@ async function notifyRedCard(match, playerName, teamName, minute = null, isSecon
 /**
  * Notifica pênalti
  */
-async function notifyPenalty(match, teamName, result = 'awarded', playerName = null, minute = null) {
-  let title = '';
-  let body = '';
+async function notifyPenalty(
+  match,
+  teamName,
+  result = "awarded",
+  playerName = null,
+  minute = null
+) {
+  let title = "";
+  let body = "";
 
   switch (result) {
-    case 'scored':
+    case "scored":
       title = `⚽ Pênalti Convertido - ${teamName}`;
-      body = playerName ? `${playerName} converteu o pênalti` : `${teamName} converteu o pênalti`;
+      body = playerName
+        ? `${playerName} converteu o pênalti`
+        : `${teamName} converteu o pênalti`;
       break;
-    case 'missed':
+    case "missed":
       title = `❌ Pênalti Perdido - ${teamName}`;
-      body = playerName ? `${playerName} perdeu o pênalti` : `${teamName} perdeu o pênalti`;
+      body = playerName
+        ? `${playerName} perdeu o pênalti`
+        : `${teamName} perdeu o pênalti`;
       break;
-    case 'saved':
+    case "saved":
       title = `🧤 Pênalti Defendido!`;
       body = `Goleiro defende pênalti cobrado por ${teamName}`;
       break;
@@ -282,30 +305,38 @@ async function notifyPenalty(match, teamName, result = 'awarded', playerName = n
  */
 async function notifyVAR(match, decision, affectedTeam = null, minute = null) {
   let title = `📺 VAR - Revisão`;
-  let body = '';
+  let body = "";
 
   switch (decision) {
-    case 'goal_confirmed':
+    case "goal_confirmed":
       title = `📺 VAR - Gol Confirmado`;
-      body = affectedTeam ? `Gol do ${affectedTeam} confirmado após revisão` : `Gol confirmado após revisão do VAR`;
+      body = affectedTeam
+        ? `Gol do ${affectedTeam} confirmado após revisão`
+        : `Gol confirmado após revisão do VAR`;
       break;
-    case 'goal_disallowed':
+    case "goal_disallowed":
       title = `📺 VAR - Gol Anulado`;
-      body = affectedTeam ? `Gol do ${affectedTeam} anulado após revisão` : `Gol anulado após revisão do VAR`;
+      body = affectedTeam
+        ? `Gol do ${affectedTeam} anulado após revisão`
+        : `Gol anulado após revisão do VAR`;
       break;
-    case 'penalty_awarded':
+    case "penalty_awarded":
       title = `📺 VAR - Pênalti Marcado`;
-      body = affectedTeam ? `Pênalti marcado para ${affectedTeam} após revisão` : `Pênalti marcado após revisão do VAR`;
+      body = affectedTeam
+        ? `Pênalti marcado para ${affectedTeam} após revisão`
+        : `Pênalti marcado após revisão do VAR`;
       break;
-    case 'penalty_cancelled':
+    case "penalty_cancelled":
       title = `📺 VAR - Pênalti Cancelado`;
       body = `Pênalti cancelado após revisão do VAR`;
       break;
-    case 'red_card':
+    case "red_card":
       title = `📺 VAR - Cartão Vermelho`;
-      body = affectedTeam ? `Cartão vermelho para jogador do ${affectedTeam} após revisão` : `Cartão vermelho após revisão do VAR`;
+      body = affectedTeam
+        ? `Cartão vermelho para jogador do ${affectedTeam} após revisão`
+        : `Cartão vermelho após revisão do VAR`;
       break;
-    case 'red_card_cancelled':
+    case "red_card_cancelled":
       title = `📺 VAR - Cartão Vermelho Cancelado`;
       body = `Cartão vermelho cancelado após revisão do VAR`;
       break;
@@ -332,7 +363,13 @@ async function notifyVAR(match, decision, affectedTeam = null, minute = null) {
 /**
  * Notifica substituição
  */
-async function notifySubstitution(match, teamName, playerOut, playerIn, minute = null) {
+async function notifySubstitution(
+  match,
+  teamName,
+  playerOut,
+  playerIn,
+  minute = null
+) {
   const title = `🔄 Substituição - ${teamName}`;
   let body = `Sai: ${playerOut}\nEntra: ${playerIn}`;
   if (minute) {

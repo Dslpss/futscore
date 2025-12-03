@@ -21,7 +21,7 @@ export interface CardEvent {
     number: number;
   };
   teamId: string;
-  cardType: 'yellow' | 'red' | 'yellow-red'; // yellow-red = segundo amarelo
+  cardType: "yellow" | "red" | "yellow-red"; // yellow-red = segundo amarelo
   reason?: string;
 }
 
@@ -46,7 +46,14 @@ export interface VAREvent {
 }
 
 export interface MatchEvent {
-  type: 'goal' | 'card' | 'substitution' | 'var' | 'penalty-missed' | 'period-start' | 'period-end';
+  type:
+    | "goal"
+    | "card"
+    | "substitution"
+    | "var"
+    | "penalty-missed"
+    | "period-start"
+    | "period-end";
   minute: string;
   teamId: string;
   data: GoalEvent | CardEvent | SubstitutionEvent | VAREvent | any;
@@ -72,7 +79,11 @@ export function transformMsnTimeline(timelineData: any): MatchTimeline {
     allEvents: [],
   };
 
-  if (!timelineData || !timelineData.timelines || !Array.isArray(timelineData.timelines)) {
+  if (
+    !timelineData ||
+    !timelineData.timelines ||
+    !Array.isArray(timelineData.timelines)
+  ) {
     return result;
   }
 
@@ -80,63 +91,77 @@ export function transformMsnTimeline(timelineData: any): MatchTimeline {
     if (!timeline.events || !Array.isArray(timeline.events)) continue;
 
     for (const event of timeline.events) {
-      const minute = event.gameClock?.minutes?.toString() || event.time || '0';
-      const teamId = event.teamId || '';
+      const minute = event.gameClock?.minutes?.toString() || event.time || "0";
+      const teamId = event.teamId || "";
 
       switch (event.eventType) {
-        case 'ScoreChange': {
+        case "ScoreChange": {
           // GOL
-          const playerName = event.player?.name?.rawName || 
-                            `${event.player?.firstName?.rawName || ''} ${event.player?.lastName?.rawName || ''}`.trim() || 
-                            'Desconhecido';
+          const playerName =
+            event.player?.name?.rawName ||
+            `${event.player?.firstName?.rawName || ""} ${
+              event.player?.lastName?.rawName || ""
+            }`.trim() ||
+            "Desconhecido";
           const playerNumber = parseInt(event.player?.jerseyNumber) || 0;
-          
+
           let assist = undefined;
           if (event.assistantPlayers && event.assistantPlayers.length > 0) {
             const assistPlayer = event.assistantPlayers[0];
             assist = {
-              name: assistPlayer.name?.rawName || 
-                    `${assistPlayer.firstName?.rawName || ''} ${assistPlayer.lastName?.rawName || ''}`.trim() || 
-                    'Desconhecido',
+              name:
+                assistPlayer.name?.rawName ||
+                `${assistPlayer.firstName?.rawName || ""} ${
+                  assistPlayer.lastName?.rawName || ""
+                }`.trim() ||
+                "Desconhecido",
               number: parseInt(assistPlayer.jerseyNumber) || 0,
             };
           }
 
-          const isPenalty = event.scoreChangeType === 'Penalty' || 
-                           event.description?.toLowerCase().includes('penalty') ||
-                           event.description?.toLowerCase().includes('pênalti');
-          
-          const isOwnGoal = event.scoreChangeType === 'OwnGoal' || 
-                           event.description?.toLowerCase().includes('own goal') ||
-                           event.description?.toLowerCase().includes('gol contra');
+          const isPenalty =
+            event.scoreChangeType === "Penalty" ||
+            event.description?.toLowerCase().includes("penalty") ||
+            event.description?.toLowerCase().includes("pênalti");
+
+          const isOwnGoal =
+            event.scoreChangeType === "OwnGoal" ||
+            event.description?.toLowerCase().includes("own goal") ||
+            event.description?.toLowerCase().includes("gol contra");
 
           const goal: GoalEvent = {
             minute,
             player: { name: playerName, number: playerNumber },
             assist,
             teamId,
-            description: event.description || '',
+            description: event.description || "",
             isPenalty,
             isOwnGoal,
           };
 
           result.goals.push(goal);
-          result.allEvents.push({ type: 'goal', minute, teamId, data: goal });
+          result.allEvents.push({ type: "goal", minute, teamId, data: goal });
           break;
         }
 
-        case 'Card': {
+        case "Card": {
           // CARTÃO (amarelo, vermelho, segundo amarelo)
-          const playerName = event.player?.name?.rawName || 
-                            `${event.player?.firstName?.rawName || ''} ${event.player?.lastName?.rawName || ''}`.trim() || 
-                            'Desconhecido';
+          const playerName =
+            event.player?.name?.rawName ||
+            `${event.player?.firstName?.rawName || ""} ${
+              event.player?.lastName?.rawName || ""
+            }`.trim() ||
+            "Desconhecido";
           const playerNumber = parseInt(event.player?.jerseyNumber) || 0;
 
-          let cardType: 'yellow' | 'red' | 'yellow-red' = 'yellow';
-          if (event.cardType === 'Red' || event.cardColor === 'Red') {
-            cardType = 'red';
-          } else if (event.cardType === 'YellowRed' || event.cardType === 'SecondYellow') {
-            cardType = 'yellow-red';
+          let cardType: "yellow" | "red" | "yellow-red" = "yellow";
+          if (event.cardType === "Red" || event.cardColor === "Red") {
+            cardType = "red";
+          } else if (
+            event.cardType === "YellowRed" ||
+            event.cardType === "SecondYellow"
+          ) {
+            cardType = "yellow-red";
           }
 
           const card: CardEvent = {
@@ -148,20 +173,26 @@ export function transformMsnTimeline(timelineData: any): MatchTimeline {
           };
 
           result.cards.push(card);
-          result.allEvents.push({ type: 'card', minute, teamId, data: card });
+          result.allEvents.push({ type: "card", minute, teamId, data: card });
           break;
         }
 
-        case 'Substitution': {
+        case "Substitution": {
           // SUBSTITUIÇÃO
-          const playerInName = event.playerIn?.name?.rawName || 
-                              `${event.playerIn?.firstName?.rawName || ''} ${event.playerIn?.lastName?.rawName || ''}`.trim() || 
-                              'Desconhecido';
+          const playerInName =
+            event.playerIn?.name?.rawName ||
+            `${event.playerIn?.firstName?.rawName || ""} ${
+              event.playerIn?.lastName?.rawName || ""
+            }`.trim() ||
+            "Desconhecido";
           const playerInNumber = parseInt(event.playerIn?.jerseyNumber) || 0;
 
-          const playerOutName = event.playerOut?.name?.rawName || 
-                               `${event.playerOut?.firstName?.rawName || ''} ${event.playerOut?.lastName?.rawName || ''}`.trim() || 
-                               'Desconhecido';
+          const playerOutName =
+            event.playerOut?.name?.rawName ||
+            `${event.playerOut?.firstName?.rawName || ""} ${
+              event.playerOut?.lastName?.rawName || ""
+            }`.trim() ||
+            "Desconhecido";
           const playerOutNumber = parseInt(event.playerOut?.jerseyNumber) || 0;
 
           const substitution: SubstitutionEvent = {
@@ -172,51 +203,62 @@ export function transformMsnTimeline(timelineData: any): MatchTimeline {
           };
 
           result.substitutions.push(substitution);
-          result.allEvents.push({ type: 'substitution', minute, teamId, data: substitution });
+          result.allEvents.push({
+            type: "substitution",
+            minute,
+            teamId,
+            data: substitution,
+          });
           break;
         }
 
-        case 'VAR':
-        case 'VideoAssistantReferee': {
+        case "VAR":
+        case "VideoAssistantReferee": {
           // DECISÃO VAR
           const varEvent: VAREvent = {
             minute,
-            description: event.description || 'Revisão VAR',
+            description: event.description || "Revisão VAR",
             teamId,
-            decision: event.varDecision || event.decision || 'Em análise',
+            decision: event.varDecision || event.decision || "Em análise",
           };
 
           result.varDecisions.push(varEvent);
-          result.allEvents.push({ type: 'var', minute, teamId, data: varEvent });
+          result.allEvents.push({
+            type: "var",
+            minute,
+            teamId,
+            data: varEvent,
+          });
           break;
         }
 
-        case 'PenaltyMissed':
-        case 'PenaltySaved': {
+        case "PenaltyMissed":
+        case "PenaltySaved": {
           // PÊNALTI PERDIDO
-          const playerName = event.player?.name?.rawName || 'Desconhecido';
+          const playerName = event.player?.name?.rawName || "Desconhecido";
           result.allEvents.push({
-            type: 'penalty-missed',
+            type: "penalty-missed",
             minute,
             teamId,
             data: {
               player: playerName,
-              description: event.description || 'Pênalti perdido',
+              description: event.description || "Pênalti perdido",
             },
           });
           break;
         }
 
-        case 'PeriodStart':
-        case 'PeriodEnd': {
+        case "PeriodStart":
+        case "PeriodEnd": {
           // INÍCIO/FIM DE PERÍODO
           result.allEvents.push({
-            type: event.eventType === 'PeriodStart' ? 'period-start' : 'period-end',
+            type:
+              event.eventType === "PeriodStart" ? "period-start" : "period-end",
             minute,
-            teamId: '',
+            teamId: "",
             data: {
               period: event.period || event.periodNumber || 1,
-              description: event.description || '',
+              description: event.description || "",
             },
           });
           break;
@@ -243,31 +285,43 @@ export function transformMsnTimelineToGoals(timelineData: any): GoalEvent[] {
  */
 export function getEventDescription(event: MatchEvent): string {
   switch (event.type) {
-    case 'goal': {
+    case "goal": {
       const goal = event.data as GoalEvent;
       let desc = `⚽ ${goal.minute}' - GOL! ${goal.player.name}`;
-      if (goal.isPenalty) desc += ' (Pênalti)';
-      if (goal.isOwnGoal) desc += ' (Gol Contra)';
+      if (goal.isPenalty) desc += " (Pênalti)";
+      if (goal.isOwnGoal) desc += " (Gol Contra)";
       if (goal.assist) desc += ` | Assistência: ${goal.assist.name}`;
       return desc;
     }
-    case 'card': {
+    case "card": {
       const card = event.data as CardEvent;
-      const cardEmoji = card.cardType === 'red' ? '🟥' : card.cardType === 'yellow-red' ? '🟨🟥' : '🟨';
-      const cardName = card.cardType === 'red' ? 'VERMELHO' : card.cardType === 'yellow-red' ? 'SEGUNDO AMARELO' : 'AMARELO';
-      return `${cardEmoji} ${card.minute}' - ${cardName}: ${card.player.name}${card.reason ? ` (${card.reason})` : ''}`;
+      const cardEmoji =
+        card.cardType === "red"
+          ? "🟥"
+          : card.cardType === "yellow-red"
+          ? "🟨🟥"
+          : "🟨";
+      const cardName =
+        card.cardType === "red"
+          ? "VERMELHO"
+          : card.cardType === "yellow-red"
+          ? "SEGUNDO AMARELO"
+          : "AMARELO";
+      return `${cardEmoji} ${card.minute}' - ${cardName}: ${card.player.name}${
+        card.reason ? ` (${card.reason})` : ""
+      }`;
     }
-    case 'substitution': {
+    case "substitution": {
       const sub = event.data as SubstitutionEvent;
       return `🔄 ${sub.minute}' - Substituição: ⬆️ ${sub.playerIn.name} ⬇️ ${sub.playerOut.name}`;
     }
-    case 'var': {
+    case "var": {
       const varEvent = event.data as VAREvent;
       return `📺 ${varEvent.minute}' - VAR: ${varEvent.decision}`;
     }
-    case 'penalty-missed':
+    case "penalty-missed":
       return `❌ ${event.minute}' - Pênalti perdido: ${event.data.player}`;
     default:
-      return '';
+      return "";
   }
 }

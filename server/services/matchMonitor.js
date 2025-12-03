@@ -1,11 +1,11 @@
-const { 
-  notifyMatchStarted, 
+const {
+  notifyMatchStarted,
   notifyGoal,
   notifyYellowCard,
   notifyRedCard,
   notifyPenalty,
   notifyVAR,
-  notifySubstitution 
+  notifySubstitution,
 } = require("./pushNotifications");
 
 // Cache de scores e status para detectar mudanças
@@ -239,100 +239,164 @@ async function processTimelineEvents(match, events) {
   if (!events || !Array.isArray(events)) return;
 
   const matchId = match.id;
-  
+
   // Inicializar cache de eventos notificados para este jogo
   if (!notifiedEvents[matchId]) {
     notifiedEvents[matchId] = new Set();
   }
 
   for (const event of events) {
-    const eventId = event.id || `${event.eventType}_${event.clockTime}_${event.participantId}`;
-    
+    const eventId =
+      event.id ||
+      `${event.eventType}_${event.clockTime}_${event.participantId}`;
+
     // Pular se já notificamos este evento
     if (notifiedEvents[matchId].has(eventId)) continue;
 
     const eventType = event.eventType?.toLowerCase() || "";
     const minute = event.clockTime || event.gameTime?.gameMinute || null;
-    
+
     // Identificar time do evento
-    const isHomeTeam = event.participantId === match.homeTeamId || event.teamId === match.homeTeamId;
+    const isHomeTeam =
+      event.participantId === match.homeTeamId ||
+      event.teamId === match.homeTeamId;
     const teamName = isHomeTeam ? match.homeTeam : match.awayTeam;
-    
+
     // Nome do jogador
-    const playerName = event.player?.name?.rawName || 
-                       event.player?.shortName?.rawName || 
-                       event.athleteName || 
-                       null;
+    const playerName =
+      event.player?.name?.rawName ||
+      event.player?.shortName?.rawName ||
+      event.athleteName ||
+      null;
 
     try {
       switch (eventType) {
         case "card":
         case "yellowcard":
-          if (event.cardType?.toLowerCase() === "yellow" || eventType === "yellowcard") {
-            console.log(`[Monitor] 🟨 Cartão Amarelo: ${playerName} (${teamName}) - ${match.homeTeam} vs ${match.awayTeam}`);
-            await notifyYellowCard(match, playerName || "Jogador", teamName, minute);
+          if (
+            event.cardType?.toLowerCase() === "yellow" ||
+            eventType === "yellowcard"
+          ) {
+            console.log(
+              `[Monitor] 🟨 Cartão Amarelo: ${playerName} (${teamName}) - ${match.homeTeam} vs ${match.awayTeam}`
+            );
+            await notifyYellowCard(
+              match,
+              playerName || "Jogador",
+              teamName,
+              minute
+            );
             notifiedEvents[matchId].add(eventId);
           }
           break;
 
         case "redcard":
-          console.log(`[Monitor] 🟥 Cartão Vermelho: ${playerName} (${teamName}) - ${match.homeTeam} vs ${match.awayTeam}`);
-          const isSecondYellow = event.cardType?.toLowerCase()?.includes("second") || event.isSecondYellow;
-          await notifyRedCard(match, playerName || "Jogador", teamName, minute, isSecondYellow);
+          console.log(
+            `[Monitor] 🟥 Cartão Vermelho: ${playerName} (${teamName}) - ${match.homeTeam} vs ${match.awayTeam}`
+          );
+          const isSecondYellow =
+            event.cardType?.toLowerCase()?.includes("second") ||
+            event.isSecondYellow;
+          await notifyRedCard(
+            match,
+            playerName || "Jogador",
+            teamName,
+            minute,
+            isSecondYellow
+          );
           notifiedEvents[matchId].add(eventId);
           break;
 
         case "secondyellowcard":
-          console.log(`[Monitor] 🟨🟥 Segundo Amarelo: ${playerName} (${teamName}) - ${match.homeTeam} vs ${match.awayTeam}`);
-          await notifyRedCard(match, playerName || "Jogador", teamName, minute, true);
+          console.log(
+            `[Monitor] 🟨🟥 Segundo Amarelo: ${playerName} (${teamName}) - ${match.homeTeam} vs ${match.awayTeam}`
+          );
+          await notifyRedCard(
+            match,
+            playerName || "Jogador",
+            teamName,
+            minute,
+            true
+          );
           notifiedEvents[matchId].add(eventId);
           break;
 
         case "penaltymissed":
         case "penalty_missed":
-          console.log(`[Monitor] ❌ Pênalti Perdido: ${teamName} - ${match.homeTeam} vs ${match.awayTeam}`);
+          console.log(
+            `[Monitor] ❌ Pênalti Perdido: ${teamName} - ${match.homeTeam} vs ${match.awayTeam}`
+          );
           await notifyPenalty(match, teamName, "missed", playerName, minute);
           notifiedEvents[matchId].add(eventId);
           break;
 
         case "penaltysaved":
         case "penalty_saved":
-          console.log(`[Monitor] 🧤 Pênalti Defendido: ${teamName} - ${match.homeTeam} vs ${match.awayTeam}`);
+          console.log(
+            `[Monitor] 🧤 Pênalti Defendido: ${teamName} - ${match.homeTeam} vs ${match.awayTeam}`
+          );
           await notifyPenalty(match, teamName, "saved", playerName, minute);
           notifiedEvents[matchId].add(eventId);
           break;
 
         case "var":
         case "varreview":
-          const decision = event.varDecision?.toLowerCase() || event.decision?.toLowerCase() || "review";
-          console.log(`[Monitor] 📺 VAR: ${decision} - ${match.homeTeam} vs ${match.awayTeam}`);
+          const decision =
+            event.varDecision?.toLowerCase() ||
+            event.decision?.toLowerCase() ||
+            "review";
+          console.log(
+            `[Monitor] 📺 VAR: ${decision} - ${match.homeTeam} vs ${match.awayTeam}`
+          );
           await notifyVAR(match, decision, teamName, minute);
           notifiedEvents[matchId].add(eventId);
           break;
 
         case "substitution":
-          const playerOut = event.playerOut?.name?.rawName || event.playerOut?.shortName?.rawName || "Jogador";
-          const playerIn = event.playerIn?.name?.rawName || event.playerIn?.shortName?.rawName || "Jogador";
-          console.log(`[Monitor] 🔄 Substituição: ${playerOut} -> ${playerIn} (${teamName})`);
-          await notifySubstitution(match, teamName, playerOut, playerIn, minute);
+          const playerOut =
+            event.playerOut?.name?.rawName ||
+            event.playerOut?.shortName?.rawName ||
+            "Jogador";
+          const playerIn =
+            event.playerIn?.name?.rawName ||
+            event.playerIn?.shortName?.rawName ||
+            "Jogador";
+          console.log(
+            `[Monitor] 🔄 Substituição: ${playerOut} -> ${playerIn} (${teamName})`
+          );
+          await notifySubstitution(
+            match,
+            teamName,
+            playerOut,
+            playerIn,
+            minute
+          );
           notifiedEvents[matchId].add(eventId);
           break;
 
         case "scorechange":
         case "goal":
           // Gols são detectados pela mudança de score, mas podemos enriquecer com dados da timeline
-          const isPenalty = event.isPenalty || event.goalType?.toLowerCase()?.includes("penalty");
-          const isOwnGoal = event.isOwnGoal || event.goalType?.toLowerCase()?.includes("own");
-          
+          const isPenalty =
+            event.isPenalty ||
+            event.goalType?.toLowerCase()?.includes("penalty");
+          const isOwnGoal =
+            event.isOwnGoal || event.goalType?.toLowerCase()?.includes("own");
+
           // Apenas logar, não notificar aqui (já é feito pela detecção de score)
           if (!notifiedEvents[matchId].has(eventId)) {
-            console.log(`[Monitor] ⚽ Gol detectado na timeline: ${playerName} (${teamName}) - Pênalti: ${isPenalty}, Contra: ${isOwnGoal}`);
+            console.log(
+              `[Monitor] ⚽ Gol detectado na timeline: ${playerName} (${teamName}) - Pênalti: ${isPenalty}, Contra: ${isOwnGoal}`
+            );
             notifiedEvents[matchId].add(eventId);
           }
           break;
       }
     } catch (error) {
-      console.error(`[Monitor] Erro ao processar evento ${eventType}:`, error.message);
+      console.error(
+        `[Monitor] Erro ao processar evento ${eventType}:`,
+        error.message
+      );
     }
   }
 }
