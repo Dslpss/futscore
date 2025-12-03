@@ -45,9 +45,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   // Registrar push token quando usuário estiver logado
   async function registerPushToken() {
     try {
+      console.log("[Auth] Iniciando registro de push token...");
       const pushToken = await registerForPushNotificationsAsync();
+      
       if (pushToken) {
+        console.log("[Auth] Push token obtido:", pushToken.substring(0, 30) + "...");
         await authApi.registerPushToken(pushToken);
+        console.log("[Auth] Push token registrado no servidor com sucesso!");
+      } else {
+        console.log("[Auth] Não foi possível obter push token");
       }
     } catch (error) {
       console.error("[Auth] Erro ao registrar push token:", error);
