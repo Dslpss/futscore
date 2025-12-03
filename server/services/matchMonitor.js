@@ -34,37 +34,32 @@ function randomDelay(min = 500, max = 2000) {
   );
 }
 
-const MSN_API_BASE = "https://assets.msn.com/service/sports/schedules";
+// MSN Sports API config (mesma do app)
+const MSN_API_BASE = "https://api.msn.com/sports";
+const MSN_API_KEY = "kO1dI4ptCTTylLkPL1ZTHYP8JhLKb8mRDoA5yotmNJ";
+
+// Gerar activity ID único
+function generateActivityId() {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
 
 /**
  * Busca jogos ao vivo de todas as ligas
  */
 async function fetchLiveMatches() {
   const leagues = [
-    {
-      id: "Soccer_BrazilBrasileiroSerieA",
-      name: "Brasileirão",
-      sport: "Soccer",
-    },
-    {
-      id: "Soccer_InternationalClubsUEFAChampionsLeague",
-      name: "Champions League",
-      sport: "Soccer",
-    },
+    { id: "Soccer_BrazilBrasileiroSerieA", name: "Brasileirão", sport: "Soccer" },
+    { id: "Soccer_InternationalClubsUEFAChampionsLeague", name: "Champions League", sport: "Soccer" },
     { id: "Soccer_SpainLaLiga", name: "La Liga", sport: "Soccer" },
-    {
-      id: "Soccer_EnglandPremierLeague",
-      name: "Premier League",
-      sport: "Soccer",
-    },
+    { id: "Soccer_EnglandPremierLeague", name: "Premier League", sport: "Soccer" },
     { id: "Soccer_GermanyBundesliga", name: "Bundesliga", sport: "Soccer" },
     { id: "Soccer_ItalySerieA", name: "Serie A", sport: "Soccer" },
     { id: "Soccer_FranceLigue1", name: "Ligue 1", sport: "Soccer" },
-    {
-      id: "Soccer_PortugalPrimeiraLiga",
-      name: "Liga Portugal",
-      sport: "Soccer",
-    },
+    { id: "Soccer_PortugalPrimeiraLiga", name: "Liga Portugal", sport: "Soccer" },
   ];
 
   const allMatches = [];
@@ -74,45 +69,68 @@ async function fetchLiveMatches() {
       // Delay aleatório entre requisições de cada liga
       await randomDelay(800, 2500);
 
-      const today = new Date().toISOString().split("T")[0];
-      const url = `${MSN_API_BASE}?day=${today}&leagueId=${league.id}&cm=pt-br&sport=${league.sport}`;
+      const now = new Date();
+      const tzoffset = Math.floor(-now.getTimezoneOffset() / 60);
+      
+      const params = new URLSearchParams({
+        version: "1.0",
+        cm: "pt-br",
+        scn: "ANON",
+        it: "web",
+        apikey: MSN_API_KEY,
+        activityId: generateActivityId(),
+        id: league.id,
+        sport: league.sport,
+        datetime: now.toISOString().split(".")[0],
+        tzoffset: tzoffset.toString(),
+        withleaguereco: "true",
+        ocid: "sports-league-landing",
+      });
+
+      const url = `${MSN_API_BASE}/livearoundtheleague?${params}`;
 
       const response = await fetch(url, {
         headers: {
           "User-Agent": getRandomUserAgent(),
-          Accept: "application/json",
-          "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
-          "Cache-Control": "no-cache",
-          Referer: "https://www.msn.com/pt-br/esportes",
+          Accept: "*/*",
+          "Accept-Language": "pt-BR,pt;q=0.8,en-US;q=0.5,en;q=0.3",
         },
       });
 
-      if (!response.ok) continue;
+      if (!response.ok) {
+        console.log(`[Monitor] ${league.name}: HTTP ${response.status}`);
+        continue;
+      }
 
       const data = await response.json();
-      const games = data?.value?.games || [];
+      const schedules = data?.value?.[0]?.schedules || [];
+      
+      for (const schedule of schedules) {
+        const games = schedule.games || [];
+        
+        for (const game of games) {
+          const status = game.gameState;
+          const isLive = ["inProgress", "halftime"].includes(status);
+          const isScheduled = status === "pre";
 
-      for (const game of games) {
-        // Verificar se está ao vivo
-        const status = game.gameState;
-        const isLive = ["inProgress", "halftime"].includes(status);
-        const isScheduled = status === "pre";
-
-        if (isLive || isScheduled) {
-          allMatches.push({
-            id: game.gameId,
-            status: status,
-            homeTeam: game.homeTeam?.displayName || "Time Casa",
-            awayTeam: game.awayTeam?.displayName || "Time Fora",
-            homeTeamId: game.homeTeam?.teamId || 0,
-            awayTeamId: game.awayTeam?.teamId || 0,
-            homeScore: game.homeTeam?.score || 0,
-            awayScore: game.awayTeam?.score || 0,
-            league: league.name,
-            startTime: game.startDateTime,
-          });
+          if (isLive || isScheduled) {
+            allMatches.push({
+              id: game.gameId,
+              status: status,
+              homeTeam: game.homeTeam?.displayName || "Time Casa",
+              awayTeam: game.awayTeam?.displayName || "Time Fora",
+              homeTeamId: game.homeTeam?.teamId || 0,
+              awayTeamId: game.awayTeam?.teamId || 0,
+              homeScore: game.homeTeam?.score || 0,
+              awayScore: game.awayTeam?.score || 0,
+              league: league.name,
+              startTime: game.startDateTime,
+            });
+          }
         }
       }
+      
+      console.log(`[Monitor] ${league.name}: ${allMatches.length} jogos`);
     } catch (error) {
       console.error(`[Monitor] Erro ao buscar ${league.name}:`, error.message);
     }
