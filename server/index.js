@@ -181,4 +181,25 @@ app.get("/debug/test-push", async (req, res) => {
 // Start Server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  
+  // Keep-alive: Previne que o Railway hiberne o servidor
+  // Faz um ping a cada 4 minutos para manter o servidor ativo
+  const KEEP_ALIVE_INTERVAL = 4 * 60 * 1000; // 4 minutos
+  
+  setInterval(() => {
+    const url = process.env.RAILWAY_PUBLIC_DOMAIN 
+      ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/monitor-status`
+      : `http://localhost:${PORT}/monitor-status`;
+    
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        console.log(`[KeepAlive] Ping OK - Monitor checks: ${data.checkCount}, Last: ${data.lastCheck}`);
+      })
+      .catch(err => {
+        console.log(`[KeepAlive] Self-ping (expected in dev):`, err.message);
+      });
+  }, KEEP_ALIVE_INTERVAL);
+  
+  console.log(`[KeepAlive] Iniciado - ping a cada ${KEEP_ALIVE_INTERVAL / 1000}s`);
 });
