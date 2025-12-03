@@ -216,7 +216,9 @@ router.get("/notification-settings", authMiddleware, async (req, res) => {
 // Verificar status do push token do usuário
 router.get("/push-status", authMiddleware, async (req, res) => {
   try {
-    const user = await User.findById(req.userId).select("pushToken notificationSettings email");
+    const user = await User.findById(req.userId).select(
+      "pushToken notificationSettings email"
+    );
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -225,7 +227,9 @@ router.get("/push-status", authMiddleware, async (req, res) => {
     res.json({
       email: user.email,
       hasPushToken: !!user.pushToken,
-      pushTokenPreview: user.pushToken ? user.pushToken.substring(0, 30) + "..." : null,
+      pushTokenPreview: user.pushToken
+        ? user.pushToken.substring(0, 30) + "..."
+        : null,
       notificationSettings: user.notificationSettings,
     });
   } catch (error) {
@@ -245,9 +249,9 @@ router.post("/test-notification", authMiddleware, async (req, res) => {
     }
 
     if (!user.pushToken) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: "Push token not registered. Open the app and login again.",
-        hasPushToken: false 
+        hasPushToken: false,
       });
     }
 
@@ -258,9 +262,9 @@ router.post("/test-notification", authMiddleware, async (req, res) => {
       { type: "test" }
     );
 
-    res.json({ 
-      success, 
-      message: success ? "Notification sent!" : "Failed to send notification" 
+    res.json({
+      success,
+      message: success ? "Notification sent!" : "Failed to send notification",
     });
   } catch (error) {
     console.error(error);

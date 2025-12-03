@@ -52,14 +52,30 @@ function generateActivityId() {
  */
 async function fetchLiveMatches() {
   const leagues = [
-    { id: "Soccer_BrazilBrasileiroSerieA", name: "Brasileirão", sport: "Soccer" },
-    { id: "Soccer_InternationalClubsUEFAChampionsLeague", name: "Champions League", sport: "Soccer" },
+    {
+      id: "Soccer_BrazilBrasileiroSerieA",
+      name: "Brasileirão",
+      sport: "Soccer",
+    },
+    {
+      id: "Soccer_InternationalClubsUEFAChampionsLeague",
+      name: "Champions League",
+      sport: "Soccer",
+    },
     { id: "Soccer_SpainLaLiga", name: "La Liga", sport: "Soccer" },
-    { id: "Soccer_EnglandPremierLeague", name: "Premier League", sport: "Soccer" },
+    {
+      id: "Soccer_EnglandPremierLeague",
+      name: "Premier League",
+      sport: "Soccer",
+    },
     { id: "Soccer_GermanyBundesliga", name: "Bundesliga", sport: "Soccer" },
     { id: "Soccer_ItalySerieA", name: "Serie A", sport: "Soccer" },
     { id: "Soccer_FranceLigue1", name: "Ligue 1", sport: "Soccer" },
-    { id: "Soccer_PortugalPrimeiraLiga", name: "Liga Portugal", sport: "Soccer" },
+    {
+      id: "Soccer_PortugalPrimeiraLiga",
+      name: "Liga Portugal",
+      sport: "Soccer",
+    },
   ];
 
   const allMatches = [];
@@ -71,7 +87,7 @@ async function fetchLiveMatches() {
 
       const now = new Date();
       const tzoffset = Math.floor(-now.getTimezoneOffset() / 60);
-      
+
       const params = new URLSearchParams({
         version: "1.0",
         cm: "pt-br",
@@ -103,38 +119,49 @@ async function fetchLiveMatches() {
       }
 
       const data = await response.json();
-      
+
       // DEBUG: Log da estrutura da resposta
       if (!data?.value?.[0]) {
-        console.log(`[Monitor] ${league.name}: Resposta sem value[0]`, JSON.stringify(data).substring(0, 200));
+        console.log(
+          `[Monitor] ${league.name}: Resposta sem value[0]`,
+          JSON.stringify(data).substring(0, 200)
+        );
         continue;
       }
-      
+
       const schedules = data.value[0].schedules || [];
-      
+
       for (const schedule of schedules) {
         const games = schedule.games || [];
-        
+
         for (const game of games) {
           // gameState é um objeto, não uma string
           const gameStatus = game.gameState?.gameStatus?.toLowerCase() || "";
-          const isLive = ["inprogress", "inprogressbreak"].includes(gameStatus) || 
-                         game.gameState?.detailedGameStatus?.toLowerCase()?.includes("inprogress");
-          const isScheduled = gameStatus === "pre" || gameStatus === "scheduled";
-          
+          const isLive =
+            ["inprogress", "inprogressbreak"].includes(gameStatus) ||
+            game.gameState?.detailedGameStatus
+              ?.toLowerCase()
+              ?.includes("inprogress");
+          const isScheduled =
+            gameStatus === "pre" || gameStatus === "scheduled";
+
           // Participantes: [0] = time da casa, [1] = time visitante
           const homeParticipant = game.participants?.[0];
           const awayParticipant = game.participants?.[1];
-          
+
           if (isLive || isScheduled) {
             allMatches.push({
               id: game.id || game.liveId,
               status: gameStatus,
               rawStatus: game.gameState?.gameStatus,
-              homeTeam: homeParticipant?.team?.shortName?.rawName || 
-                        homeParticipant?.team?.name?.rawName || "Time Casa",
-              awayTeam: awayParticipant?.team?.shortName?.rawName || 
-                        awayParticipant?.team?.name?.rawName || "Time Fora",
+              homeTeam:
+                homeParticipant?.team?.shortName?.rawName ||
+                homeParticipant?.team?.name?.rawName ||
+                "Time Casa",
+              awayTeam:
+                awayParticipant?.team?.shortName?.rawName ||
+                awayParticipant?.team?.name?.rawName ||
+                "Time Fora",
               homeTeamId: homeParticipant?.team?.id || "",
               awayTeamId: awayParticipant?.team?.id || "",
               homeScore: parseInt(homeParticipant?.result?.score) || 0,
@@ -146,7 +173,7 @@ async function fetchLiveMatches() {
           }
         }
       }
-      
+
       console.log(`[Monitor] ${league.name}: ${allMatches.length} jogos`);
     } catch (error) {
       console.error(`[Monitor] Erro ao buscar ${league.name}:`, error.message);
@@ -179,8 +206,11 @@ async function checkAndNotify() {
       // 1. Verificar se jogo COMEÇOU (mudou de scheduled/pre para inprogress)
       const previousStatus = lastKnownStatus[matchId];
       const isNowLive = match.isLive;
-      const wasNotLive = !previousStatus || previousStatus === "pre" || previousStatus === "scheduled";
-      
+      const wasNotLive =
+        !previousStatus ||
+        previousStatus === "pre" ||
+        previousStatus === "scheduled";
+
       if (isNowLive && wasNotLive && !notifiedMatchStarts.has(matchId)) {
         console.log(
           `[Monitor] 🟢 Jogo começou: ${match.homeTeam} vs ${match.awayTeam}`

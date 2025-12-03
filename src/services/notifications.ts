@@ -75,24 +75,34 @@ export async function registerForPushNotificationsAsync(): Promise<
   try {
     console.log("[Push] Tentando obter Expo Push Token...");
     console.log("[Push] ProjectId: c060407a-d600-45dd-88b2-f4dcd4ee3eed");
-    
+
     const tokenData = await Notifications.getExpoPushTokenAsync({
       projectId: "c060407a-d600-45dd-88b2-f4dcd4ee3eed", // Seu projectId do app.json
     });
-    
+
     console.log("[Push] ✅ Expo Push Token obtido com sucesso!");
     console.log("[Push] Token completo:", tokenData.data);
     return tokenData.data;
   } catch (error: any) {
-    console.error("[Push] ❌ Erro ao obter push token:", error?.message || error);
+    console.error(
+      "[Push] ❌ Erro ao obter push token:",
+      error?.message || error
+    );
     console.error("[Push] Detalhes do erro:", JSON.stringify(error, null, 2));
-    
+
     // Verificar se é erro de Expo Go
-    if (error?.message?.includes('experienceId') || error?.message?.includes('projectId')) {
-      console.error("[Push] ⚠️ ATENÇÃO: Push tokens não funcionam corretamente no Expo Go.");
-      console.error("[Push] ⚠️ Use 'npx expo run:android' ou gere um APK para testar push notifications.");
+    if (
+      error?.message?.includes("experienceId") ||
+      error?.message?.includes("projectId")
+    ) {
+      console.error(
+        "[Push] ⚠️ ATENÇÃO: Push tokens não funcionam corretamente no Expo Go."
+      );
+      console.error(
+        "[Push] ⚠️ Use 'npx expo run:android' ou gere um APK para testar push notifications."
+      );
     }
-    
+
     return null;
   }
 }

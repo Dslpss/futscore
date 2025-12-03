@@ -36,15 +36,18 @@ app.get("/", (req, res) => {
 app.get("/push-stats", async (req, res) => {
   try {
     const User = require("./models/User");
-    const usersWithToken = await User.countDocuments({ pushToken: { $ne: null } });
+    const usersWithToken = await User.countDocuments({
+      pushToken: { $ne: null },
+    });
     const totalUsers = await User.countDocuments();
-    
+
     res.json({
       totalUsers,
       usersWithPushToken: usersWithToken,
-      message: usersWithToken === 0 
-        ? "Nenhum usuário com push token. Faça login no app para registrar." 
-        : `${usersWithToken} usuário(s) receberão notificações.`
+      message:
+        usersWithToken === 0
+          ? "Nenhum usuário com push token. Faça login no app para registrar."
+          : `${usersWithToken} usuário(s) receberão notificações.`,
     });
   } catch (error) {
     res.status(500).json({ error: error.message });

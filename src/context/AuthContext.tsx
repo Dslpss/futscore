@@ -49,23 +49,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     try {
       console.log("[Auth] Iniciando registro de push token...");
       const pushToken = await registerForPushNotificationsAsync();
-      
+
       if (pushToken) {
-        console.log("[Auth] Push token obtido:", pushToken.substring(0, 30) + "...");
-        
+        console.log(
+          "[Auth] Push token obtido:",
+          pushToken.substring(0, 30) + "..."
+        );
+
         // Se authToken foi passado, usar diretamente no header
         if (authToken) {
           const response = await fetch(`${BACKEND_URL}/user/push-token`, {
-            method: 'POST',
+            method: "POST",
             headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${authToken}`,
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${authToken}`,
             },
             body: JSON.stringify({ pushToken }),
           });
-          
+
           if (response.ok) {
-            console.log("[Auth] Push token registrado no servidor com sucesso!");
+            console.log(
+              "[Auth] Push token registrado no servidor com sucesso!"
+            );
           } else {
             const error = await response.json();
             console.error("[Auth] Erro ao registrar push token:", error);
@@ -76,7 +81,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           console.log("[Auth] Push token registrado no servidor com sucesso!");
         }
       } else {
-        console.log("[Auth] Não foi possível obter push token (permissão negada ou emulador)");
+        console.log(
+          "[Auth] Não foi possível obter push token (permissão negada ou emulador)"
+        );
       }
     } catch (error) {
       console.error("[Auth] Erro ao registrar push token:", error);
