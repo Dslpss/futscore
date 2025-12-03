@@ -9,9 +9,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { registerForPushNotificationsAsync } from "../services/notifications";
 import { authApi } from "../services/authApi";
+import { CONFIG } from "../constants/config";
 
 // Backend URL - Railway Production
 export const API_URL = "https://futscore-production.up.railway.app/auth";
+const BACKEND_URL = CONFIG.BACKEND_URL;
 
 interface User {
   id: string;
@@ -43,11 +45,45 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   }, []);
 
   // Registrar push token quando usuário estiver logado
-  async function registerPushToken() {
+  async function registerPushToken(authToken?: string) {
     try {
+      console.log("[Auth] Iniciando registro de push token...");
       const pushToken = await registerForPushNotificationsAsync();
+
       if (pushToken) {
-        await authApi.registerPushToken(pushToken);
+        console.log(
+          "[Auth] Push token obtido:",
+          pushToken.substring(0, 30) + "..."
+        );
+
+        // Se authToken foi passado, usar diretamente no header
+        if (authToken) {
+          const response = await fetch(`${BACKEND_URL}/user/push-token`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${authToken}`,
+            },
+            body: JSON.stringify({ pushToken }),
+          });
+
+          if (response.ok) {
+            console.log(
+              "[Auth] Push token registrado no servidor com sucesso!"
+            );
+          } else {
+            const error = await response.json();
+            console.error("[Auth] Erro ao registrar push token:", error);
+          }
+        } else {
+          // Usar authApi que pega token do AsyncStorage
+          await authApi.registerPushToken(pushToken);
+          console.log("[Auth] Push token registrado no servidor com sucesso!");
+        }
+      } else {
+        console.log(
+          "[Auth] Não foi possível obter push token (permissão negada ou emulador)"
+        );
       }
     } catch (error) {
       console.error("[Auth] Erro ao registrar push token:", error);
@@ -87,8 +123,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       await AsyncStorage.setItem("@FutScore:user", JSON.stringify(newUser));
       await AsyncStorage.setItem("@FutScore:token", newToken);
 
-      // Registrar push token após login
-      registerPushToken();
+      // Registrar push token após login - passar o token diretamente
+      registerPushToken(newToken);
     } catch (error) {
       console.error("Error signing in", error);
     }

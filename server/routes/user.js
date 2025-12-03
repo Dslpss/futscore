@@ -130,27 +130,34 @@ router.delete("/favorites/:teamId", authMiddleware, async (req, res) => {
 
 // Registrar Push Token do dispositivo
 router.post("/push-token", authMiddleware, async (req, res) => {
+  console.log(`[Push] POST /push-token recebido - userId: ${req.userId}`);
+  console.log(`[Push] Body:`, JSON.stringify(req.body));
+
   try {
     const { pushToken } = req.body;
 
     if (!pushToken) {
+      console.log(`[Push] ❌ Push token não fornecido`);
       return res.status(400).json({ message: "Push token is required" });
     }
+
+    console.log(`[Push] Token recebido: ${pushToken.substring(0, 40)}...`);
 
     const user = await User.findByIdAndUpdate(
       req.userId,
       { pushToken },
       { new: true }
-    ).select("pushToken");
+    ).select("pushToken email");
 
     if (!user) {
+      console.log(`[Push] ❌ Usuário não encontrado: ${req.userId}`);
       return res.status(404).json({ message: "User not found" });
     }
 
-    console.log(`[Push] Token registrado para usuário ${req.userId}`);
+    console.log(`[Push] ✅ Token registrado para ${user.email}`);
     res.json({ success: true, message: "Push token registered" });
   } catch (error) {
-    console.error(error);
+    console.error(`[Push] ❌ Erro:`, error);
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -205,6 +212,67 @@ router.get("/notification-settings", authMiddleware, async (req, res) => {
     }
 
     res.json({ notificationSettings: user.notificationSettings || {} });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// ============ DEBUG/TEST ENDPOINTS ============
+
+// Verificar status do push token do usuário
+router.get("/push-status", authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select(
+      "pushToken notificationSettings email"
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({
+      email: user.email,
+      hasPushToken: !!user.pushToken,
+      pushTokenPreview: user.pushToken
+        ? user.pushToken.substring(0, 30) + "..."
+        : null,
+      notificationSettings: user.notificationSettings,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Enviar notificação de teste para o próprio usuário
+router.post("/test-notification", authMiddleware, async (req, res) => {
+  try {
+    const { sendPushToUser } = require("../services/pushNotifications");
+    const user = await User.findById(req.userId).select("pushToken");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (!user.pushToken) {
+      return res.status(400).json({
+        message: "Push token not registered. Open the app and login again.",
+        hasPushToken: false,
+      });
+    }
+
+    const success = await sendPushToUser(
+      user.pushToken,
+      "🧪 Teste de Notificação",
+      "Se você recebeu isso, as notificações estão funcionando!",
+      { type: "test" }
+    );
+
+    res.json({
+      success,
+      message: success ? "Notification sent!" : "Failed to send notification",
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error" });
