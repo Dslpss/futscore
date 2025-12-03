@@ -99,6 +99,48 @@ app.get("/debug/register-token", async (req, res) => {
   }
 });
 
+// Endpoint para enviar notificação de teste (debug)
+app.get("/debug/test-push", async (req, res) => {
+  try {
+    const { email } = req.query;
+
+    if (!email) {
+      return res.status(400).json({
+        error: "Forneça o email via query param",
+        example: "/debug/test-push?email=seu@email.com",
+      });
+    }
+
+    const User = require("./models/User");
+    const { sendPushToUser } = require("./services/pushNotifications");
+    
+    const user = await User.findOne({ email }).select("pushToken");
+
+    if (!user) {
+      return res.status(404).json({ error: "Usuário não encontrado" });
+    }
+
+    if (!user.pushToken) {
+      return res.status(400).json({ error: "Usuário não tem push token registrado" });
+    }
+
+    const success = await sendPushToUser(
+      user.pushToken,
+      "🎉 Teste FutScore!",
+      "Se você recebeu isso, as notificações estão funcionando perfeitamente!",
+      { type: "test" }
+    );
+
+    console.log(`[Debug] Notificação de teste enviada para ${email}: ${success ? "✅" : "❌"}`);
+    res.json({
+      success,
+      message: success ? "Notificação enviada! Verifique seu celular." : "Falha ao enviar notificação",
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Start Server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
