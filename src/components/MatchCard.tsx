@@ -12,6 +12,7 @@ interface MatchCardProps {
 }
 
 export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
+  const isHalfTime = match.fixture.status.short === "HT";
   const isLive =
     match.fixture.status.short === "1H" ||
     match.fixture.status.short === "2H" ||
@@ -51,18 +52,21 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
               </Text>
             </View>
 
-            {isLive ? (
+            {isHalfTime ? (
+              <View style={styles.halfTimeBadge}>
+                <Text style={styles.halfTimeIcon}>☕</Text>
+                <Text style={styles.halfTimeText}>INTERVALO</Text>
+              </View>
+            ) : isLive ? (
               <View style={styles.liveBadge}>
                 <View style={styles.liveDot} />
                 <Text style={styles.liveText}>
-                  {match.fixture.status.short === "HT"
-                    ? "INTERVALO"
-                    : match.fixture.status.short === "1H"
+                  AO VIVO •{" "}
+                  {match.fixture.status.short === "1H"
                     ? "1º TEMPO"
                     : "2º TEMPO"}
-                  {match.fixture.status.short !== "HT" &&
-                  match.fixture.status.elapsed
-                    ? ` • ${match.fixture.status.elapsed}'`
+                  {match.fixture.status.elapsed
+                    ? ` ${match.fixture.status.elapsed}'`
                     : ""}
                 </Text>
               </View>
@@ -310,6 +314,26 @@ const styles = StyleSheet.create({
   },
 
   // Status badges
+  halfTimeBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(251, 146, 60, 0.15)",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(251, 146, 60, 0.3)",
+    gap: 6,
+  },
+  halfTimeIcon: {
+    fontSize: 12,
+  },
+  halfTimeText: {
+    color: "#fb923c",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.3,
+  },
   liveBadge: {
     flexDirection: "row",
     alignItems: "center",

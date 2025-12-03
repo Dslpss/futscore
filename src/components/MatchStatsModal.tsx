@@ -762,13 +762,27 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                           {goals.map((goal, index) => (
                             <View key={index} style={styles.goalCard}>
                               <View style={styles.goalHeader}>
-                                <Text style={styles.goalMinute}>
-                                  {goal.minute}'
-                                </Text>
+                                <View style={styles.goalTimeContainer}>
+                                  <Text style={styles.goalMinute}>
+                                    {goal.minute}'
+                                  </Text>
+                                  <View
+                                    style={[
+                                      styles.goalPeriodBadge,
+                                      goal.period === 2 &&
+                                        styles.goalPeriodBadgeSecond,
+                                    ]}>
+                                    <Text style={styles.goalPeriodText}>
+                                      {goal.period === 1 ? "1º T" : "2º T"}
+                                    </Text>
+                                  </View>
+                                </View>
                                 <Text style={styles.goalIcon}>⚽</Text>
                               </View>
                               <Text style={styles.goalPlayer}>
                                 {goal.player.number}. {goal.player.name}
+                                {goal.isPenalty && " (Pênalti)"}
+                                {goal.isOwnGoal && " (Gol Contra)"}
                               </Text>
                               {goal.assist && (
                                 <Text style={styles.goalAssist}>
@@ -1419,6 +1433,25 @@ const styles = StyleSheet.create({
     color: "#a1a1aa",
     fontSize: 14,
     marginBottom: 8,
+  },
+  goalTimeContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  goalPeriodBadge: {
+    backgroundColor: "rgba(34, 197, 94, 0.2)",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  goalPeriodBadgeSecond: {
+    backgroundColor: "rgba(59, 130, 246, 0.2)",
+  },
+  goalPeriodText: {
+    color: "#a1a1aa",
+    fontSize: 11,
+    fontWeight: "600",
   },
   goalDescription: {
     color: "#71717a",

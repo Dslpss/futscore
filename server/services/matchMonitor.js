@@ -427,7 +427,7 @@ async function checkAndNotify() {
   try {
     lastCheckTime = new Date();
     checkCount++;
-    
+
     console.log(`[Monitor] Verificando jogos... (check #${checkCount})`);
     const matches = await fetchLiveMatches();
 

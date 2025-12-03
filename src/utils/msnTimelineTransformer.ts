@@ -1,5 +1,6 @@
 export interface GoalEvent {
   minute: string;
+  period: 1 | 2; // 1 = primeiro tempo, 2 = segundo tempo
   player: {
     name: string;
     number: number;
@@ -94,6 +95,12 @@ export function transformMsnTimeline(timelineData: any): MatchTimeline {
       const minute = event.gameClock?.minutes?.toString() || event.time || "0";
       const teamId = event.teamId || "";
 
+      // Determinar o período baseado no minuto ou no campo period da API
+      const eventPeriod = event.period?.number || event.playingPeriod?.number;
+      const minuteNum = parseInt(minute) || 0;
+      const period: 1 | 2 =
+        eventPeriod === "2" || eventPeriod === 2 || minuteNum > 45 ? 2 : 1;
+
       switch (event.eventType) {
         case "ScoreChange": {
           // GOL
@@ -131,6 +138,7 @@ export function transformMsnTimeline(timelineData: any): MatchTimeline {
 
           const goal: GoalEvent = {
             minute,
+            period,
             player: { name: playerName, number: playerNumber },
             assist,
             teamId,

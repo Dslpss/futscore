@@ -14,14 +14,57 @@ export function transformMsnGameToMatch(game: any, leagueInfo?: any): Match {
   // Determine match status
   let statusShort = "NS"; // Not Started
   let statusLong = "Não Iniciado";
+  let elapsed: number | undefined = undefined;
 
-  if (game.gameState?.gameStatus === "Final") {
+  const gameStatus = game.gameState?.gameStatus;
+  const detailedStatus =
+    game.gameState?.detailedGameStatus?.toLowerCase() || "";
+
+  // Buscar minutos do gameClock (formato: { minutes: "52", seconds: "41" })
+  const gameClockMinutes = game.gameState?.gameClock?.minutes;
+
+  // Buscar período do currentPlayingPeriod (formato: { playingPeriodType: "Half", number: "2" })
+  const currentPeriod = game.currentPlayingPeriod?.number;
+  const periodType =
+    game.currentPlayingPeriod?.playingPeriodType?.toLowerCase();
+
+  if (gameStatus === "Final" || gameStatus === "Post") {
     statusShort = "FT";
     statusLong = "Partida Encerrada";
-  } else if (game.gameState?.gameStatus === "InProgress") {
-    statusShort = "1H"; // Assume first half if in progress
-    statusLong = "Em Andamento";
-  } else if (game.gameState?.gameStatus === "PreGame") {
+  } else if (gameStatus === "InProgress" || gameStatus === "InProgressBreak") {
+    // Parse minutos jogados
+    if (gameClockMinutes) {
+      elapsed = parseInt(gameClockMinutes) || 0;
+    }
+
+    // Verificar se está no intervalo
+    if (
+      gameStatus === "InProgressBreak" ||
+      periodType === "break" ||
+      detailedStatus.includes("halftime") ||
+      detailedStatus.includes("half time") ||
+      detailedStatus.includes("half-time") ||
+      detailedStatus.includes("break") ||
+      detailedStatus.includes("intervalo")
+    ) {
+      statusShort = "HT";
+      statusLong = "Intervalo";
+    } else if (
+      currentPeriod === "2" ||
+      currentPeriod === 2 ||
+      detailedStatus.includes("second half") ||
+      detailedStatus.includes("2nd half") ||
+      detailedStatus.includes("segundo tempo") ||
+      // Se o minuto é maior que 45, está no segundo tempo
+      (elapsed && elapsed > 45)
+    ) {
+      statusShort = "2H";
+      statusLong = "Segundo Tempo";
+    } else {
+      statusShort = "1H";
+      statusLong = "Primeiro Tempo";
+    }
+  } else if (gameStatus === "PreGame" || gameStatus === "Pre") {
     statusShort = "NS";
     statusLong = "Não Iniciado";
   }
@@ -56,6 +99,7 @@ export function transformMsnGameToMatch(game: any, leagueInfo?: any): Match {
       status: {
         long: statusLong,
         short: statusShort,
+        elapsed: elapsed,
       },
       // Store the full MSN game ID for later use (statistics, lineups)
       msnGameId: game.id,
