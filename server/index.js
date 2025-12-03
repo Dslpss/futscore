@@ -113,7 +113,7 @@ app.get("/debug/test-push", async (req, res) => {
 
     const User = require("./models/User");
     const { sendPushToUser } = require("./services/pushNotifications");
-    
+
     const user = await User.findOne({ email }).select("pushToken");
 
     if (!user) {
@@ -121,7 +121,9 @@ app.get("/debug/test-push", async (req, res) => {
     }
 
     if (!user.pushToken) {
-      return res.status(400).json({ error: "Usuário não tem push token registrado" });
+      return res
+        .status(400)
+        .json({ error: "Usuário não tem push token registrado" });
     }
 
     const success = await sendPushToUser(
@@ -131,10 +133,16 @@ app.get("/debug/test-push", async (req, res) => {
       { type: "test" }
     );
 
-    console.log(`[Debug] Notificação de teste enviada para ${email}: ${success ? "✅" : "❌"}`);
+    console.log(
+      `[Debug] Notificação de teste enviada para ${email}: ${
+        success ? "✅" : "❌"
+      }`
+    );
     res.json({
       success,
-      message: success ? "Notificação enviada! Verifique seu celular." : "Falha ao enviar notificação",
+      message: success
+        ? "Notificação enviada! Verifique seu celular."
+        : "Falha ao enviar notificação",
     });
   } catch (error) {
     res.status(500).json({ error: error.message });

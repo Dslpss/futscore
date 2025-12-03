@@ -25,16 +25,16 @@ async function sendPushToUser(pushToken, title, body, data = {}) {
     };
 
     console.log(`[Push] Enviando para: ${pushToken.substring(0, 40)}...`);
-    
+
     const chunks = expo.chunkPushNotifications([message]);
 
     for (const chunk of chunks) {
       const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
       console.log(`[Push] Resposta Expo:`, JSON.stringify(ticketChunk));
-      
+
       // Verificar se houve erro
       for (const ticket of ticketChunk) {
-        if (ticket.status === 'error') {
+        if (ticket.status === "error") {
           console.error(`[Push] ❌ Erro do Expo: ${ticket.message}`);
           if (ticket.details && ticket.details.error) {
             console.error(`[Push] ❌ Detalhes: ${ticket.details.error}`);
@@ -42,7 +42,7 @@ async function sendPushToUser(pushToken, title, body, data = {}) {
           return false;
         }
       }
-      
+
       console.log(`[Push] ✅ Enviado com sucesso: ${title}`);
     }
 
