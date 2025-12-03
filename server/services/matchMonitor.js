@@ -1,0 +1,264 @@
+const { notifyMatchStarted, notifyGoal } = require("./pushNotifications");
+
+// Cache de scores e status para detectar mudanças
+let lastKnownScores = {};
+let lastKnownStatus = {};
+let notifiedMatchStarts = new Set();
+
+// Configuração - intervalos mais espaçados para evitar detecção
+const CHECK_INTERVAL_LIVE = 60 * 1000; // 1 minuto quando há jogos ao vivo
+const CHECK_INTERVAL_IDLE = 5 * 60 * 1000; // 5 minutos quando não há jogos
+let currentInterval = CHECK_INTERVAL_IDLE;
+let intervalId = null;
+
+// User agents rotativos para parecer requisições de diferentes dispositivos
+const USER_AGENTS = [
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+  "Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0",
+];
+
+let userAgentIndex = 0;
+
+function getRandomUserAgent() {
+  userAgentIndex = (userAgentIndex + 1) % USER_AGENTS.length;
+  return USER_AGENTS[userAgentIndex];
+}
+
+// Delay aleatório para parecer comportamento humano
+function randomDelay(min = 500, max = 2000) {
+  return new Promise((resolve) =>
+    setTimeout(resolve, Math.random() * (max - min) + min)
+  );
+}
+
+const MSN_API_BASE = "https://assets.msn.com/service/sports/schedules";
+
+/**
+ * Busca jogos ao vivo de todas as ligas
+ */
+async function fetchLiveMatches() {
+  const leagues = [
+    {
+      id: "Soccer_BrazilBrasileiroSerieA",
+      name: "Brasileirão",
+      sport: "Soccer",
+    },
+    {
+      id: "Soccer_InternationalClubsUEFAChampionsLeague",
+      name: "Champions League",
+      sport: "Soccer",
+    },
+    { id: "Soccer_SpainLaLiga", name: "La Liga", sport: "Soccer" },
+    {
+      id: "Soccer_EnglandPremierLeague",
+      name: "Premier League",
+      sport: "Soccer",
+    },
+    { id: "Soccer_GermanyBundesliga", name: "Bundesliga", sport: "Soccer" },
+    { id: "Soccer_ItalySerieA", name: "Serie A", sport: "Soccer" },
+    { id: "Soccer_FranceLigue1", name: "Ligue 1", sport: "Soccer" },
+    {
+      id: "Soccer_PortugalPrimeiraLiga",
+      name: "Liga Portugal",
+      sport: "Soccer",
+    },
+  ];
+
+  const allMatches = [];
+
+  for (const league of leagues) {
+    try {
+      // Delay aleatório entre requisições de cada liga
+      await randomDelay(800, 2500);
+
+      const today = new Date().toISOString().split("T")[0];
+      const url = `${MSN_API_BASE}?day=${today}&leagueId=${league.id}&cm=pt-br&sport=${league.sport}`;
+
+      const response = await fetch(url, {
+        headers: {
+          "User-Agent": getRandomUserAgent(),
+          Accept: "application/json",
+          "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+          "Cache-Control": "no-cache",
+          Referer: "https://www.msn.com/pt-br/esportes",
+        },
+      });
+
+      if (!response.ok) continue;
+
+      const data = await response.json();
+      const games = data?.value?.games || [];
+
+      for (const game of games) {
+        // Verificar se está ao vivo
+        const status = game.gameState;
+        const isLive = ["inProgress", "halftime"].includes(status);
+        const isScheduled = status === "pre";
+
+        if (isLive || isScheduled) {
+          allMatches.push({
+            id: game.gameId,
+            status: status,
+            homeTeam: game.homeTeam?.displayName || "Time Casa",
+            awayTeam: game.awayTeam?.displayName || "Time Fora",
+            homeTeamId: game.homeTeam?.teamId || 0,
+            awayTeamId: game.awayTeam?.teamId || 0,
+            homeScore: game.homeTeam?.score || 0,
+            awayScore: game.awayTeam?.score || 0,
+            league: league.name,
+            startTime: game.startDateTime,
+          });
+        }
+      }
+    } catch (error) {
+      console.error(`[Monitor] Erro ao buscar ${league.name}:`, error.message);
+    }
+  }
+
+  return allMatches;
+}
+
+/**
+ * Verifica mudanças e envia notificações
+ */
+async function checkAndNotify() {
+  try {
+    console.log("[Monitor] Verificando jogos...");
+    const matches = await fetchLiveMatches();
+
+    // Contar jogos ao vivo para ajustar intervalo
+    const liveMatches = matches.filter(
+      (m) => m.status === "inProgress" || m.status === "halftime"
+    );
+    console.log(
+      `[Monitor] ${matches.length} jogos total, ${liveMatches.length} ao vivo`
+    );
+
+    // Ajustar intervalo baseado em jogos ao vivo
+    adjustCheckInterval(liveMatches.length > 0);
+
+    for (const match of matches) {
+      const matchId = match.id;
+
+      // 1. Verificar se jogo COMEÇOU (mudou de pre para inProgress)
+      const previousStatus = lastKnownStatus[matchId];
+      if (
+        match.status === "inProgress" &&
+        previousStatus === "pre" &&
+        !notifiedMatchStarts.has(matchId)
+      ) {
+        console.log(
+          `[Monitor] 🟢 Jogo começou: ${match.homeTeam} vs ${match.awayTeam}`
+        );
+        await notifyMatchStarted(match);
+        notifiedMatchStarts.add(matchId);
+      }
+
+      // Atualizar status conhecido
+      lastKnownStatus[matchId] = match.status;
+
+      // 2. Verificar se houve GOL (apenas para jogos ao vivo)
+      if (match.status === "inProgress") {
+        const previous = lastKnownScores[matchId];
+
+        if (previous) {
+          const homeScored = match.homeScore > previous.home;
+          const awayScored = match.awayScore > previous.away;
+
+          if (homeScored) {
+            console.log(
+              `[Monitor] ⚽ GOL ${match.homeTeam}! ${match.homeTeam} ${match.homeScore} x ${match.awayScore} ${match.awayTeam}`
+            );
+            await notifyGoal(match, match.homeTeam);
+          }
+
+          if (awayScored) {
+            console.log(
+              `[Monitor] ⚽ GOL ${match.awayTeam}! ${match.homeTeam} ${match.homeScore} x ${match.awayScore} ${match.awayTeam}`
+            );
+            await notifyGoal(match, match.awayTeam);
+          }
+        }
+
+        // Atualizar score conhecido
+        lastKnownScores[matchId] = {
+          home: match.homeScore,
+          away: match.awayScore,
+        };
+      }
+    }
+
+    // Limpar jogos antigos do cache (a cada hora)
+    cleanOldCache();
+  } catch (error) {
+    console.error("[Monitor] Erro:", error);
+  }
+}
+
+/**
+ * Ajusta o intervalo de verificação baseado em jogos ao vivo
+ */
+function adjustCheckInterval(hasLiveMatches) {
+  const newInterval = hasLiveMatches
+    ? CHECK_INTERVAL_LIVE
+    : CHECK_INTERVAL_IDLE;
+
+  if (newInterval !== currentInterval) {
+    currentInterval = newInterval;
+    console.log(
+      `[Monitor] Intervalo ajustado para ${currentInterval / 1000}s (${
+        hasLiveMatches ? "jogos ao vivo" : "sem jogos"
+      })`
+    );
+
+    // Reiniciar o intervalo com o novo tempo
+    if (intervalId) {
+      clearInterval(intervalId);
+      intervalId = setInterval(checkAndNotify, currentInterval);
+    }
+  }
+}
+
+/**
+ * Limpa cache de jogos antigos
+ */
+let lastCleanup = Date.now();
+function cleanOldCache() {
+  const now = Date.now();
+  if (now - lastCleanup > 60 * 60 * 1000) {
+    // A cada 1 hora
+    console.log("[Monitor] Limpando cache antigo...");
+    lastKnownScores = {};
+    lastKnownStatus = {};
+    notifiedMatchStarts.clear();
+    lastCleanup = now;
+  }
+}
+
+/**
+ * Inicia o monitoramento em loop
+ */
+function startMatchMonitor() {
+  console.log("[Monitor] 🚀 Iniciando monitoramento de partidas...");
+  console.log(
+    `[Monitor] Intervalo inicial: ${currentInterval / 1000}s (modo economia)`
+  );
+  console.log("[Monitor] Intervalo com jogos ao vivo: 60s | Sem jogos: 5min");
+
+  // Primeira verificação com delay inicial aleatório
+  setTimeout(() => {
+    checkAndNotify();
+
+    // Loop contínuo
+    intervalId = setInterval(checkAndNotify, currentInterval);
+  }, Math.random() * 5000 + 2000); // Delay inicial de 2-7 segundos
+}
+
+module.exports = {
+  startMatchMonitor,
+  checkAndNotify,
+  fetchLiveMatches,
+};

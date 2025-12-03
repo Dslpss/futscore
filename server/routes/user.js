@@ -1,39 +1,41 @@
-const express = require('express');
-const User = require('../models/User');
-const authMiddleware = require('../middleware/auth');
+const express = require("express");
+const User = require("../models/User");
+const authMiddleware = require("../middleware/auth");
 
 const router = express.Router();
 
 // Get user's favorite teams
-router.get('/favorites', authMiddleware, async (req, res) => {
+router.get("/favorites", authMiddleware, async (req, res) => {
   try {
-    const user = await User.findById(req.userId).select('favoriteTeams');
-    
+    const user = await User.findById(req.userId).select("favoriteTeams");
+
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: "User not found" });
     }
 
     res.json({ favoriteTeams: user.favoriteTeams || [] });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Server error" });
   }
 });
 
 // Update user's favorite teams (replace entire list)
-router.put('/favorites', authMiddleware, async (req, res) => {
+router.put("/favorites", authMiddleware, async (req, res) => {
   try {
     const { favoriteTeams } = req.body;
 
     if (!Array.isArray(favoriteTeams)) {
-      return res.status(400).json({ message: 'favoriteTeams must be an array' });
+      return res
+        .status(400)
+        .json({ message: "favoriteTeams must be an array" });
     }
 
     // Validate each team object
     for (const team of favoriteTeams) {
       if (!team.id || !team.name || !team.logo || !team.country) {
-        return res.status(400).json({ 
-          message: 'Each team must have id, name, logo, and country' 
+        return res.status(400).json({
+          message: "Each team must have id, name, logo, and country",
         });
       }
     }
@@ -42,44 +44,44 @@ router.put('/favorites', authMiddleware, async (req, res) => {
       req.userId,
       { favoriteTeams },
       { new: true }
-    ).select('favoriteTeams');
+    ).select("favoriteTeams");
 
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: "User not found" });
     }
 
     res.json({ favoriteTeams: user.favoriteTeams });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Server error" });
   }
 });
 
 // Add a single team to favorites
-router.post('/favorites/:teamId', authMiddleware, async (req, res) => {
+router.post("/favorites/:teamId", authMiddleware, async (req, res) => {
   try {
     const { teamId } = req.params;
     const { name, logo, country } = req.body;
 
     if (!name || !logo || !country) {
-      return res.status(400).json({ 
-        message: 'Team name, logo, and country are required' 
+      return res.status(400).json({
+        message: "Team name, logo, and country are required",
       });
     }
 
     const user = await User.findById(req.userId);
-    
+
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: "User not found" });
     }
 
     // Check if team already exists
     const teamExists = user.favoriteTeams.some(
-      team => team.id === parseInt(teamId)
+      (team) => team.id === parseInt(teamId)
     );
 
     if (teamExists) {
-      return res.status(400).json({ message: 'Team already in favorites' });
+      return res.status(400).json({ message: "Team already in favorites" });
     }
 
     // Add team to favorites
@@ -95,24 +97,24 @@ router.post('/favorites/:teamId', authMiddleware, async (req, res) => {
     res.json({ favoriteTeams: user.favoriteTeams });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Server error" });
   }
 });
 
 // Remove a team from favorites
-router.delete('/favorites/:teamId', authMiddleware, async (req, res) => {
+router.delete("/favorites/:teamId", authMiddleware, async (req, res) => {
   try {
     const { teamId } = req.params;
 
     const user = await User.findById(req.userId);
-    
+
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: "User not found" });
     }
 
     // Remove team from favorites
     user.favoriteTeams = user.favoriteTeams.filter(
-      team => team.id !== parseInt(teamId)
+      (team) => team.id !== parseInt(teamId)
     );
 
     await user.save();
@@ -120,7 +122,92 @@ router.delete('/favorites/:teamId', authMiddleware, async (req, res) => {
     res.json({ favoriteTeams: user.favoriteTeams });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// ============ PUSH NOTIFICATIONS ============
+
+// Registrar Push Token do dispositivo
+router.post("/push-token", authMiddleware, async (req, res) => {
+  try {
+    const { pushToken } = req.body;
+
+    if (!pushToken) {
+      return res.status(400).json({ message: "Push token is required" });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.userId,
+      { pushToken },
+      { new: true }
+    ).select("pushToken");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    console.log(`[Push] Token registrado para usuário ${req.userId}`);
+    res.json({ success: true, message: "Push token registered" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Remover Push Token (quando usuário deslogar)
+router.delete("/push-token", authMiddleware, async (req, res) => {
+  try {
+    await User.findByIdAndUpdate(req.userId, { pushToken: null });
+    res.json({ success: true, message: "Push token removed" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Atualizar configurações de notificação
+router.put("/notification-settings", authMiddleware, async (req, res) => {
+  try {
+    const { allMatches, favoritesOnly, goals, matchStart } = req.body;
+
+    const user = await User.findByIdAndUpdate(
+      req.userId,
+      {
+        notificationSettings: {
+          allMatches: allMatches !== undefined ? allMatches : true,
+          favoritesOnly: favoritesOnly !== undefined ? favoritesOnly : false,
+          goals: goals !== undefined ? goals : true,
+          matchStart: matchStart !== undefined ? matchStart : true,
+        },
+      },
+      { new: true }
+    ).select("notificationSettings");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({ notificationSettings: user.notificationSettings });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Buscar configurações de notificação
+router.get("/notification-settings", authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select("notificationSettings");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({ notificationSettings: user.notificationSettings || {} });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
