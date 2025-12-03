@@ -390,5 +390,65 @@ export const msnSportsApi = {
       return null;
     }
   },
+
+  /**
+   * Get team live schedule (finished and upcoming matches)
+   * Uses /liveschedules endpoint which provides richer data including game outcomes
+   * @param teamId - Team ID from MSN Sports (e.g., "SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_2001")
+   * @param take - Number of games to return (default: 7, includes past and future)
+   */
+  getTeamLiveSchedule: async (teamId: string, take: number = 7): Promise<any[]> => {
+    const cacheKey = `team_live_schedule_${teamId}_${take}`;
+    const cached = await getCachedData<any[]>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const now = new Date();
+      const params = {
+        ...CONFIG.MSN_SPORTS.BASE_PARAMS,
+        apikey: CONFIG.MSN_SPORTS.API_KEY,
+        activityId: generateActivityId(),
+        ocid: 'sports-gamecenter',
+        type: 'TeamSchedule',
+        ids: teamId,
+        take: take,
+        tzoffset: Math.floor(-now.getTimezoneOffset() / 60).toString(),
+      };
+
+      console.log(`[MSN API] Fetching live schedule for team ${teamId}...`);
+      
+      const response = await msnApiClient.get('/liveschedules', { params });
+
+      if (!response.data || !response.data.value || response.data.value.length === 0) {
+        console.log(`[MSN API] No live schedule data available for team ${teamId}`);
+        return [];
+      }
+
+      const scheduleData = response.data.value[0];
+      
+      if (!scheduleData.schedules || scheduleData.schedules.length === 0) {
+        console.log(`[MSN API] No games found in live schedule for team ${teamId}`);
+        return [];
+      }
+
+      // Collect all games from schedules
+      let allGames: any[] = [];
+      
+      scheduleData.schedules.forEach((schedule: any) => {
+        if (schedule.games && Array.isArray(schedule.games)) {
+          allGames = [...allGames, ...schedule.games];
+        }
+      });
+
+      console.log(`[MSN API] Fetched ${allGames.length} games from live schedule for team ${teamId}`);
+
+      // Cache for 30 minutes (live data changes frequently)
+      await setCachedData(cacheKey, allGames, 30 * 60 * 1000);
+      return allGames;
+    } catch (error) {
+      console.error(`[MSN API] Error fetching live schedule for ${teamId}:`, error);
+      return [];
+    }
+  },
 };
 

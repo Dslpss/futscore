@@ -55,11 +55,13 @@ export function transformMsnGameToMatch(game: any, leagueInfo?: any): Match {
         id: homeParticipant?.team?.id ? parseInt(homeParticipant.team.id.split('_').pop() || '0') : 0,
         name: homeParticipant?.team?.name?.localizedName || homeParticipant?.team?.name?.rawName || 'Unknown',
         logo: homeParticipant?.team?.image?.id ? `https://www.bing.com/th?id=${homeParticipant.team.image.id}&w=80&h=80` : '',
+        msnId: homeParticipant?.team?.id, // Store MSN Team ID for later use
       },
       away: {
         id: awayParticipant?.team?.id ? parseInt(awayParticipant.team.id.split('_').pop() || '0') : 0,
         name: awayParticipant?.team?.name?.localizedName || awayParticipant?.team?.name?.rawName || 'Unknown',
         logo: awayParticipant?.team?.image?.id ? `https://www.bing.com/th?id=${awayParticipant.team.image.id}&w=80&h=80` : '',
+        msnId: awayParticipant?.team?.id, // Store MSN Team ID for later use
       },
     },
     goals: {

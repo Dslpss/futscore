@@ -397,4 +397,93 @@ export const api = {
       return [];
     }
   },
+
+  /**
+   * Get recent matches for a specific team (last 5 finished games)
+   * @param teamId - Team ID
+   * @param limit - Number of matches to return (default: 5)
+   */
+  getTeamMatches: async (teamId: number, limit: number = 5): Promise<Match[]> => {
+    const cacheKey = `team_matches_${teamId}_${limit}`;
+    const cached = await getCachedData<Match[]>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      // football-data.org endpoint for team matches
+      const response = await apiClient.get(`/teams/${teamId}/matches`, {
+        params: {
+          status: 'FINISHED',
+          limit: limit * 2, // Request more to ensure we get enough after filtering
+        },
+      });
+
+      if (!response.data.matches || response.data.matches.length === 0) {
+        console.log(`[API] No matches found for team ${teamId}`);
+        return [];
+      }
+
+      // Transform and filter
+      const matches: Match[] = response.data.matches
+        .filter((match: any) => match.status === 'FINISHED')
+        .slice(0, limit)
+        .map((match: any) => ({
+          fixture: {
+            id: match.id,
+            date: match.utcDate,
+            status: {
+              long: 'Partida Encerrada',
+              short: 'FT',
+              elapsed: null,
+            },
+            venue: match.venue
+              ? {
+                  name: match.venue.name || 'Estádio não informado',
+                  city: match.venue.city || '',
+                }
+              : undefined,
+          },
+          league: {
+            id: match.competition.code as any,
+            name: match.competition.name,
+            logo: match.competition.emblem || '',
+            country: match.area?.name || '',
+          },
+          teams: {
+            home: {
+              id: match.homeTeam.id,
+              name: match.homeTeam.name,
+              logo: match.homeTeam.crest || '',
+            },
+            away: {
+              id: match.awayTeam.id,
+              name: match.awayTeam.name,
+              logo: match.awayTeam.crest || '',
+            },
+          },
+          goals: {
+            home: match.score.fullTime.home,
+            away: match.score.fullTime.away,
+          },
+          score: {
+            halftime: {
+              home: match.score.halfTime.home,
+              away: match.score.halfTime.away,
+            },
+            fulltime: {
+              home: match.score.fullTime.home,
+              away: match.score.fullTime.away,
+            },
+          },
+        }));
+
+      console.log(`[API] Fetched ${matches.length} recent matches for team ${teamId}`);
+
+      // Cache for 1 hour
+      await setCachedData(cacheKey, matches, 60 * 60 * 1000);
+      return matches;
+    } catch (error) {
+      console.error(`[API] Error fetching team matches for team ${teamId}:`, error);
+      return [];
+    }
+  },
 };

@@ -10,6 +10,7 @@ export interface Team {
   id: number;
   name: string;
   logo: string;
+  msnId?: string; // MSN Sports Team ID (e.g., "SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_2001")
 }
 
 export interface Statistics {

@@ -5,6 +5,7 @@ import { X } from 'lucide-react-native';
 import { api } from '../services/api';
 import { Player } from '../types';
 import { LinearGradient } from 'expo-linear-gradient';
+import { TeamMatchHistory } from './TeamMatchHistory';
 
 interface TeamDetailsModalProps {
   visible: boolean;
@@ -14,6 +15,7 @@ interface TeamDetailsModalProps {
     name: string;
     logo: string;
     country: string;
+    msnId?: string; // Optional MSN Sports Team ID
   } | null;
 }
 
@@ -94,13 +96,26 @@ export const TeamDetailsModal: React.FC<TeamDetailsModalProps> = ({ visible, onC
                 <ActivityIndicator size="large" color="#22c55e" />
               </View>
             ) : squad.length > 0 ? (
-              <View style={styles.squadContainer}>
-                {renderSection('Goleiros', groupedSquad.Goalkeeper)}
-                {renderSection('Defensores', groupedSquad.Defender)}
-                {renderSection('Meio-Campistas', groupedSquad.Midfielder)}
-                {renderSection('Atacantes', groupedSquad.Attacker)}
-                {renderSection('Comissão Técnica', groupedSquad.Coach)}
-              </View>
+              <>
+                {/* Match History Section */}
+                <View style={styles.historyContainer}>
+                  <TeamMatchHistory 
+                    teamId={team.id} 
+                    teamName={team.name}
+                    msnId={team.msnId}
+                    limit={5}
+                  />
+                </View>
+
+                {/* Squad Section */}
+                <View style={styles.squadContainer}>
+                  {renderSection('Goleiros', groupedSquad.Goalkeeper)}
+                  {renderSection('Defensores', groupedSquad.Defender)}
+                  {renderSection('Meio-Campistas', groupedSquad.Midfielder)}
+                  {renderSection('Atacantes', groupedSquad.Attacker)}
+                  {renderSection('Comissão Técnica', groupedSquad.Coach)}
+                </View>
+              </>
             ) : (
               <View style={styles.emptyContainer}>
                 <Text style={styles.emptyText}>Dados do elenco não disponíveis para este time.</Text>
@@ -152,6 +167,13 @@ const styles = StyleSheet.create({
   teamName: { color: '#fff', fontSize: 20, fontWeight: '700', marginBottom: 4, textAlign: 'center' },
   teamCountry: { color: '#a1a1aa', fontSize: 14 },
   loadingContainer: { padding: 40, alignItems: 'center' },
+  historyContainer: { 
+    paddingHorizontal: 20, 
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
+  },
   squadContainer: { paddingHorizontal: 20 },
   section: { marginBottom: 24 },
   sectionTitle: {

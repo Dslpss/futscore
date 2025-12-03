@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Constants from 'expo-constants';
 import { View, Text, StyleSheet, FlatList, RefreshControl, SafeAreaView, StatusBar, TouchableOpacity, Dimensions, Platform, ScrollView, Modal, Alert } from 'react-native';
 import { useMatches } from '../context/MatchContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { useAuth } from '../context/AuthContext';
 import { MatchCard } from '../components/MatchCard';
+import { NextMatchWidget } from '../components/NextMatchWidget';
 import { LinearGradient } from 'expo-linear-gradient';
 import { WarningCard } from '../components/WarningCard';
 import { UpdateModal } from '../components/UpdateModal';
@@ -12,6 +13,7 @@ import axios from 'axios';
 import { api } from '../services/api';
 import { CONFIG } from '../constants/config';
 import { Match } from '../types';
+import { getNextFavoriteMatch } from '../utils/matchHelpers';
 
 const { width } = Dimensions.get('window');
 
@@ -262,6 +264,24 @@ export const HomeScreen = ({ navigation }: any) => {
           })}
         </ScrollView>
       </View>
+      
+      {/* Next Match Widget */}
+      <NextMatchWidget 
+        match={(() => {
+          const sourceMatches = isToday(selectedDate) ? [...liveMatches, ...todaysMatches] : customMatches;
+          return getNextFavoriteMatch(sourceMatches, favoriteTeams);
+        })()}
+        onPress={() => {
+          const nextMatch = (() => {
+            const sourceMatches = isToday(selectedDate) ? [...liveMatches, ...todaysMatches] : customMatches;
+            return getNextFavoriteMatch(sourceMatches, favoriteTeams);
+          })();
+          if (nextMatch) {
+            // Could navigate to match details or open stats modal
+            console.log('Next match clicked:', nextMatch);
+          }
+        }}
+      />
       
       {/* Action Buttons - Favorites, Standings, and Leagues Explorer */}
       <View style={styles.actionButtonsContainer}>
