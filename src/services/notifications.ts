@@ -181,19 +181,163 @@ export async function notifyMatchStarted(
 export async function notifyGoal(
   match: any,
   scorerTeam: string,
+  isFavorite: boolean = false,
+  playerName?: string,
+  isPenalty?: boolean,
+  isOwnGoal?: boolean,
+  assistName?: string
+) {
+  const favoriteEmoji = isFavorite ? "⭐ " : "";
+  const homeScore = match.goals?.home ?? 0;
+  const awayScore = match.goals?.away ?? 0;
+
+  let goalType = "";
+  if (isPenalty) goalType = " (Pênalti)";
+  if (isOwnGoal) goalType = " (Gol Contra)";
+
+  const title = `${favoriteEmoji}⚽ GOOOOL${goalType}!`;
+  
+  let body = `${match.teams.home.name} ${homeScore} x ${awayScore} ${match.teams.away.name}`;
+  if (playerName) {
+    body = `${playerName}${goalType}\n${body}`;
+    if (assistName) {
+      body += `\nAssist: ${assistName}`;
+    }
+  }
+  body += `\n${match.league?.name || ""}`;
+
+  await schedulePushNotification(title, body);
+  console.log(
+    `[Notifications] Goal: ${scorerTeam} - ${match.teams.home.name} ${homeScore} x ${awayScore} ${match.teams.away.name}`
+  );
+}
+
+// Notificação de cartão amarelo
+export async function notifyYellowCard(
+  match: any,
+  playerName: string,
+  teamName: string,
+  minute: string,
+  isFavorite: boolean = false,
+  reason?: string
+) {
+  const favoriteEmoji = isFavorite ? "⭐ " : "";
+  const title = `${favoriteEmoji}🟨 Cartão Amarelo`;
+  
+  let body = `${minute}' - ${playerName} (${teamName})`;
+  if (reason) body += `\n${reason}`;
+  body += `\n${match.teams.home.name} vs ${match.teams.away.name}`;
+
+  await schedulePushNotification(title, body);
+  console.log(`[Notifications] Yellow Card: ${playerName} - ${teamName}`);
+}
+
+// Notificação de cartão vermelho
+export async function notifyRedCard(
+  match: any,
+  playerName: string,
+  teamName: string,
+  minute: string,
+  isFavorite: boolean = false,
+  isSecondYellow: boolean = false,
+  reason?: string
+) {
+  const favoriteEmoji = isFavorite ? "⭐ " : "";
+  const cardEmoji = isSecondYellow ? "🟨🟥" : "🟥";
+  const cardType = isSecondYellow ? "Segundo Amarelo" : "Cartão Vermelho";
+  const title = `${favoriteEmoji}${cardEmoji} ${cardType}!`;
+  
+  let body = `${minute}' - ${playerName} EXPULSO! (${teamName})`;
+  if (reason) body += `\n${reason}`;
+  body += `\n${match.teams.home.name} vs ${match.teams.away.name}`;
+
+  await schedulePushNotification(title, body);
+  console.log(`[Notifications] Red Card: ${playerName} - ${teamName}`);
+}
+
+// Notificação de pênalti marcado
+export async function notifyPenaltyAwarded(
+  match: any,
+  teamName: string,
+  minute: string,
+  isFavorite: boolean = false
+) {
+  const favoriteEmoji = isFavorite ? "⭐ " : "";
+  const title = `${favoriteEmoji}🎯 PÊNALTI!`;
+  const body = `${minute}' - Pênalti para o ${teamName}!\n${match.teams.home.name} vs ${match.teams.away.name}`;
+
+  await schedulePushNotification(title, body);
+  console.log(`[Notifications] Penalty Awarded: ${teamName}`);
+}
+
+// Notificação de pênalti perdido/defendido
+export async function notifyPenaltyMissed(
+  match: any,
+  playerName: string,
+  teamName: string,
+  minute: string,
+  isFavorite: boolean = false
+) {
+  const favoriteEmoji = isFavorite ? "⭐ " : "";
+  const title = `${favoriteEmoji}❌ Pênalti Perdido!`;
+  const body = `${minute}' - ${playerName} (${teamName}) perdeu o pênalti!\n${match.teams.home.name} vs ${match.teams.away.name}`;
+
+  await schedulePushNotification(title, body);
+  console.log(`[Notifications] Penalty Missed: ${playerName} - ${teamName}`);
+}
+
+// Notificação de decisão VAR
+export async function notifyVARDecision(
+  match: any,
+  decision: string,
+  minute: string,
+  isFavorite: boolean = false
+) {
+  const favoriteEmoji = isFavorite ? "⭐ " : "";
+  const title = `${favoriteEmoji}📺 Decisão VAR`;
+  const body = `${minute}' - ${decision}\n${match.teams.home.name} vs ${match.teams.away.name}`;
+
+  await schedulePushNotification(title, body);
+  console.log(`[Notifications] VAR Decision: ${decision}`);
+}
+
+// Notificação de fim de jogo
+export async function notifyMatchEnded(
+  match: any,
   isFavorite: boolean = false
 ) {
   const favoriteEmoji = isFavorite ? "⭐ " : "";
   const homeScore = match.goals?.home ?? 0;
   const awayScore = match.goals?.away ?? 0;
 
-  const title = `${favoriteEmoji}⚽ GOOOOL do ${scorerTeam}!`;
-  const body = `${match.teams.home.name} ${homeScore} x ${awayScore} ${
-    match.teams.away.name
-  }\n${match.league?.name || ""}`;
+  let resultText = "";
+  if (homeScore > awayScore) {
+    resultText = `Vitória do ${match.teams.home.name}!`;
+  } else if (awayScore > homeScore) {
+    resultText = `Vitória do ${match.teams.away.name}!`;
+  } else {
+    resultText = "Empate!";
+  }
+
+  const title = `${favoriteEmoji}🏁 FIM DE JOGO!`;
+  const body = `${match.teams.home.name} ${homeScore} x ${awayScore} ${match.teams.away.name}\n${resultText}`;
 
   await schedulePushNotification(title, body);
-  console.log(
-    `[Notifications] Goal: ${scorerTeam} - ${match.teams.home.name} ${homeScore} x ${awayScore} ${match.teams.away.name}`
-  );
+  console.log(`[Notifications] Match Ended: ${match.teams.home.name} ${homeScore} x ${awayScore} ${match.teams.away.name}`);
+}
+
+// Notificação de intervalo
+export async function notifyHalfTime(
+  match: any,
+  isFavorite: boolean = false
+) {
+  const favoriteEmoji = isFavorite ? "⭐ " : "";
+  const homeScore = match.goals?.home ?? 0;
+  const awayScore = match.goals?.away ?? 0;
+
+  const title = `${favoriteEmoji}⏸️ Intervalo`;
+  const body = `${match.teams.home.name} ${homeScore} x ${awayScore} ${match.teams.away.name}`;
+
+  await schedulePushNotification(title, body);
+  console.log(`[Notifications] Half Time: ${match.teams.home.name} ${homeScore} x ${awayScore} ${match.teams.away.name}`);
 }

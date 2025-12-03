@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Home, Plane } from 'lucide-react-native';
 import { Match } from '../types';
 
 interface NextMatchWidgetProps {
@@ -125,6 +126,10 @@ const MatchCard: React.FC<{ match: Match; onPress: () => void }> = ({ match, onP
             <Text style={styles.teamName} numberOfLines={1}>
               {match.teams.home.name}
             </Text>
+            <View style={styles.homeBadge}>
+              <Home size={8} color="#22c55e" />
+              <Text style={styles.homeBadgeText}>Casa</Text>
+            </View>
           </View>
 
           {/* VS Divider */}
@@ -144,6 +149,10 @@ const MatchCard: React.FC<{ match: Match; onPress: () => void }> = ({ match, onP
             <Text style={styles.teamName} numberOfLines={1}>
               {match.teams.away.name}
             </Text>
+            <View style={styles.awayBadge}>
+              <Plane size={8} color="#f59e0b" />
+              <Text style={styles.awayBadgeText}>Fora</Text>
+            </View>
           </View>
         </View>
 
@@ -273,6 +282,36 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     textAlign: 'center',
+  },
+  homeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    gap: 3,
+  },
+  homeBadgeText: {
+    color: '#22c55e',
+    fontSize: 8,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  awayBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    gap: 3,
+  },
+  awayBadgeText: {
+    color: '#f59e0b',
+    fontSize: 8,
+    fontWeight: '700',
+    textTransform: 'uppercase',
   },
 
   // VS

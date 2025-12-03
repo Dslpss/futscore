@@ -154,11 +154,22 @@ async function notifyMatchStarted(match) {
 /**
  * Notifica gol
  */
-async function notifyGoal(match, scorerTeam) {
-  const title = `⚽ GOOOOL do ${scorerTeam}!`;
-  const body = `${match.homeTeam} ${match.homeScore} x ${match.awayScore} ${
-    match.awayTeam
-  }\n${match.league || ""}`;
+async function notifyGoal(match, scorerTeam, playerName = null, minute = null, isPenalty = false, isOwnGoal = false) {
+  let title = `⚽ GOOOOL`;
+  if (isOwnGoal) {
+    title = `⚽ GOL CONTRA`;
+  } else if (isPenalty) {
+    title = `⚽ GOL DE PÊNALTI`;
+  }
+  title += ` do ${scorerTeam}!`;
+
+  let body = `${match.homeTeam} ${match.homeScore} x ${match.awayScore} ${match.awayTeam}`;
+  if (playerName && minute) {
+    body = `${playerName} (${minute}')\n${body}`;
+  }
+  if (match.league) {
+    body += `\n${match.league}`;
+  }
 
   await sendPushToAll(title, body, {
     type: "goal",
@@ -166,6 +177,178 @@ async function notifyGoal(match, scorerTeam) {
     homeTeamId: match.homeTeamId,
     awayTeamId: match.awayTeamId,
     scorer: scorerTeam,
+    playerName,
+    minute,
+    isPenalty,
+    isOwnGoal,
+  });
+}
+
+/**
+ * Notifica cartão amarelo
+ */
+async function notifyYellowCard(match, playerName, teamName, minute = null) {
+  const title = `🟨 Cartão Amarelo - ${teamName}`;
+  let body = `${playerName} recebeu cartão amarelo`;
+  if (minute) {
+    body += ` aos ${minute}'`;
+  }
+  body += `\n${match.homeTeam} ${match.homeScore} x ${match.awayScore} ${match.awayTeam}`;
+
+  await sendPushToAll(title, body, {
+    type: "yellow_card",
+    matchId: match.id,
+    homeTeamId: match.homeTeamId,
+    awayTeamId: match.awayTeamId,
+    playerName,
+    teamName,
+    minute,
+  });
+}
+
+/**
+ * Notifica cartão vermelho
+ */
+async function notifyRedCard(match, playerName, teamName, minute = null, isSecondYellow = false) {
+  const title = isSecondYellow 
+    ? `🟨🟥 Segundo Amarelo - ${teamName}` 
+    : `🟥 Cartão Vermelho - ${teamName}`;
+  
+  let body = `${playerName} foi expulso`;
+  if (isSecondYellow) {
+    body += ` (segundo amarelo)`;
+  }
+  if (minute) {
+    body += ` aos ${minute}'`;
+  }
+  body += `\n${match.homeTeam} ${match.homeScore} x ${match.awayScore} ${match.awayTeam}`;
+
+  await sendPushToAll(title, body, {
+    type: "red_card",
+    matchId: match.id,
+    homeTeamId: match.homeTeamId,
+    awayTeamId: match.awayTeamId,
+    playerName,
+    teamName,
+    minute,
+    isSecondYellow,
+  });
+}
+
+/**
+ * Notifica pênalti
+ */
+async function notifyPenalty(match, teamName, result = 'awarded', playerName = null, minute = null) {
+  let title = '';
+  let body = '';
+
+  switch (result) {
+    case 'scored':
+      title = `⚽ Pênalti Convertido - ${teamName}`;
+      body = playerName ? `${playerName} converteu o pênalti` : `${teamName} converteu o pênalti`;
+      break;
+    case 'missed':
+      title = `❌ Pênalti Perdido - ${teamName}`;
+      body = playerName ? `${playerName} perdeu o pênalti` : `${teamName} perdeu o pênalti`;
+      break;
+    case 'saved':
+      title = `🧤 Pênalti Defendido!`;
+      body = `Goleiro defende pênalti cobrado por ${teamName}`;
+      break;
+    default:
+      title = `⚠️ Pênalti para ${teamName}!`;
+      body = `${teamName} tem pênalti a seu favor`;
+  }
+
+  if (minute) {
+    body += ` aos ${minute}'`;
+  }
+  body += `\n${match.homeTeam} ${match.homeScore} x ${match.awayScore} ${match.awayTeam}`;
+
+  await sendPushToAll(title, body, {
+    type: "penalty",
+    matchId: match.id,
+    homeTeamId: match.homeTeamId,
+    awayTeamId: match.awayTeamId,
+    teamName,
+    result,
+    playerName,
+    minute,
+  });
+}
+
+/**
+ * Notifica decisão do VAR
+ */
+async function notifyVAR(match, decision, affectedTeam = null, minute = null) {
+  let title = `📺 VAR - Revisão`;
+  let body = '';
+
+  switch (decision) {
+    case 'goal_confirmed':
+      title = `📺 VAR - Gol Confirmado`;
+      body = affectedTeam ? `Gol do ${affectedTeam} confirmado após revisão` : `Gol confirmado após revisão do VAR`;
+      break;
+    case 'goal_disallowed':
+      title = `📺 VAR - Gol Anulado`;
+      body = affectedTeam ? `Gol do ${affectedTeam} anulado após revisão` : `Gol anulado após revisão do VAR`;
+      break;
+    case 'penalty_awarded':
+      title = `📺 VAR - Pênalti Marcado`;
+      body = affectedTeam ? `Pênalti marcado para ${affectedTeam} após revisão` : `Pênalti marcado após revisão do VAR`;
+      break;
+    case 'penalty_cancelled':
+      title = `📺 VAR - Pênalti Cancelado`;
+      body = `Pênalti cancelado após revisão do VAR`;
+      break;
+    case 'red_card':
+      title = `📺 VAR - Cartão Vermelho`;
+      body = affectedTeam ? `Cartão vermelho para jogador do ${affectedTeam} após revisão` : `Cartão vermelho após revisão do VAR`;
+      break;
+    case 'red_card_cancelled':
+      title = `📺 VAR - Cartão Vermelho Cancelado`;
+      body = `Cartão vermelho cancelado após revisão do VAR`;
+      break;
+    default:
+      body = `Revisão do VAR em andamento`;
+  }
+
+  if (minute) {
+    body += ` aos ${minute}'`;
+  }
+  body += `\n${match.homeTeam} ${match.homeScore} x ${match.awayScore} ${match.awayTeam}`;
+
+  await sendPushToAll(title, body, {
+    type: "var",
+    matchId: match.id,
+    homeTeamId: match.homeTeamId,
+    awayTeamId: match.awayTeamId,
+    decision,
+    affectedTeam,
+    minute,
+  });
+}
+
+/**
+ * Notifica substituição
+ */
+async function notifySubstitution(match, teamName, playerOut, playerIn, minute = null) {
+  const title = `🔄 Substituição - ${teamName}`;
+  let body = `Sai: ${playerOut}\nEntra: ${playerIn}`;
+  if (minute) {
+    body += ` (${minute}')`;
+  }
+  body += `\n${match.homeTeam} ${match.homeScore} x ${match.awayScore} ${match.awayTeam}`;
+
+  await sendPushToAll(title, body, {
+    type: "substitution",
+    matchId: match.id,
+    homeTeamId: match.homeTeamId,
+    awayTeamId: match.awayTeamId,
+    teamName,
+    playerOut,
+    playerIn,
+    minute,
   });
 }
 
@@ -174,5 +357,10 @@ module.exports = {
   sendPushToAll,
   notifyMatchStarted,
   notifyGoal,
+  notifyYellowCard,
+  notifyRedCard,
+  notifyPenalty,
+  notifyVAR,
+  notifySubstitution,
   expo,
 };

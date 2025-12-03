@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { Match } from '../types';
 import { format } from 'date-fns';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Star } from 'lucide-react-native';
+import { Star, Home, Plane } from 'lucide-react-native';
 import { useFavorites } from '../context/FavoritesContext';
 import { MatchStatsModal } from './MatchStatsModal';
 
@@ -66,6 +66,10 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
                 <Image source={{ uri: match.teams.home.logo }} style={styles.teamLogo} />
               </View>
               <Text style={styles.teamName} numberOfLines={2}>{match.teams.home.name}</Text>
+              <View style={styles.homeAwayBadge}>
+                <Home size={10} color="#22c55e" />
+                <Text style={styles.homeBadgeText}>Casa</Text>
+              </View>
             </View>
 
             {/* Score / VS */}
@@ -121,6 +125,10 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
                 <Image source={{ uri: match.teams.away.logo }} style={styles.teamLogo} />
               </View>
               <Text style={styles.teamName} numberOfLines={2}>{match.teams.away.name}</Text>
+              <View style={styles.awayBadge}>
+                <Plane size={10} color="#f59e0b" />
+                <Text style={styles.awayBadgeText}>Fora</Text>
+              </View>
             </View>
           </View>
         </LinearGradient>
@@ -255,6 +263,38 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
     maxWidth: 100,
+  },
+  homeAwayBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    marginTop: 6,
+    gap: 4,
+  },
+  homeBadgeText: {
+    color: '#22c55e',
+    fontSize: 9,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  awayBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    marginTop: 6,
+    gap: 4,
+  },
+  awayBadgeText: {
+    color: '#f59e0b',
+    fontSize: 9,
+    fontWeight: '700',
+    textTransform: 'uppercase',
   },
   scoreContainer: {
     alignItems: 'center',

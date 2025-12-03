@@ -1,9 +1,19 @@
-const { notifyMatchStarted, notifyGoal } = require("./pushNotifications");
+const { 
+  notifyMatchStarted, 
+  notifyGoal,
+  notifyYellowCard,
+  notifyRedCard,
+  notifyPenalty,
+  notifyVAR,
+  notifySubstitution 
+} = require("./pushNotifications");
 
 // Cache de scores e status para detectar mudanças
 let lastKnownScores = {};
 let lastKnownStatus = {};
 let notifiedMatchStarts = new Set();
+// Cache para eventos já notificados (por matchId -> Set de eventIds)
+let notifiedEvents = {};
 
 // Configuração - intervalos mais espaçados para evitar detecção
 const CHECK_INTERVAL_LIVE = 60 * 1000; // 1 minuto quando há jogos ao vivo
@@ -184,6 +194,150 @@ async function fetchLiveMatches() {
 }
 
 /**
+ * Busca timeline de eventos de um jogo específico
+ */
+async function fetchMatchTimeline(matchId) {
+  try {
+    await randomDelay(300, 800);
+
+    const params = new URLSearchParams({
+      version: "1.0",
+      cm: "pt-br",
+      scn: "ANON",
+      it: "web",
+      apikey: MSN_API_KEY,
+      activityId: generateActivityId(),
+    });
+
+    const url = `${MSN_API_BASE}/match/${matchId}/timeline?${params}`;
+
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": getRandomUserAgent(),
+        Accept: "*/*",
+        "Accept-Language": "pt-BR,pt;q=0.8,en-US;q=0.5,en;q=0.3",
+      },
+    });
+
+    if (!response.ok) {
+      console.log(`[Monitor] Timeline ${matchId}: HTTP ${response.status}`);
+      return null;
+    }
+
+    const data = await response.json();
+    return data.value || [];
+  } catch (error) {
+    console.error(`[Monitor] Erro timeline ${matchId}:`, error.message);
+    return null;
+  }
+}
+
+/**
+ * Processa eventos da timeline e envia notificações
+ */
+async function processTimelineEvents(match, events) {
+  if (!events || !Array.isArray(events)) return;
+
+  const matchId = match.id;
+  
+  // Inicializar cache de eventos notificados para este jogo
+  if (!notifiedEvents[matchId]) {
+    notifiedEvents[matchId] = new Set();
+  }
+
+  for (const event of events) {
+    const eventId = event.id || `${event.eventType}_${event.clockTime}_${event.participantId}`;
+    
+    // Pular se já notificamos este evento
+    if (notifiedEvents[matchId].has(eventId)) continue;
+
+    const eventType = event.eventType?.toLowerCase() || "";
+    const minute = event.clockTime || event.gameTime?.gameMinute || null;
+    
+    // Identificar time do evento
+    const isHomeTeam = event.participantId === match.homeTeamId || event.teamId === match.homeTeamId;
+    const teamName = isHomeTeam ? match.homeTeam : match.awayTeam;
+    
+    // Nome do jogador
+    const playerName = event.player?.name?.rawName || 
+                       event.player?.shortName?.rawName || 
+                       event.athleteName || 
+                       null;
+
+    try {
+      switch (eventType) {
+        case "card":
+        case "yellowcard":
+          if (event.cardType?.toLowerCase() === "yellow" || eventType === "yellowcard") {
+            console.log(`[Monitor] 🟨 Cartão Amarelo: ${playerName} (${teamName}) - ${match.homeTeam} vs ${match.awayTeam}`);
+            await notifyYellowCard(match, playerName || "Jogador", teamName, minute);
+            notifiedEvents[matchId].add(eventId);
+          }
+          break;
+
+        case "redcard":
+          console.log(`[Monitor] 🟥 Cartão Vermelho: ${playerName} (${teamName}) - ${match.homeTeam} vs ${match.awayTeam}`);
+          const isSecondYellow = event.cardType?.toLowerCase()?.includes("second") || event.isSecondYellow;
+          await notifyRedCard(match, playerName || "Jogador", teamName, minute, isSecondYellow);
+          notifiedEvents[matchId].add(eventId);
+          break;
+
+        case "secondyellowcard":
+          console.log(`[Monitor] 🟨🟥 Segundo Amarelo: ${playerName} (${teamName}) - ${match.homeTeam} vs ${match.awayTeam}`);
+          await notifyRedCard(match, playerName || "Jogador", teamName, minute, true);
+          notifiedEvents[matchId].add(eventId);
+          break;
+
+        case "penaltymissed":
+        case "penalty_missed":
+          console.log(`[Monitor] ❌ Pênalti Perdido: ${teamName} - ${match.homeTeam} vs ${match.awayTeam}`);
+          await notifyPenalty(match, teamName, "missed", playerName, minute);
+          notifiedEvents[matchId].add(eventId);
+          break;
+
+        case "penaltysaved":
+        case "penalty_saved":
+          console.log(`[Monitor] 🧤 Pênalti Defendido: ${teamName} - ${match.homeTeam} vs ${match.awayTeam}`);
+          await notifyPenalty(match, teamName, "saved", playerName, minute);
+          notifiedEvents[matchId].add(eventId);
+          break;
+
+        case "var":
+        case "varreview":
+          const decision = event.varDecision?.toLowerCase() || event.decision?.toLowerCase() || "review";
+          console.log(`[Monitor] 📺 VAR: ${decision} - ${match.homeTeam} vs ${match.awayTeam}`);
+          await notifyVAR(match, decision, teamName, minute);
+          notifiedEvents[matchId].add(eventId);
+          break;
+
+        case "substitution":
+          const playerOut = event.playerOut?.name?.rawName || event.playerOut?.shortName?.rawName || "Jogador";
+          const playerIn = event.playerIn?.name?.rawName || event.playerIn?.shortName?.rawName || "Jogador";
+          console.log(`[Monitor] 🔄 Substituição: ${playerOut} -> ${playerIn} (${teamName})`);
+          await notifySubstitution(match, teamName, playerOut, playerIn, minute);
+          notifiedEvents[matchId].add(eventId);
+          break;
+
+        case "scorechange":
+        case "goal":
+          // Gols são detectados pela mudança de score, mas podemos enriquecer com dados da timeline
+          const isPenalty = event.isPenalty || event.goalType?.toLowerCase()?.includes("penalty");
+          const isOwnGoal = event.isOwnGoal || event.goalType?.toLowerCase()?.includes("own");
+          
+          // Apenas logar, não notificar aqui (já é feito pela detecção de score)
+          if (!notifiedEvents[matchId].has(eventId)) {
+            console.log(`[Monitor] ⚽ Gol detectado na timeline: ${playerName} (${teamName}) - Pênalti: ${isPenalty}, Contra: ${isOwnGoal}`);
+            notifiedEvents[matchId].add(eventId);
+          }
+          break;
+      }
+    } catch (error) {
+      console.error(`[Monitor] Erro ao processar evento ${eventType}:`, error.message);
+    }
+  }
+}
+
+/**
  * Verifica mudanças e envia notificações
  */
 async function checkAndNotify() {
@@ -250,6 +404,12 @@ async function checkAndNotify() {
           home: match.homeScore,
           away: match.awayScore,
         };
+
+        // 3. Buscar e processar eventos da timeline (cartões, pênaltis, VAR, etc)
+        const timelineEvents = await fetchMatchTimeline(matchId);
+        if (timelineEvents) {
+          await processTimelineEvents(match, timelineEvents);
+        }
       }
     }
 
@@ -296,6 +456,7 @@ function cleanOldCache() {
     lastKnownScores = {};
     lastKnownStatus = {};
     notifiedMatchStarts.clear();
+    notifiedEvents = {};
     lastCleanup = now;
   }
 }
