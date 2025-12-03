@@ -24,16 +24,31 @@ async function sendPushToUser(pushToken, title, body, data = {}) {
       channelId: "match-alerts", // Canal configurado no app
     };
 
+    console.log(`[Push] Enviando para: ${pushToken.substring(0, 40)}...`);
+    
     const chunks = expo.chunkPushNotifications([message]);
 
     for (const chunk of chunks) {
       const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
-      console.log(`[Push] Enviado: ${title}`);
+      console.log(`[Push] Resposta Expo:`, JSON.stringify(ticketChunk));
+      
+      // Verificar se houve erro
+      for (const ticket of ticketChunk) {
+        if (ticket.status === 'error') {
+          console.error(`[Push] ❌ Erro do Expo: ${ticket.message}`);
+          if (ticket.details && ticket.details.error) {
+            console.error(`[Push] ❌ Detalhes: ${ticket.details.error}`);
+          }
+          return false;
+        }
+      }
+      
+      console.log(`[Push] ✅ Enviado com sucesso: ${title}`);
     }
 
     return true;
   } catch (error) {
-    console.error("[Push] Erro ao enviar:", error);
+    console.error("[Push] ❌ Erro ao enviar:", error);
     return false;
   }
 }
