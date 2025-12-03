@@ -6,12 +6,16 @@ const {
   notifyPenalty,
   notifyVAR,
   notifySubstitution,
+  notifyHalfTime,
+  notifyMatchEnded,
 } = require("./pushNotifications");
 
 // Cache de scores e status para detectar mudanças
 let lastKnownScores = {};
 let lastKnownStatus = {};
 let notifiedMatchStarts = new Set();
+let notifiedHalfTime = new Set();
+let notifiedMatchEnds = new Set();
 // Cache para eventos já notificados (por matchId -> Set de eventIds)
 let notifiedEvents = {};
 
@@ -154,12 +158,14 @@ async function fetchLiveMatches() {
               ?.includes("inprogress");
           const isScheduled =
             gameStatus === "pre" || gameStatus === "scheduled";
+          const isFinished = gameStatus === "final" || gameStatus === "post";
 
           // Participantes: [0] = time da casa, [1] = time visitante
           const homeParticipant = game.participants?.[0];
           const awayParticipant = game.participants?.[1];
 
-          if (isLive || isScheduled) {
+          // Incluir jogos ao vivo, agendados E finalizados recentemente
+          if (isLive || isScheduled || isFinished) {
             allMatches.push({
               id: game.id || game.liveId,
               status: gameStatus,
@@ -179,6 +185,19 @@ async function fetchLiveMatches() {
               league: league.name,
               startTime: game.startDateTime,
               isLive: isLive,
+              detailedStatus:
+                game.gameState?.detailedGameStatus?.toLowerCase() || "",
+              isHalfTime:
+                gameStatus === "inprogressbreak" ||
+                game.gameState?.detailedGameStatus
+                  ?.toLowerCase()
+                  ?.includes("halftime"),
+              isFinished:
+                gameStatus === "final" ||
+                gameStatus === "post" ||
+                game.gameState?.detailedGameStatus
+                  ?.toLowerCase()
+                  ?.includes("final"),
             });
           }
         }
@@ -469,10 +488,31 @@ async function checkAndNotify() {
           away: match.awayScore,
         };
 
-        // 3. Buscar e processar eventos da timeline (cartões, pênaltis, VAR, etc)
+        // 3. Verificar INTERVALO
+        if (match.isHalfTime && !notifiedHalfTime.has(matchId)) {
+          console.log(
+            `[Monitor] ⏸️ Intervalo: ${match.homeTeam} ${match.homeScore} x ${match.awayScore} ${match.awayTeam}`
+          );
+          await notifyHalfTime(match);
+          notifiedHalfTime.add(matchId);
+        }
+
+        // 4. Buscar e processar eventos da timeline (cartões, pênaltis, VAR, etc)
         const timelineEvents = await fetchMatchTimeline(matchId);
         if (timelineEvents) {
           await processTimelineEvents(match, timelineEvents);
+        }
+      }
+
+      // 5. Verificar FIM DE JOGO (fora do if isLive para pegar jogos que acabaram de terminar)
+      if (match.isFinished && !notifiedMatchEnds.has(matchId)) {
+        // Só notifica se o jogo estava sendo monitorado (já tinha começado)
+        if (notifiedMatchStarts.has(matchId)) {
+          console.log(
+            `[Monitor] 🏁 Fim de jogo: ${match.homeTeam} ${match.homeScore} x ${match.awayScore} ${match.awayTeam}`
+          );
+          await notifyMatchEnded(match);
+          notifiedMatchEnds.add(matchId);
         }
       }
     }
@@ -520,6 +560,8 @@ function cleanOldCache() {
     lastKnownScores = {};
     lastKnownStatus = {};
     notifiedMatchStarts.clear();
+    notifiedHalfTime.clear();
+    notifiedMatchEnds.clear();
     notifiedEvents = {};
     lastCleanup = now;
   }

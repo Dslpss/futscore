@@ -389,6 +389,47 @@ async function notifySubstitution(
   });
 }
 
+/**
+ * Notifica intervalo do jogo
+ */
+async function notifyHalfTime(match) {
+  const title = `⏸️ Intervalo`;
+  const body = `${match.homeTeam} ${match.homeScore} x ${match.awayScore} ${
+    match.awayTeam
+  }\n${match.league || ""}`;
+
+  await sendPushToAll(title, body, {
+    type: "half_time",
+    matchId: match.id,
+    homeTeamId: match.homeTeamId,
+    awayTeamId: match.awayTeamId,
+  });
+}
+
+/**
+ * Notifica fim do jogo
+ */
+async function notifyMatchEnded(match) {
+  let resultText = "";
+  if (match.homeScore > match.awayScore) {
+    resultText = `Vitória do ${match.homeTeam}!`;
+  } else if (match.awayScore > match.homeScore) {
+    resultText = `Vitória do ${match.awayTeam}!`;
+  } else {
+    resultText = "Empate!";
+  }
+
+  const title = `🏁 FIM DE JOGO`;
+  const body = `${match.homeTeam} ${match.homeScore} x ${match.awayScore} ${match.awayTeam}\n${resultText}`;
+
+  await sendPushToAll(title, body, {
+    type: "match_end",
+    matchId: match.id,
+    homeTeamId: match.homeTeamId,
+    awayTeamId: match.awayTeamId,
+  });
+}
+
 module.exports = {
   sendPushToUser,
   sendPushToAll,
@@ -399,5 +440,7 @@ module.exports = {
   notifyPenalty,
   notifyVAR,
   notifySubstitution,
+  notifyHalfTime,
+  notifyMatchEnded,
   expo,
 };

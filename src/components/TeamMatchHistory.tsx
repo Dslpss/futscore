@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   ScrollView,
   Image,
+  TouchableOpacity,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { api } from "../services/api";
@@ -13,6 +14,7 @@ import { Match } from "../types";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { inferMsnTeamId } from "../utils/teamIdMapper";
+import { MatchStatsModal } from "./MatchStatsModal";
 
 interface TeamMatchHistoryProps {
   teamId: number;
@@ -31,6 +33,13 @@ export const TeamMatchHistory: React.FC<TeamMatchHistoryProps> = ({
 }) => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+
+  const handleMatchPress = (match: Match) => {
+    setSelectedMatch(match);
+    setModalVisible(true);
+  };
 
   useEffect(() => {
     loadMatchHistory();
@@ -238,7 +247,11 @@ export const TeamMatchHistory: React.FC<TeamMatchHistoryProps> = ({
           const awayTeam = match.teams.away;
 
           return (
-            <View key={match.fixture.id} style={styles.matchCard}>
+            <TouchableOpacity
+              key={match.fixture.id}
+              style={styles.matchCard}
+              activeOpacity={0.7}
+              onPress={() => handleMatchPress(match)}>
               <LinearGradient
                 colors={
                   ["rgba(255,255,255,0.05)", "rgba(255,255,255,0.02)"] as any
@@ -280,8 +293,13 @@ export const TeamMatchHistory: React.FC<TeamMatchHistoryProps> = ({
                 <Text style={styles.league} numberOfLines={1}>
                   {match.league.name}
                 </Text>
+
+                {/* Tap indicator for finished matches */}
+                {!isFuture && (
+                  <Text style={styles.tapHint}>Toque para detalhes</Text>
+                )}
               </LinearGradient>
-            </View>
+            </TouchableOpacity>
           );
         })}
       </ScrollView>
@@ -313,6 +331,16 @@ export const TeamMatchHistory: React.FC<TeamMatchHistoryProps> = ({
           <Text style={[styles.statLabel, { color: "#ef4444" }]}>D</Text>
         </View>
       </View>
+
+      {/* Match Stats Modal */}
+      <MatchStatsModal
+        visible={modalVisible}
+        onClose={() => {
+          setModalVisible(false);
+          setSelectedMatch(null);
+        }}
+        match={selectedMatch}
+      />
     </View>
   );
 };
@@ -482,5 +510,13 @@ const styles = StyleSheet.create({
     width: 1,
     height: 24,
     backgroundColor: "rgba(255,255,255,0.1)",
+  },
+  tapHint: {
+    color: "rgba(255,255,255,0.4)",
+    fontSize: 10,
+    fontWeight: "500",
+    textAlign: "center",
+    marginTop: 8,
+    fontStyle: "italic",
   },
 });

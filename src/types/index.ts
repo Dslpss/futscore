@@ -209,3 +209,38 @@ export interface MsnEntityHeader {
   };
   version: string;
 }
+
+// Detalhes completos do jogo (via /livegames)
+export interface GameDetails {
+  venue?: {
+    name: string;
+    capacity: string;
+    city: string;
+    country: string;
+    latitude?: number;
+    longitude?: number;
+  };
+  channels?: {
+    type: string;
+    names: string[];
+  }[];
+  weather?: {
+    condition: string;
+    detailedCondition: string;
+    temperature: number;
+    unit: string;
+    summary: string;
+  };
+  winLossRecord?: {
+    home: {
+      wins: number;
+      losses: number;
+      ties: number;
+    };
+    away: {
+      wins: number;
+      losses: number;
+      ties: number;
+    };
+  };
+}

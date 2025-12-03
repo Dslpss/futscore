@@ -1,49 +1,78 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import Constants from 'expo-constants';
-import { View, Text, StyleSheet, FlatList, RefreshControl, SafeAreaView, StatusBar, TouchableOpacity, Dimensions, Platform, ScrollView, Modal, Alert } from 'react-native';
-import { useMatches } from '../context/MatchContext';
-import { useFavorites } from '../context/FavoritesContext';
-import { useAuth } from '../context/AuthContext';
-import { MatchCard } from '../components/MatchCard';
-import { NextMatchWidget } from '../components/NextMatchWidget';
-import { LinearGradient } from 'expo-linear-gradient';
-import { WarningCard } from '../components/WarningCard';
-import { UpdateModal } from '../components/UpdateModal';
-import axios from 'axios';
-import { api } from '../services/api';
-import { CONFIG } from '../constants/config';
-import { Match } from '../types';
-import { getNextFavoriteMatch, getNextMatchesForFavorites } from '../utils/matchHelpers';
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import Constants from "expo-constants";
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  RefreshControl,
+  SafeAreaView,
+  StatusBar,
+  TouchableOpacity,
+  Dimensions,
+  Platform,
+  ScrollView,
+  Modal,
+  Alert,
+} from "react-native";
+import { useMatches } from "../context/MatchContext";
+import { useFavorites } from "../context/FavoritesContext";
+import { useAuth } from "../context/AuthContext";
+import { MatchCard } from "../components/MatchCard";
+import { NextMatchWidget } from "../components/NextMatchWidget";
+import { UpcomingMatchesSlider } from "../components/UpcomingMatchesSlider";
+import { LinearGradient } from "expo-linear-gradient";
+import { WarningCard } from "../components/WarningCard";
+import { UpdateModal } from "../components/UpdateModal";
+import axios from "axios";
+import { api } from "../services/api";
+import { CONFIG } from "../constants/config";
+import { Match } from "../types";
+import {
+  getNextFavoriteMatch,
+  getNextMatchesForFavorites,
+} from "../utils/matchHelpers";
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 
 interface Warning {
   _id: string;
   title: string;
   message: string;
-  type: 'info' | 'warning' | 'danger';
+  type: "info" | "warning" | "danger";
 }
 
 export const HomeScreen = ({ navigation }: any) => {
-  const { liveMatches, todaysMatches, loading: contextLoading, refreshMatches: contextRefresh } = useMatches();
+  const {
+    liveMatches,
+    todaysMatches,
+    loading: contextLoading,
+    refreshMatches: contextRefresh,
+  } = useMatches();
   const { favoriteTeams } = useFavorites();
   const { user, signOut } = useAuth();
-  const [selectedLeague, setSelectedLeague] = useState<string>('ALL');
+  const [selectedLeague, setSelectedLeague] = useState<string>("ALL");
   const [warnings, setWarnings] = useState<Warning[]>([]);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<any>(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
-  
+
   // Date Selection State
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [customMatches, setCustomMatches] = useState<Match[]>([]);
   const [loadingCustom, setLoadingCustom] = useState(false);
 
+  // Ref for league selector ScrollView to maintain position
+  const leagueSelectorRef = useRef<ScrollView>(null);
+  const leagueScrollPosition = useRef<number>(0);
+
   const isToday = (date: Date) => {
     const today = new Date();
-    return date.getDate() === today.getDate() &&
-           date.getMonth() === today.getMonth() &&
-           date.getFullYear() === today.getFullYear();
+    return (
+      date.getDate() === today.getDate() &&
+      date.getMonth() === today.getMonth() &&
+      date.getFullYear() === today.getFullYear()
+    );
   };
 
   const loading = isToday(selectedDate) ? contextLoading : loadingCustom;
@@ -65,62 +94,79 @@ export const HomeScreen = ({ navigation }: any) => {
   const fetchMatchesForDate = async (date: Date) => {
     setLoadingCustom(true);
     try {
-      const dateStr = date.toISOString().split('T')[0];
-      
+      const dateStr = date.toISOString().split("T")[0];
+
       // 1. Fetch from football-data.org (Brasileirão, Champions, La Liga)
-      const footballDataIds = ['BSA', 'CL', 'PD'];
+      const footballDataIds = ["BSA", "CL", "PD"];
       let footballDataMatches: Match[] = [];
-      
-      const footballDataPromises = footballDataIds.map(id => api.getFixtures(id, dateStr));
+
+      const footballDataPromises = footballDataIds.map((id) =>
+        api.getFixtures(id, dateStr)
+      );
       const footballDataResults = await Promise.all(footballDataPromises);
-      
-      footballDataResults.forEach(matches => {
+
+      footballDataResults.forEach((matches) => {
         footballDataMatches = [...footballDataMatches, ...matches];
       });
 
       // 2. Fetch from MSN Sports API (Premier League, Bundesliga, etc.)
       // Note: MSN Sports returns matches around the specified datetime
-      const { msnSportsApi } = await import('../services/msnSportsApi');
-      const { transformMsnGameToMatch } = await import('../utils/msnTransformer');
-      
+      const { msnSportsApi } = await import("../services/msnSportsApi");
+      const { transformMsnGameToMatch } = await import(
+        "../utils/msnTransformer"
+      );
+
       const msnLeagueIds = [
-        'Soccer_BrazilBrasileiroSerieA',  // Brasileirão
-        'Soccer_EnglandPremierLeague',
-        'Soccer_GermanyBundesliga',
-        'Soccer_ItalySerieA',
-        'Soccer_FranceLigue1',
-        'Soccer_PortugalPrimeiraLiga',
-        'Basketball_NBA',
+        "Soccer_BrazilBrasileiroSerieA", // Brasileirão
+        "Soccer_InternationalClubsUEFAChampionsLeague", // Champions League
+        "Soccer_EnglandPremierLeague",
+        "Soccer_GermanyBundesliga",
+        "Soccer_ItalySerieA",
+        "Soccer_FranceLigue1",
+        "Soccer_SpainLaLiga", // La Liga
+        "Soccer_PortugalPrimeiraLiga",
+        "Basketball_NBA",
       ];
-      
+
       let msnMatches: Match[] = [];
-      
+
       for (const leagueId of msnLeagueIds) {
         try {
-          const sport = leagueId.includes('Basketball') ? 'Basketball' : 'Soccer';
+          const sport = leagueId.includes("Basketball")
+            ? "Basketball"
+            : "Soccer";
           const games = await msnSportsApi.getLiveAroundLeague(leagueId, sport);
-          
-          const transformedGames = games.map((game: any) => transformMsnGameToMatch(game));
+
+          const transformedGames = games.map((game: any) =>
+            transformMsnGameToMatch(game)
+          );
           msnMatches = [...msnMatches, ...transformedGames];
         } catch (error) {
-          console.error(`[HomeScreen] Error fetching MSN Sports for ${leagueId}:`, error);
+          console.error(
+            `[HomeScreen] Error fetching MSN Sports for ${leagueId}:`,
+            error
+          );
         }
       }
 
       // 3. Combine all matches and filter for selected date
       const allMatches = [...footballDataMatches, ...msnMatches];
-      
+
       // Filter for the selected date
-      const selectedDateStr = date.toLocaleDateString('pt-BR');
-      const filteredForDate = allMatches.filter(m => {
-        const matchDateStr = new Date(m.fixture.date).toLocaleDateString('pt-BR');
+      const selectedDateStr = date.toLocaleDateString("pt-BR");
+      const filteredForDate = allMatches.filter((m) => {
+        const matchDateStr = new Date(m.fixture.date).toLocaleDateString(
+          "pt-BR"
+        );
         return matchDateStr === selectedDateStr;
       });
-      
+
       setCustomMatches(filteredForDate);
-      console.log(`[HomeScreen] Fetched ${filteredForDate.length} matches for ${selectedDateStr}`);
+      console.log(
+        `[HomeScreen] Fetched ${filteredForDate.length} matches for ${selectedDateStr}`
+      );
     } catch (error) {
-      console.error('Error fetching custom matches', error);
+      console.error("Error fetching custom matches", error);
     } finally {
       setLoadingCustom(false);
     }
@@ -135,10 +181,12 @@ export const HomeScreen = ({ navigation }: any) => {
     try {
       const response = await axios.get(`${CONFIG.BACKEND_URL}/admin/warnings`);
       // Deduplicate warnings
-      const uniqueWarnings = Array.from(new Map(response.data.map((w: Warning) => [w._id, w])).values());
+      const uniqueWarnings = Array.from(
+        new Map(response.data.map((w: Warning) => [w._id, w])).values()
+      );
       setWarnings(uniqueWarnings as Warning[]);
     } catch (error) {
-      console.error('Error fetching warnings', error);
+      console.error("Error fetching warnings", error);
     }
   };
 
@@ -146,30 +194,34 @@ export const HomeScreen = ({ navigation }: any) => {
     try {
       const response = await axios.get(`${CONFIG.BACKEND_URL}/admin/version`);
       const latestVersion = response.data;
-      const currentVersion = Constants.expoConfig?.version || '1.0.0';
+      const currentVersion = Constants.expoConfig?.version || "1.0.0";
 
-      if (latestVersion && latestVersion.active && latestVersion.version > currentVersion) {
+      if (
+        latestVersion &&
+        latestVersion.active &&
+        latestVersion.version > currentVersion
+      ) {
         setUpdateInfo(latestVersion);
         setShowUpdateModal(true);
       }
     } catch (error) {
-      console.error('Error checking update', error);
+      console.error("Error checking update", error);
     }
   };
 
   const leagues = [
-    { code: 'ALL', name: 'Todos' },
-    { code: 'FAV', name: 'Favoritos' },
-    { code: 'BSA', name: 'Brasileirão' },
-    { code: 'CL', name: 'Champions' },
-    { code: 'PD', name: 'La Liga' },
-    { code: 'PL', name: 'Premier League' },
-    { code: 'BL1', name: 'Bundesliga' },
-    { code: 'SA', name: 'Serie A' },
-    { code: 'FL1', name: 'Ligue 1' },
-    { code: 'PPL', name: 'Liga Portugal' },
-    { code: 'NBA', name: 'NBA' },
-    { code: 'FINISHED', name: 'Finalizados' },
+    { code: "ALL", name: "Todos" },
+    { code: "FAV", name: "Favoritos" },
+    { code: "BSA", name: "Brasileirão" },
+    { code: "CL", name: "Champions" },
+    { code: "PD", name: "La Liga" },
+    { code: "PL", name: "Premier League" },
+    { code: "BL1", name: "Bundesliga" },
+    { code: "SA", name: "Serie A" },
+    { code: "FL1", name: "Ligue 1" },
+    { code: "PPL", name: "Liga Portugal" },
+    { code: "NBA", name: "NBA" },
+    { code: "FINISHED", name: "Finalizados" },
   ];
 
   const generateDates = () => {
@@ -187,14 +239,20 @@ export const HomeScreen = ({ navigation }: any) => {
   const renderHeader = () => (
     <View style={styles.headerContainer}>
       <LinearGradient
-        colors={['rgba(34, 197, 94, 0.1)', 'transparent']}
+        colors={["rgba(34, 197, 94, 0.1)", "transparent"]}
         style={styles.headerGradient}
       />
-      
+
       <View style={styles.topBar}>
         <View style={{ flex: 1, marginRight: 16 }}>
           <Text style={styles.dateText}>
-            {selectedDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase()}
+            {selectedDate
+              .toLocaleDateString("pt-BR", {
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+              })
+              .toUpperCase()}
           </Text>
           <View style={styles.titleContainer}>
             <Text style={styles.titleHighlight}>Fut</Text>
@@ -202,61 +260,65 @@ export const HomeScreen = ({ navigation }: any) => {
             <View style={styles.liveDotHeader} />
           </View>
         </View>
-        
-        <TouchableOpacity 
+
+        <TouchableOpacity
           style={styles.profileButton}
           onPress={() => setShowProfileModal(true)}
-          activeOpacity={0.8}
-        >
-           <LinearGradient
-             colors={['#2a2a2a', '#1a1a1a']}
-             style={styles.profileGradient}
-           >
-             <Text style={{ fontSize: 20 }}>👤</Text>
-           </LinearGradient>
+          activeOpacity={0.8}>
+          <LinearGradient
+            colors={["#2a2a2a", "#1a1a1a"]}
+            style={styles.profileGradient}>
+            <Text style={{ fontSize: 20 }}>👤</Text>
+          </LinearGradient>
         </TouchableOpacity>
       </View>
 
       {/* Date Selector */}
       <View style={styles.dateSelectorWrapper}>
-        <ScrollView 
-          horizontal 
+        <ScrollView
+          horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.dateSelectorContainer}
-        >
+          contentContainerStyle={styles.dateSelectorContainer}>
           {dates.map((date, index) => {
-            const isSelected = date.getDate() === selectedDate.getDate() && 
-                             date.getMonth() === selectedDate.getMonth();
+            const isSelected =
+              date.getDate() === selectedDate.getDate() &&
+              date.getMonth() === selectedDate.getMonth();
             const isDateToday = isToday(date);
-            
+
             return (
               <TouchableOpacity
                 key={index}
                 style={[
                   styles.dateButton,
-                  isSelected && styles.dateButtonActive
+                  isSelected && styles.dateButtonActive,
                 ]}
                 onPress={() => setSelectedDate(date)}
-                activeOpacity={0.7}
-              >
+                activeOpacity={0.7}>
                 {isSelected && (
                   <LinearGradient
-                    colors={['#22c55e', '#16a34a']}
+                    colors={["#22c55e", "#16a34a"]}
                     style={StyleSheet.absoluteFillObject}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                   />
                 )}
-                <Text style={[
-                  styles.dateDayText,
-                  isSelected && styles.dateTextActive
-                ]}>
-                  {isDateToday ? 'HOJE' : date.toLocaleDateString('pt-BR', { weekday: 'short' }).toUpperCase().replace('.', '')}
+                <Text
+                  style={[
+                    styles.dateDayText,
+                    isSelected && styles.dateTextActive,
+                  ]}>
+                  {isDateToday
+                    ? "HOJE"
+                    : date
+                        .toLocaleDateString("pt-BR", { weekday: "short" })
+                        .toUpperCase()
+                        .replace(".", "")}
                 </Text>
-                <Text style={[
-                  styles.dateNumberText,
-                  isSelected && styles.dateTextActive
-                ]}>
+                <Text
+                  style={[
+                    styles.dateNumberText,
+                    isSelected && styles.dateTextActive,
+                  ]}>
                   {date.getDate()}
                 </Text>
               </TouchableOpacity>
@@ -264,89 +326,159 @@ export const HomeScreen = ({ navigation }: any) => {
           })}
         </ScrollView>
       </View>
-      
+
       {/* Next Match Widget */}
-      <NextMatchWidget 
+      <NextMatchWidget
         matches={(() => {
-          const sourceMatches = isToday(selectedDate) ? [...liveMatches, ...todaysMatches] : customMatches;
+          const sourceMatches = isToday(selectedDate)
+            ? [...liveMatches, ...todaysMatches]
+            : customMatches;
           return getNextMatchesForFavorites(sourceMatches, favoriteTeams);
         })()}
         onPressMatch={(match) => {
-          console.log('Next match clicked:', match);
+          console.log("Next match clicked:", match);
         }}
       />
-      
+
+      {/* Upcoming Matches Slider - Games starting soon */}
+      <UpcomingMatchesSlider
+        matches={
+          isToday(selectedDate)
+            ? [...liveMatches, ...todaysMatches]
+            : customMatches
+        }
+        onPressMatch={(match) => {
+          console.log("Upcoming match clicked:", match);
+        }}
+      />
+
       {/* Action Buttons - Favorites, Standings, and Leagues Explorer */}
       <View style={styles.actionButtonsContainer}>
-        <ScrollView 
-          horizontal 
+        <ScrollView
+          horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.actionButtonsContent}
-        >
-          <TouchableOpacity 
+          contentContainerStyle={styles.actionButtonsContent}>
+          <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => navigation.navigate('TeamSelection')}
-            activeOpacity={0.7}
-          >
-             <View style={styles.actionButtonContent}>
-               <Text style={styles.actionButtonIcon}>⭐</Text>
-               <Text style={styles.actionButtonText}>Favoritos</Text>
-             </View>
+            onPress={() => navigation.navigate("TeamSelection")}
+            activeOpacity={0.85}>
+            <LinearGradient
+              colors={["#2d1f4e", "#1a1a2e"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.actionButtonGradient}>
+              <View style={styles.actionButtonIconWrapper}>
+                <LinearGradient
+                  colors={["#fbbf24", "#f59e0b"]}
+                  style={styles.actionIconGradient}>
+                  <Text style={styles.actionButtonIcon}>⭐</Text>
+                </LinearGradient>
+              </View>
+              <View style={styles.actionButtonTextContainer}>
+                <Text style={styles.actionButtonText}>Favoritos</Text>
+                <Text style={styles.actionButtonSubtext}>Seus times</Text>
+              </View>
+            </LinearGradient>
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => navigation.navigate('Standings', { leagueId: selectedLeague !== 'ALL' ? selectedLeague : 'Soccer_EnglandPremierLeague' })}
-            activeOpacity={0.7}
-          >
-             <View style={styles.actionButtonContent}>
-               <Text style={styles.actionButtonIcon}>📊</Text>
-               <Text style={styles.actionButtonText}>Tabela</Text>
-             </View>
+            onPress={() =>
+              navigation.navigate("Standings", {
+                leagueId:
+                  selectedLeague !== "ALL"
+                    ? selectedLeague
+                    : "Soccer_EnglandPremierLeague",
+              })
+            }
+            activeOpacity={0.85}>
+            <LinearGradient
+              colors={["#1e3a5f", "#1a1a2e"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.actionButtonGradient}>
+              <View style={styles.actionButtonIconWrapper}>
+                <LinearGradient
+                  colors={["#3b82f6", "#2563eb"]}
+                  style={styles.actionIconGradient}>
+                  <Text style={styles.actionButtonIcon}>📊</Text>
+                </LinearGradient>
+              </View>
+              <View style={styles.actionButtonTextContainer}>
+                <Text style={styles.actionButtonText}>Tabela</Text>
+                <Text style={styles.actionButtonSubtext}>Classificação</Text>
+              </View>
+            </LinearGradient>
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => navigation.navigate('LeaguesExplorer')}
-            activeOpacity={0.7}
-          >
-             <View style={styles.actionButtonContent}>
-               <Text style={styles.actionButtonIcon}>🏆</Text>
-               <Text style={styles.actionButtonText}>Ligas</Text>
-             </View>
+            onPress={() => navigation.navigate("LeaguesExplorer")}
+            activeOpacity={0.85}>
+            <LinearGradient
+              colors={["#1e4d3a", "#1a1a2e"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.actionButtonGradient}>
+              <View style={styles.actionButtonIconWrapper}>
+                <LinearGradient
+                  colors={["#22c55e", "#16a34a"]}
+                  style={styles.actionIconGradient}>
+                  <Text style={styles.actionButtonIcon}>🏆</Text>
+                </LinearGradient>
+              </View>
+              <View style={styles.actionButtonTextContainer}>
+                <Text style={styles.actionButtonText}>Ligas</Text>
+                <Text style={styles.actionButtonSubtext}>Explorar</Text>
+              </View>
+            </LinearGradient>
           </TouchableOpacity>
         </ScrollView>
       </View>
-      
+
       {/* League Selector */}
       <View style={styles.leagueSelectorWrapper}>
-        <ScrollView 
-          horizontal 
+        <ScrollView
+          ref={leagueSelectorRef}
+          horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.leagueSelectorContainer}
-        >
+          onScroll={(e) => {
+            leagueScrollPosition.current = e.nativeEvent.contentOffset.x;
+          }}
+          scrollEventThrottle={16}
+          onContentSizeChange={() => {
+            // Restore scroll position after re-render
+            if (leagueSelectorRef.current && leagueScrollPosition.current > 0) {
+              leagueSelectorRef.current.scrollTo({
+                x: leagueScrollPosition.current,
+                animated: false,
+              });
+            }
+          }}>
           {leagues.map((league) => (
             <TouchableOpacity
               key={league.code}
               style={[
                 styles.leagueButton,
-                selectedLeague === league.code && styles.leagueButtonActive
+                selectedLeague === league.code && styles.leagueButtonActive,
               ]}
               onPress={() => setSelectedLeague(league.code)}
-              activeOpacity={0.8}
-            >
+              activeOpacity={0.8}>
               {selectedLeague === league.code && (
                 <LinearGradient
-                  colors={['#22c55e', '#16a34a']}
+                  colors={["#22c55e", "#16a34a"]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={StyleSheet.absoluteFillObject}
                 />
               )}
-              <Text style={[
-                styles.leagueButtonText,
-                selectedLeague === league.code && styles.leagueButtonTextActive
-              ]}>
+              <Text
+                style={[
+                  styles.leagueButtonText,
+                  selectedLeague === league.code &&
+                    styles.leagueButtonTextActive,
+                ]}>
                 {league.name}
               </Text>
             </TouchableOpacity>
@@ -355,7 +487,7 @@ export const HomeScreen = ({ navigation }: any) => {
       </View>
 
       {/* System Warnings */}
-      {warnings.map(warning => (
+      {warnings.map((warning) => (
         <WarningCard
           key={warning._id}
           title={warning.title}
@@ -369,43 +501,49 @@ export const HomeScreen = ({ navigation }: any) => {
   // Filter matches by selected league
   const filteredMatches = (() => {
     let matches = [];
-    const sourceMatches = isToday(selectedDate) ? [...liveMatches, ...todaysMatches] : customMatches;
+    const sourceMatches = isToday(selectedDate)
+      ? [...liveMatches, ...todaysMatches]
+      : customMatches;
 
-    if (selectedLeague === 'ALL') {
+    if (selectedLeague === "ALL") {
       matches = sourceMatches;
-    } else if (selectedLeague === 'FAV') {
-      matches = sourceMatches.filter(m => 
-        favoriteTeams.includes(m.teams.home.id) || favoriteTeams.includes(m.teams.away.id)
+    } else if (selectedLeague === "FAV") {
+      matches = sourceMatches.filter(
+        (m) =>
+          favoriteTeams.includes(m.teams.home.id) ||
+          favoriteTeams.includes(m.teams.away.id)
       );
-    } else if (selectedLeague === 'FINISHED') {
-      matches = sourceMatches.filter(m => 
-        ['FT', 'AET', 'PEN'].includes(m.fixture.status.short)
+    } else if (selectedLeague === "FINISHED") {
+      matches = sourceMatches.filter((m) =>
+        ["FT", "AET", "PEN"].includes(m.fixture.status.short)
       );
     } else {
       // Handle both API formats:
       // football-data.org: league.id = "BSA", "CL", "PD"
       // MSN Sports: league.id = "Soccer_EnglandPremierLeague", "Basketball_NBA", etc.
       // We match either exact ID or if the league ID contains the selected code
-      matches = sourceMatches.filter(m => {
-        const leagueId = m.league.id?.toString() || '';
+      matches = sourceMatches.filter((m) => {
+        const leagueId = m.league.id?.toString() || "";
         // Direct match
         if (leagueId === selectedLeague) return true;
-        
+
         // MSN Sports format mapping
         const msnMapping: Record<string, string> = {
-          'BSA': 'BrazilBrasileiroSerieA',  // Brasileirão also in MSN
-          'PL': 'EnglandPremierLeague',
-          'BL1': 'GermanyBundesliga',
-          'SA': 'ItalySerieA',
-          'FL1': 'FranceLigue1',
-          'PPL': 'PortugalPrimeiraLiga',
-          'NBA': 'Basketball_NBA',
+          BSA: "BrazilBrasileiroSerieA", // Brasileirão also in MSN
+          CL: "InternationalClubsUEFAChampionsLeague", // Champions League
+          PD: "SpainLaLiga", // La Liga
+          PL: "EnglandPremierLeague",
+          BL1: "GermanyBundesliga",
+          SA: "ItalySerieA",
+          FL1: "FranceLigue1",
+          PPL: "PortugalPrimeiraLiga",
+          NBA: "Basketball_NBA",
         };
-        
+
         if (msnMapping[selectedLeague]) {
           return leagueId.includes(msnMapping[selectedLeague]);
         }
-        
+
         return false;
       });
     }
@@ -414,32 +552,38 @@ export const HomeScreen = ({ navigation }: any) => {
     const uniqueMatches = Array.from(
       new Map(
         matches
-          .filter(item => item?.fixture?.id)
-          .map(item => [item.fixture.id, item])
+          .filter((item) => item?.fixture?.id)
+          .map((item) => [item.fixture.id, item])
       ).values()
     );
     return uniqueMatches;
   })();
 
   // Group matches
-  const finishedMatches = filteredMatches.filter(m => ['FT', 'AET', 'PEN'].includes(m.fixture.status.short));
-  const scheduledMatches = filteredMatches.filter(m => ['NS', 'TBD', 'TIMED'].includes(m.fixture.status.short));
-  const live = filteredMatches.filter(m => ['1H', '2H', 'HT'].includes(m.fixture.status.short));
+  const finishedMatches = filteredMatches.filter((m) =>
+    ["FT", "AET", "PEN"].includes(m.fixture.status.short)
+  );
+  const scheduledMatches = filteredMatches.filter((m) =>
+    ["NS", "TBD", "TIMED"].includes(m.fixture.status.short)
+  );
+  const live = filteredMatches.filter((m) =>
+    ["1H", "2H", "HT"].includes(m.fixture.status.short)
+  );
 
   const sections = [
-    { title: 'AO VIVO', data: live, type: 'live' },
-    { title: 'Agendados', data: scheduledMatches, type: 'scheduled' },
-    { title: 'Finalizados', data: finishedMatches, type: 'finished' },
-  ].filter(section => section.data.length > 0);
+    { title: "AO VIVO", data: live, type: "live" },
+    { title: "Agendados", data: scheduledMatches, type: "scheduled" },
+    { title: "Finalizados", data: finishedMatches, type: "finished" },
+  ].filter((section) => section.data.length > 0);
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#09090b" />
       <LinearGradient
-        colors={['#09090b', '#18181b', '#09090b']}
+        colors={["#09090b", "#18181b", "#09090b"]}
         style={styles.background}
       />
-      
+
       <SafeAreaView style={styles.safeArea}>
         <FlatList
           data={sections}
@@ -447,25 +591,36 @@ export const HomeScreen = ({ navigation }: any) => {
           renderItem={({ item }) => (
             <View style={styles.sectionContainer}>
               <View style={styles.sectionHeader}>
-                 {item.type === 'live' && (
-                   <View style={styles.liveIndicatorContainer}>
-                     <View style={styles.pulsingDot} />
-                   </View>
-                 )}
-                 <Text style={[styles.sectionTitle, item.type === 'live' && styles.liveTitle]}>
-                   {item.title}
-                 </Text>
-                 <View style={styles.sectionLine} />
+                {item.type === "live" && (
+                  <View style={styles.liveIndicatorContainer}>
+                    <View style={styles.pulsingDot} />
+                  </View>
+                )}
+                <Text
+                  style={[
+                    styles.sectionTitle,
+                    item.type === "live" && styles.liveTitle,
+                  ]}>
+                  {item.title}
+                </Text>
+                <View style={styles.sectionLine} />
               </View>
-              {item.data.map(match => (
-                <MatchCard key={`${item.type}-${match.fixture.id}`} match={match} />
+              {item.data.map((match) => (
+                <MatchCard
+                  key={`${item.type}-${match.fixture.id}`}
+                  match={match}
+                />
               ))}
             </View>
           )}
           contentContainerStyle={styles.listContent}
           ListHeaderComponent={renderHeader}
           refreshControl={
-            <RefreshControl refreshing={loading} onRefresh={refreshMatches} tintColor="#22c55e" />
+            <RefreshControl
+              refreshing={loading}
+              onRefresh={refreshMatches}
+              tintColor="#22c55e"
+            />
           }
           ListEmptyComponent={
             !loading ? (
@@ -499,26 +654,27 @@ export const HomeScreen = ({ navigation }: any) => {
         visible={showProfileModal}
         transparent
         animationType="fade"
-        onRequestClose={() => setShowProfileModal(false)}
-      >
-        <TouchableOpacity 
+        onRequestClose={() => setShowProfileModal(false)}>
+        <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
-          onPress={() => setShowProfileModal(false)}
-        >
-          <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
+          onPress={() => setShowProfileModal(false)}>
+          <View
+            style={styles.modalContent}
+            onStartShouldSetResponder={() => true}>
             <LinearGradient
-              colors={['#1a1a2e', '#16213e']}
-              style={styles.profileModalGradient}
-            >
+              colors={["#1a1a2e", "#16213e"]}
+              style={styles.profileModalGradient}>
               <View style={styles.profileModalHeader}>
                 <View style={styles.profileAvatar}>
                   <Text style={styles.profileAvatarText}>
-                    {user?.name?.charAt(0).toUpperCase() || '?'}
+                    {user?.name?.charAt(0).toUpperCase() || "?"}
                   </Text>
                 </View>
-                <Text style={styles.profileName}>{user?.name || 'Usuário'}</Text>
-                <Text style={styles.profileEmail}>{user?.email || ''}</Text>
+                <Text style={styles.profileName}>
+                  {user?.name || "Usuário"}
+                </Text>
+                <Text style={styles.profileEmail}>{user?.email || ""}</Text>
               </View>
 
               <View style={styles.profileModalDivider} />
@@ -527,32 +683,26 @@ export const HomeScreen = ({ navigation }: any) => {
                 style={styles.logoutButton}
                 onPress={() => {
                   setShowProfileModal(false);
-                  Alert.alert(
-                    'Sair da Conta',
-                    'Tem certeza que deseja sair?',
-                    [
-                      {
-                        text: 'Cancelar',
-                        style: 'cancel',
+                  Alert.alert("Sair da Conta", "Tem certeza que deseja sair?", [
+                    {
+                      text: "Cancelar",
+                      style: "cancel",
+                    },
+                    {
+                      text: "Sair",
+                      style: "destructive",
+                      onPress: async () => {
+                        await signOut();
                       },
-                      {
-                        text: 'Sair',
-                        style: 'destructive',
-                        onPress: async () => {
-                          await signOut();
-                        },
-                      },
-                    ]
-                  );
+                    },
+                  ]);
                 }}
-                activeOpacity={0.8}
-              >
+                activeOpacity={0.8}>
                 <LinearGradient
-                  colors={['#ef4444', '#dc2626']}
+                  colors={["#ef4444", "#dc2626"]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
-                  style={styles.logoutGradient}
-                >
+                  style={styles.logoutGradient}>
                   <Text style={styles.logoutIcon}>🚪</Text>
                   <Text style={styles.logoutText}>Sair da Conta</Text>
                 </LinearGradient>
@@ -560,8 +710,7 @@ export const HomeScreen = ({ navigation }: any) => {
 
               <TouchableOpacity
                 style={styles.closeModalButton}
-                onPress={() => setShowProfileModal(false)}
-              >
+                onPress={() => setShowProfileModal(false)}>
                 <Text style={styles.closeModalText}>Fechar</Text>
               </TouchableOpacity>
             </LinearGradient>
@@ -575,10 +724,10 @@ export const HomeScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#09090b',
+    backgroundColor: "#09090b",
   },
   background: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     right: 0,
     top: 0,
@@ -593,11 +742,12 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     marginBottom: 32,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 20 : 10,
-    position: 'relative',
+    paddingTop:
+      Platform.OS === "android" ? (StatusBar.currentHeight || 0) + 20 : 10,
+    position: "relative",
   },
   headerGradient: {
-    position: 'absolute',
+    position: "absolute",
     top: -100,
     left: -20,
     right: -20,
@@ -605,65 +755,65 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 28,
   },
   dateText: {
-    color: '#e4e4e7',
+    color: "#e4e4e7",
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: "700",
     // letterSpacing: 1.5, // Removed to prevent truncation
     marginBottom: 4,
   },
   titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
+    flexDirection: "row",
+    alignItems: "baseline",
   },
   titleHighlight: {
     fontSize: 32,
-    fontWeight: '300',
-    color: '#fff',
+    fontWeight: "300",
+    color: "#fff",
     letterSpacing: -1,
   },
   title: {
     fontSize: 32,
-    fontWeight: '900',
-    color: '#fff',
+    fontWeight: "900",
+    color: "#fff",
     letterSpacing: -1,
   },
   liveDotHeader: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 0.3,
   },
   favoritesButtonContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 20,
     marginTop: 4,
   },
   favoritesButtonCentered: {
-    shadowColor: '#22c55e',
+    shadowColor: "#22c55e",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 8,
     elevation: 5,
   },
   favoritesButton: {
-    shadowColor: '#FF6B6B',
+    shadowColor: "#FF6B6B",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 8,
     elevation: 5,
   },
   favoritesGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 24,
@@ -673,18 +823,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   favoritesText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 0.3,
   },
   headerButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   profileButton: {
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -694,72 +844,72 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   // Modal styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   modalContent: {
-    width: '100%',
+    width: "100%",
     maxWidth: 400,
     borderRadius: 24,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   profileModalGradient: {
     padding: 24,
   },
   profileModalHeader: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 24,
   },
   profileAvatar: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#22c55e',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#22c55e",
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 16,
   },
   profileAvatarText: {
     fontSize: 32,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
   profileName: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontWeight: "700",
+    color: "#FFFFFF",
     marginBottom: 4,
   },
   profileEmail: {
     fontSize: 14,
-    color: '#9CA3AF',
+    color: "#9CA3AF",
   },
   profileModalDivider: {
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
     marginBottom: 24,
   },
   logoutButton: {
     marginBottom: 16,
-    shadowColor: '#ef4444',
+    shadowColor: "#ef4444",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 8,
     elevation: 5,
   },
   logoutGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 12,
@@ -769,18 +919,18 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   logoutText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   closeModalButton: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 12,
   },
   closeModalText: {
-    color: '#9CA3AF',
+    color: "#9CA3AF",
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 
   dateSelectorWrapper: {
@@ -794,138 +944,138 @@ const styles = StyleSheet.create({
     width: 56,
     height: 64,
     borderRadius: 16,
-    backgroundColor: '#18181b',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#18181b",
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-    overflow: 'hidden',
+    borderColor: "rgba(255,255,255,0.05)",
+    overflow: "hidden",
   },
   dateButtonActive: {
-    backgroundColor: '#22c55e',
-    borderColor: 'transparent',
+    backgroundColor: "#22c55e",
+    borderColor: "transparent",
   },
   dateDayText: {
-    color: '#71717a',
+    color: "#71717a",
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: "700",
     marginBottom: 4,
   },
   dateNumberText: {
-    color: '#e4e4e7',
+    color: "#e4e4e7",
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   dateTextActive: {
-    color: '#fff',
+    color: "#fff",
   },
 
   leagueSelectorWrapper: {
     marginHorizontal: -4,
   },
   leagueSelectorContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#18181b',
+    flexDirection: "row",
+    backgroundColor: "#18181b",
     padding: 4,
     borderRadius: 40,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-    minWidth: '100%', // Ensure it takes full width if content is small
+    borderColor: "rgba(255,255,255,0.05)",
+    minWidth: "100%", // Ensure it takes full width if content is small
   },
   leagueButton: {
     paddingVertical: 10,
     paddingHorizontal: 24,
     borderRadius: 34,
-    overflow: 'hidden',
-    position: 'relative',
+    overflow: "hidden",
+    position: "relative",
   },
   leagueButtonActive: {
-    backgroundColor: 'transparent',
-    borderColor: 'transparent',
-    shadowColor: 'transparent',
+    backgroundColor: "transparent",
+    borderColor: "transparent",
+    shadowColor: "transparent",
     elevation: 0,
   },
   leagueButtonText: {
-    color: '#71717a',
+    color: "#71717a",
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
     zIndex: 1,
   },
   leagueButtonTextActive: {
-    color: '#fff',
-    fontWeight: '800',
+    color: "#fff",
+    fontWeight: "800",
   },
   sectionContainer: {
     marginBottom: 32,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '800',
-    color: '#e4e4e7',
+    fontWeight: "800",
+    color: "#e4e4e7",
     letterSpacing: 0.5,
     marginRight: 12,
   },
   liveTitle: {
-    color: '#22c55e',
+    color: "#22c55e",
   },
   liveIndicatorContainer: {
     marginRight: 8,
     width: 8,
     height: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   pulsingDot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-      backgroundColor: '#22c55e',
-      shadowColor: '#22c55e',
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 1,
-      shadowRadius: 4,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#22c55e",
+    shadowColor: "#22c55e",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 4,
   },
   sectionLine: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: "rgba(255,255,255,0.1)",
   },
   emptyContainer: {
     padding: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginTop: 40,
   },
   emptyIconContainer: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(255,255,255,0.03)",
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: "rgba(255,255,255,0.05)",
   },
   emptyIcon: {
     fontSize: 32,
   },
   emptyTitle: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
     marginBottom: 8,
   },
   emptyText: {
-    color: '#71717a',
+    color: "#71717a",
     fontSize: 14,
-    textAlign: 'center',
+    textAlign: "center",
   },
   actionButtonsContainer: {
     marginBottom: 20,
@@ -936,25 +1086,51 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   actionButton: {
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    overflow: 'hidden',
+    borderRadius: 16,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
-  actionButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
+  actionButtonGradient: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
     paddingHorizontal: 16,
-    gap: 8,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    borderRadius: 16,
+  },
+  actionButtonIconWrapper: {
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  actionIconGradient: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
   },
   actionButtonIcon: {
-    fontSize: 16,
+    fontSize: 20,
+  },
+  actionButtonTextContainer: {
+    flexDirection: "column",
   },
   actionButtonText: {
-    color: '#e4e4e7',
-    fontSize: 13,
-    fontWeight: '600',
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
+  actionButtonSubtext: {
+    color: "#a1a1aa",
+    fontSize: 11,
+    fontWeight: "500",
+    marginTop: 2,
   },
 });

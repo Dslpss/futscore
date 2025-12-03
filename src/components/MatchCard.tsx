@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
 import { Match } from "../types";
 import { format } from "date-fns";
 import { LinearGradient } from "expo-linear-gradient";
-import { Star, Home, Plane } from "lucide-react-native";
+import { Star, Clock, Calendar } from "lucide-react-native";
 import { useFavorites } from "../context/FavoritesContext";
 import { MatchStatsModal } from "./MatchStatsModal";
 
@@ -16,52 +16,64 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
     match.fixture.status.short === "1H" ||
     match.fixture.status.short === "2H" ||
     match.fixture.status.short === "HT";
+  const isFinished = ["FT", "AET", "PEN"].includes(match.fixture.status.short);
   const { isFavoriteTeam, toggleFavoriteTeam } = useFavorites();
   const [modalVisible, setModalVisible] = React.useState(false);
 
   const isHomeFavorite = isFavoriteTeam(match.teams.home.id);
   const isAwayFavorite = isFavoriteTeam(match.teams.away.id);
 
+  // Determine gradient colors based on match state
+  const gradientColors = isLive
+    ? (["#1a2e1a", "#162216", "#0f1a0f"] as const)
+    : (["#1a1a2e", "#16213e", "#0f0f1a"] as const);
+
   return (
     <>
       <TouchableOpacity
         style={styles.container}
-        activeOpacity={0.9}
+        activeOpacity={0.85}
         onPress={() => setModalVisible(true)}>
         <LinearGradient
-          colors={["#1c1c1e", "#121212"]}
+          colors={gradientColors}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.card}>
-          {/* Header: League & Status */}
+          {/* Header: League Badge & Status */}
           <View style={styles.header}>
-            <View style={styles.leagueContainer}>
+            <View style={styles.leagueBadge}>
               <Image
                 source={{ uri: match.league.logo }}
                 style={styles.leagueLogo}
               />
-              <Text style={styles.league}>{match.league.name}</Text>
+              <Text style={styles.leagueName} numberOfLines={1}>
+                {match.league.name}
+              </Text>
             </View>
+
             {isLive ? (
               <View style={styles.liveBadge}>
                 <View style={styles.liveDot} />
                 <Text style={styles.liveText}>
                   {match.fixture.status.short === "HT"
-                    ? "INT"
+                    ? "INTERVALO"
                     : match.fixture.status.short === "1H"
-                    ? "1T"
-                    : match.fixture.status.short === "2H"
-                    ? "2T"
-                    : "AO VIVO"}
+                    ? "1º TEMPO"
+                    : "2º TEMPO"}
                   {match.fixture.status.short !== "HT" &&
                   match.fixture.status.elapsed
                     ? ` • ${match.fixture.status.elapsed}'`
                     : ""}
                 </Text>
               </View>
+            ) : isFinished ? (
+              <View style={styles.finishedBadge}>
+                <Text style={styles.finishedText}>ENCERRADO</Text>
+              </View>
             ) : (
-              <View style={styles.timeContainer}>
-                <Text style={styles.status}>
+              <View style={styles.scheduledBadge}>
+                <Clock size={12} color="#a1a1aa" />
+                <Text style={styles.scheduledText}>
                   {format(new Date(match.fixture.date), "HH:mm")}
                 </Text>
               </View>
@@ -71,126 +83,126 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
           {/* Match Content */}
           <View style={styles.matchContent}>
             {/* Home Team */}
-            <View style={styles.teamContainer}>
+            <View style={styles.teamSection}>
               <TouchableOpacity
-                onPress={() => toggleFavoriteTeam(match.teams.home.id)}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  toggleFavoriteTeam(match.teams.home.id);
+                }}
                 style={styles.favoriteButton}>
                 <Star
-                  size={16}
+                  size={14}
                   color={isHomeFavorite ? "#FBBF24" : "rgba(255,255,255,0.2)"}
                   fill={isHomeFavorite ? "#FBBF24" : "transparent"}
                 />
               </TouchableOpacity>
-              <View style={styles.logoContainer}>
-                <Image
-                  source={{ uri: match.teams.home.logo }}
-                  style={styles.teamLogo}
-                />
+
+              <View style={styles.teamLogoWrapper}>
+                <LinearGradient
+                  colors={["rgba(255,255,255,0.1)", "rgba(255,255,255,0.03)"]}
+                  style={styles.teamLogoGlow}>
+                  <Image
+                    source={{ uri: match.teams.home.logo }}
+                    style={styles.teamLogo}
+                  />
+                </LinearGradient>
               </View>
+
               <Text style={styles.teamName} numberOfLines={2}>
                 {match.teams.home.name}
               </Text>
-              <View style={styles.homeAwayBadge}>
-                <Home size={10} color="#22c55e" />
-                <Text style={styles.homeBadgeText}>Casa</Text>
+
+              <View style={styles.homeIndicator}>
+                <Text style={styles.homeIndicatorText}>CASA</Text>
               </View>
             </View>
 
-            {/* Score / VS */}
-            <View style={styles.scoreContainer}>
+            {/* Score / VS Section */}
+            <View style={styles.centerSection}>
               {["NS", "TBD", "TIMED", "PST", "CANC", "ABD", "WO"].includes(
                 match.fixture.status.short
               ) ? (
-                <Text style={styles.vsText}>VS</Text>
+                <>
+                  <View style={styles.vsContainer}>
+                    <Text style={styles.vsText}>VS</Text>
+                  </View>
+                  <View style={styles.dateContainer}>
+                    <Calendar size={10} color="#71717a" />
+                    <Text style={styles.dateText}>
+                      {format(new Date(match.fixture.date), "dd/MM")}
+                    </Text>
+                  </View>
+                </>
               ) : (
-                <View style={styles.scoreBoard}>
-                  <Text style={[styles.score, isLive && styles.liveScore]}>
-                    {match.goals.home ?? 0}
+                <>
+                  <View
+                    style={[styles.scoreBox, isLive && styles.scoreBoxLive]}>
+                    <Text
+                      style={[
+                        styles.scoreNumber,
+                        isLive && styles.scoreNumberLive,
+                      ]}>
+                      {match.goals.home ?? 0}
+                    </Text>
+                    <View
+                      style={[
+                        styles.scoreDivider,
+                        isLive && styles.scoreDividerLive,
+                      ]}
+                    />
+                    <Text
+                      style={[
+                        styles.scoreNumber,
+                        isLive && styles.scoreNumberLive,
+                      ]}>
+                      {match.goals.away ?? 0}
+                    </Text>
+                  </View>
+                  <Text style={styles.statusLabel}>
+                    {getStatusLabel(match.fixture.status.short)}
                   </Text>
-                  <Text
-                    style={[styles.scoreDivider, isLive && styles.liveScore]}>
-                    :
-                  </Text>
-                  <Text style={[styles.score, isLive && styles.liveScore]}>
-                    {match.goals.away ?? 0}
-                  </Text>
-                </View>
+                </>
               )}
-              <Text style={styles.statusText}>
-                {(() => {
-                  const status = match.fixture.status.short;
-                  switch (status) {
-                    case "TBD":
-                      return "A Definir";
-                    case "NS":
-                      return "Não Iniciado";
-                    case "1H":
-                      return "1º Tempo";
-                    case "HT":
-                      return "Intervalo";
-                    case "2H":
-                      return "2º Tempo";
-                    case "ET":
-                      return "Prorrogação";
-                    case "BT":
-                      return "Pênaltis"; // Break Time (in penalties)
-                    case "P":
-                      return "Pênaltis";
-                    case "SUSP":
-                      return "Suspenso";
-                    case "INT":
-                      return "Interrompido";
-                    case "FT":
-                      return "Encerrado";
-                    case "AET":
-                      return "Encerrado (Prorr.)";
-                    case "PEN":
-                      return "Encerrado (Pên.)";
-                    case "PST":
-                      return "Adiado";
-                    case "CANC":
-                      return "Cancelado";
-                    case "ABD":
-                      return "Abandonado";
-                    case "AWD":
-                      return "W.O.";
-                    case "WO":
-                      return "W.O.";
-                    case "LIVE":
-                      return "Ao Vivo";
-                    default:
-                      return match.fixture.status.long; // Fallback
-                  }
-                })()}
-              </Text>
             </View>
 
             {/* Away Team */}
-            <View style={styles.teamContainer}>
+            <View style={styles.teamSection}>
               <TouchableOpacity
-                onPress={() => toggleFavoriteTeam(match.teams.away.id)}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  toggleFavoriteTeam(match.teams.away.id);
+                }}
                 style={styles.favoriteButton}>
                 <Star
-                  size={16}
+                  size={14}
                   color={isAwayFavorite ? "#FBBF24" : "rgba(255,255,255,0.2)"}
                   fill={isAwayFavorite ? "#FBBF24" : "transparent"}
                 />
               </TouchableOpacity>
-              <View style={styles.logoContainer}>
-                <Image
-                  source={{ uri: match.teams.away.logo }}
-                  style={styles.teamLogo}
-                />
+
+              <View style={styles.teamLogoWrapper}>
+                <LinearGradient
+                  colors={["rgba(255,255,255,0.1)", "rgba(255,255,255,0.03)"]}
+                  style={styles.teamLogoGlow}>
+                  <Image
+                    source={{ uri: match.teams.away.logo }}
+                    style={styles.teamLogo}
+                  />
+                </LinearGradient>
               </View>
+
               <Text style={styles.teamName} numberOfLines={2}>
                 {match.teams.away.name}
               </Text>
-              <View style={styles.awayBadge}>
-                <Plane size={10} color="#f59e0b" />
-                <Text style={styles.awayBadgeText}>Fora</Text>
+
+              <View style={styles.awayIndicator}>
+                <Text style={styles.awayIndicatorText}>FORA</Text>
               </View>
             </View>
           </View>
+
+          {/* Tap hint */}
+          <Text style={styles.tapHint}>Toque para ver detalhes</Text>
         </LinearGradient>
       </TouchableOpacity>
 
@@ -203,205 +215,319 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
   );
 };
 
+// Helper function for status labels
+const getStatusLabel = (status: string): string => {
+  switch (status) {
+    case "TBD":
+      return "A Definir";
+    case "NS":
+      return "Não Iniciado";
+    case "1H":
+      return "1º Tempo";
+    case "HT":
+      return "Intervalo";
+    case "2H":
+      return "2º Tempo";
+    case "ET":
+      return "Prorrogação";
+    case "BT":
+      return "Pênaltis";
+    case "P":
+      return "Pênaltis";
+    case "SUSP":
+      return "Suspenso";
+    case "INT":
+      return "Interrompido";
+    case "FT":
+      return "Encerrado";
+    case "AET":
+      return "Prorrogação";
+    case "PEN":
+      return "Pênaltis";
+    case "PST":
+      return "Adiado";
+    case "CANC":
+      return "Cancelado";
+    case "ABD":
+      return "Abandonado";
+    case "AWD":
+      return "W.O.";
+    case "WO":
+      return "W.O.";
+    case "LIVE":
+      return "Ao Vivo";
+    default:
+      return status;
+  }
+};
+
 const styles = StyleSheet.create({
   container: {
     marginBottom: 16,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
+    shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowRadius: 20,
+    elevation: 12,
   },
   card: {
     borderRadius: 24,
-    padding: 16,
+    padding: 18,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.08)",
   },
+
+  // Header
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 18,
   },
-  leagueContainer: {
+  leagueBadge: {
     flexDirection: "row",
     alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.06)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
     flex: 1,
+    maxWidth: "60%",
   },
   leagueLogo: {
-    width: 24,
-    height: 24,
+    width: 18,
+    height: 18,
     resizeMode: "contain",
-    marginRight: 10,
+    marginRight: 8,
   },
-  league: {
+  leagueName: {
     color: "#a1a1aa",
-    fontSize: 10, // Reduced from 13
-    fontWeight: "600",
+    fontSize: 10,
+    fontWeight: "700",
     textTransform: "uppercase",
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
     flex: 1,
   },
-  timeContainer: {
-    backgroundColor: "rgba(255,255,255,0.05)",
-    paddingVertical: 6,
-    borderRadius: 8,
-    width: 80, // Fixed width
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  status: {
-    color: "#e4e4e7",
-    fontSize: 13,
-    fontWeight: "700",
-    textAlign: "center", // Ensure text is centered
-    width: "100%", // Ensure text takes full width of container
-  },
+
+  // Status badges
   liveBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(34, 197, 94, 0.15)",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    backgroundColor: "rgba(239, 68, 68, 0.15)",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(34, 197, 94, 0.3)",
+    borderColor: "rgba(239, 68, 68, 0.3)",
   },
   liveDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "#22c55e",
+    backgroundColor: "#ef4444",
     marginRight: 6,
+    shadowColor: "#ef4444",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
   },
   liveText: {
-    color: "#22c55e",
-    fontSize: 11,
+    color: "#ef4444",
+    fontSize: 10,
     fontWeight: "800",
-    textTransform: "uppercase",
+    letterSpacing: 0.3,
   },
+  finishedBadge: {
+    backgroundColor: "rgba(34, 197, 94, 0.12)",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(34, 197, 94, 0.25)",
+  },
+  finishedText: {
+    color: "#22c55e",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
+  scheduledBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.06)",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+    gap: 6,
+  },
+  scheduledText: {
+    color: "#e4e4e7",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+
+  // Match Content
   matchContent: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start", // Align to top to handle long names
+    alignItems: "flex-start",
   },
-  teamContainer: {
+
+  // Team Section
+  teamSection: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "flex-start",
-    position: "relative",
+    maxWidth: 100,
   },
   favoriteButton: {
     position: "absolute",
-    top: -10,
-    right: 10,
+    top: -8,
+    right: 4,
     zIndex: 20,
     padding: 4,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    borderRadius: 12,
   },
-  logoContainer: {
+  teamLogoWrapper: {
+    marginBottom: 10,
+  },
+  teamLogoGlow: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: "rgba(255,255,255,0.03)",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.05)",
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.08)",
   },
   teamLogo: {
-    width: 40,
-    height: 40,
+    width: 42,
+    height: 42,
     resizeMode: "contain",
   },
   teamName: {
     color: "#fff",
-    fontSize: 13,
-    fontWeight: "600",
+    fontSize: 12,
+    fontWeight: "700",
     textAlign: "center",
-    lineHeight: 18,
-    maxWidth: 100,
+    lineHeight: 16,
+    marginBottom: 6,
   },
-  homeAwayBadge: {
-    flexDirection: "row",
-    alignItems: "center",
+  homeIndicator: {
     backgroundColor: "rgba(34, 197, 94, 0.15)",
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 10,
-    marginTop: 6,
-    gap: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(34, 197, 94, 0.25)",
   },
-  homeBadgeText: {
+  homeIndicatorText: {
     color: "#22c55e",
-    fontSize: 9,
-    fontWeight: "700",
-    textTransform: "uppercase",
+    fontSize: 8,
+    fontWeight: "800",
+    letterSpacing: 0.5,
   },
-  awayBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(245, 158, 11, 0.15)",
+  awayIndicator: {
+    backgroundColor: "rgba(251, 191, 36, 0.15)",
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 10,
-    marginTop: 6,
-    gap: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(251, 191, 36, 0.25)",
   },
-  awayBadgeText: {
-    color: "#f59e0b",
-    fontSize: 9,
-    fontWeight: "700",
-    textTransform: "uppercase",
+  awayIndicatorText: {
+    color: "#fbbf24",
+    fontSize: 8,
+    fontWeight: "800",
+    letterSpacing: 0.5,
   },
-  scoreContainer: {
-    alignItems: "center",
-    width: 100, // Increased from 80
-    paddingTop: 10,
-    zIndex: 10,
-  },
-  scoreBoard: {
-    flexDirection: "row",
+
+  // Center / Score Section
+  centerSection: {
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 4,
+    flex: 1,
+    paddingTop: 8,
   },
-  score: {
-    color: "#fff",
-    fontSize: 32,
-    fontWeight: "800",
-    fontVariant: ["tabular-nums"],
-    letterSpacing: -1,
-  },
-  scoreDivider: {
-    color: "rgba(255,255,255,0.2)",
-    fontSize: 24,
-    fontWeight: "300",
-    marginHorizontal: 4,
-    marginTop: -4,
-  },
-  liveScore: {
-    color: "#22c55e",
-    textShadowColor: "rgba(34, 197, 94, 0.5)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 10,
+  vsContainer: {
+    backgroundColor: "rgba(255,255,255,0.05)",
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
   },
   vsText: {
     color: "#52525b",
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: "900",
-    // fontStyle: 'italic', // Removed to prevent clipping
-    marginBottom: 4,
-    paddingHorizontal: 10, // Added padding
-    textAlign: "center",
   },
-  statusText: {
+  dateContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+    gap: 4,
+  },
+  dateText: {
     color: "#71717a",
     fontSize: 11,
-    fontWeight: "500",
-    textTransform: "uppercase",
+    fontWeight: "600",
+  },
+  scoreBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.4)",
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+  },
+  scoreBoxLive: {
+    backgroundColor: "rgba(34, 197, 94, 0.15)",
+    borderColor: "rgba(34, 197, 94, 0.3)",
+  },
+  scoreNumber: {
+    color: "#fff",
+    fontSize: 28,
+    fontWeight: "900",
+    minWidth: 24,
     textAlign: "center",
+  },
+  scoreNumberLive: {
+    color: "#22c55e",
+    textShadowColor: "rgba(34, 197, 94, 0.5)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
+  },
+  scoreDivider: {
+    width: 3,
+    height: 20,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    marginHorizontal: 10,
+    borderRadius: 2,
+  },
+  scoreDividerLive: {
+    backgroundColor: "rgba(34, 197, 94, 0.4)",
+  },
+  statusLabel: {
+    color: "#71717a",
+    fontSize: 10,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    marginTop: 8,
+    letterSpacing: 0.3,
+  },
+
+  // Tap hint
+  tapHint: {
+    color: "rgba(255,255,255,0.25)",
+    fontSize: 10,
+    fontWeight: "500",
+    textAlign: "center",
+    marginTop: 14,
+    fontStyle: "italic",
   },
 });

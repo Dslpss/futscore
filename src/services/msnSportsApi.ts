@@ -928,4 +928,164 @@ export const msnSportsApi = {
       return [];
     }
   },
+
+  /**
+   * Get detailed game information (venue, channels, weather, win/loss record)
+   * @param gameId - Game ID (e.g., "58053211" - the triggering ID, not the full MSN ID)
+   * @returns Detailed game information
+   */
+  getGameDetails: async (gameId: string): Promise<any> => {
+    // Extract numeric ID if full MSN ID is passed
+    const numericId = gameId.includes("_Game_")
+      ? gameId.split("_Game_")[1]
+      : gameId;
+
+    const cacheKey = `game_details_${numericId}`;
+    const cached = await getCachedData<any>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const params = {
+        ...CONFIG.MSN_SPORTS.BASE_PARAMS,
+        apikey: CONFIG.MSN_SPORTS.API_KEY,
+        activityId: generateActivityId(),
+        ids: numericId,
+        scope: "Full",
+        ocid: "sports-gamecenter",
+      };
+
+      console.log(`[MSN API] Fetching game details for ${numericId}...`);
+
+      const response = await msnApiClient.get("/livegames", { params });
+
+      if (
+        !response.data ||
+        !response.data.value ||
+        !response.data.value[0] ||
+        !response.data.value[0].games ||
+        !response.data.value[0].games[0]
+      ) {
+        console.log(`[MSN API] No game details found for ${numericId}`);
+        return null;
+      }
+
+      const game = response.data.value[0].games[0];
+
+      // Transform to a cleaner structure
+      const gameDetails = {
+        id: game.id,
+        startDateTime: game.startDateTime,
+        gameStatus: game.gameState?.gameStatus,
+        detailedStatus: game.gameState?.detailedGameStatus,
+        week: game.week,
+        leagueName: game.leagueName?.localizedName || game.leagueName?.rawName,
+
+        // Venue information
+        venue: game.venue
+          ? {
+              name: game.venue.name?.localizedName || game.venue.name?.rawName,
+              capacity: game.venue.capacity,
+              city:
+                game.venue.location?.city?.fullName ||
+                game.venue.location?.city?.name?.rawName,
+              country:
+                game.venue.location?.country?.fullName ||
+                game.venue.location?.country?.name?.rawName,
+              latitude: game.venue.location?.latitude,
+              longitude: game.venue.location?.longitude,
+            }
+          : null,
+
+        // TV/Streaming channels
+        channels:
+          game.channels?.map((ch: any) => ({
+            type: ch.type,
+            names: ch.channelNames || [],
+          })) || [],
+
+        // Weather forecast
+        weather: game.weatherForecast
+          ? {
+              condition: game.weatherForecast.condition,
+              detailedCondition: game.weatherForecast.detailedCondition,
+              temperature: game.weatherForecast.temperature?.value,
+              unit: game.weatherForecast.temperature?.unit || "Celsius",
+              summary: game.weatherForecast.summary,
+            }
+          : null,
+
+        // Teams with win/loss record
+        homeTeam: game.participants?.[0]
+          ? {
+              id: game.participants[0].team?.id,
+              name:
+                game.participants[0].team?.name?.localizedName ||
+                game.participants[0].team?.name?.rawName,
+              shortName:
+                game.participants[0].team?.shortName?.localizedName ||
+                game.participants[0].team?.shortName?.rawName,
+              abbreviation: game.participants[0].team?.abbreviation,
+              image: game.participants[0].team?.image?.id,
+              score: game.participants[0].result?.score,
+              winProbability:
+                game.participants[0].probabilities?.[0]?.winProbability,
+              winLossRecord: game.participants[0].team?.winLossRecord
+                ? {
+                    wins: parseInt(
+                      game.participants[0].team.winLossRecord.wins
+                    ),
+                    losses: parseInt(
+                      game.participants[0].team.winLossRecord.losses
+                    ),
+                    ties: parseInt(
+                      game.participants[0].team.winLossRecord.ties
+                    ),
+                  }
+                : null,
+            }
+          : null,
+
+        awayTeam: game.participants?.[1]
+          ? {
+              id: game.participants[1].team?.id,
+              name:
+                game.participants[1].team?.name?.localizedName ||
+                game.participants[1].team?.name?.rawName,
+              shortName:
+                game.participants[1].team?.shortName?.localizedName ||
+                game.participants[1].team?.shortName?.rawName,
+              abbreviation: game.participants[1].team?.abbreviation,
+              image: game.participants[1].team?.image?.id,
+              score: game.participants[1].result?.score,
+              winProbability:
+                game.participants[1].probabilities?.[0]?.winProbability,
+              winLossRecord: game.participants[1].team?.winLossRecord
+                ? {
+                    wins: parseInt(
+                      game.participants[1].team.winLossRecord.wins
+                    ),
+                    losses: parseInt(
+                      game.participants[1].team.winLossRecord.losses
+                    ),
+                    ties: parseInt(
+                      game.participants[1].team.winLossRecord.ties
+                    ),
+                  }
+                : null,
+            }
+          : null,
+      };
+
+      console.log(
+        `[MSN API] Fetched game details: ${gameDetails.homeTeam?.shortName} vs ${gameDetails.awayTeam?.shortName}`
+      );
+
+      // Cache for 30 minutes (game details can change)
+      await setCachedData(cacheKey, gameDetails, 30 * 60 * 1000);
+      return gameDetails;
+    } catch (error) {
+      console.error(`[MSN API] Error fetching game details:`, error);
+      return null;
+    }
+  },
 };
