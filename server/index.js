@@ -3,7 +3,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const authRoutes = require("./routes/auth");
-const { startMatchMonitor } = require("./services/matchMonitor");
+const { startMatchMonitor, getMonitorStatus, checkAndNotify } = require("./services/matchMonitor");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -93,6 +93,35 @@ app.get("/debug/register-token", async (req, res) => {
       success: true,
       message: `Token registrado para ${email}`,
       tokenPreview: token.substring(0, 40) + "...",
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Endpoint para verificar status do monitor de partidas
+app.get("/monitor-status", (req, res) => {
+  try {
+    const status = getMonitorStatus();
+    res.json({
+      ...status,
+      serverTime: new Date().toISOString(),
+      uptime: process.uptime() + "s",
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Endpoint para forçar verificação manual
+app.get("/debug/force-check", async (req, res) => {
+  try {
+    console.log("[Debug] Forçando verificação de partidas...");
+    await checkAndNotify();
+    res.json({ 
+      success: true, 
+      message: "Verificação executada! Veja os logs do servidor.",
+      status: getMonitorStatus()
     });
   } catch (error) {
     res.status(500).json({ error: error.message });

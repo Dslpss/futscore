@@ -425,7 +425,10 @@ async function processTimelineEvents(match, events) {
  */
 async function checkAndNotify() {
   try {
-    console.log("[Monitor] Verificando jogos...");
+    lastCheckTime = new Date();
+    checkCount++;
+    
+    console.log(`[Monitor] Verificando jogos... (check #${checkCount})`);
     const matches = await fetchLiveMatches();
 
     // Contar jogos ao vivo para ajustar intervalo
@@ -570,12 +573,18 @@ function cleanOldCache() {
 /**
  * Inicia o monitoramento em loop
  */
+let monitorStartTime = null;
+let lastCheckTime = null;
+let checkCount = 0;
+
 function startMatchMonitor() {
   console.log("[Monitor] 🚀 Iniciando monitoramento de partidas...");
   console.log(
     `[Monitor] Intervalo inicial: ${currentInterval / 1000}s (modo economia)`
   );
   console.log("[Monitor] Intervalo com jogos ao vivo: 60s | Sem jogos: 5min");
+
+  monitorStartTime = new Date();
 
   // Primeira verificação com delay inicial aleatório
   setTimeout(() => {
@@ -586,8 +595,23 @@ function startMatchMonitor() {
   }, Math.random() * 5000 + 2000); // Delay inicial de 2-7 segundos
 }
 
+// Função para obter status do monitor
+function getMonitorStatus() {
+  return {
+    isRunning: intervalId !== null,
+    startedAt: monitorStartTime,
+    lastCheck: lastCheckTime,
+    checkCount: checkCount,
+    currentInterval: currentInterval / 1000 + "s",
+    notifiedMatches: notifiedMatchStarts.size,
+    notifiedHalfTimes: notifiedHalfTime.size,
+    notifiedEnds: notifiedMatchEnds.size,
+  };
+}
+
 module.exports = {
   startMatchMonitor,
   checkAndNotify,
   fetchLiveMatches,
+  getMonitorStatus,
 };
