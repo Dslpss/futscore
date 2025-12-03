@@ -111,28 +111,37 @@ async function fetchLiveMatches() {
       }
       
       const schedules = data.value[0].schedules || [];
-      let leagueGames = 0;
       
       for (const schedule of schedules) {
         const games = schedule.games || [];
         
         for (const game of games) {
-          const status = game.gameState;
-          const isLive = ["inProgress", "halftime"].includes(status);
-          const isScheduled = status === "pre";
-
+          // gameState é um objeto, não uma string
+          const gameStatus = game.gameState?.gameStatus?.toLowerCase() || "";
+          const isLive = ["inprogress", "inprogressbreak"].includes(gameStatus) || 
+                         game.gameState?.detailedGameStatus?.toLowerCase()?.includes("inprogress");
+          const isScheduled = gameStatus === "pre" || gameStatus === "scheduled";
+          
+          // Participantes: [0] = time da casa, [1] = time visitante
+          const homeParticipant = game.participants?.[0];
+          const awayParticipant = game.participants?.[1];
+          
           if (isLive || isScheduled) {
             allMatches.push({
-              id: game.gameId,
-              status: status,
-              homeTeam: game.homeTeam?.displayName || "Time Casa",
-              awayTeam: game.awayTeam?.displayName || "Time Fora",
-              homeTeamId: game.homeTeam?.teamId || 0,
-              awayTeamId: game.awayTeam?.teamId || 0,
-              homeScore: game.homeTeam?.score || 0,
-              awayScore: game.awayTeam?.score || 0,
+              id: game.id || game.liveId,
+              status: gameStatus,
+              rawStatus: game.gameState?.gameStatus,
+              homeTeam: homeParticipant?.team?.shortName?.rawName || 
+                        homeParticipant?.team?.name?.rawName || "Time Casa",
+              awayTeam: awayParticipant?.team?.shortName?.rawName || 
+                        awayParticipant?.team?.name?.rawName || "Time Fora",
+              homeTeamId: homeParticipant?.team?.id || "",
+              awayTeamId: awayParticipant?.team?.id || "",
+              homeScore: parseInt(homeParticipant?.result?.score) || 0,
+              awayScore: parseInt(awayParticipant?.result?.score) || 0,
               league: league.name,
               startTime: game.startDateTime,
+              isLive: isLive,
             });
           }
         }
@@ -156,9 +165,7 @@ async function checkAndNotify() {
     const matches = await fetchLiveMatches();
 
     // Contar jogos ao vivo para ajustar intervalo
-    const liveMatches = matches.filter(
-      (m) => m.status === "inProgress" || m.status === "halftime"
-    );
+    const liveMatches = matches.filter((m) => m.isLive);
     console.log(
       `[Monitor] ${matches.length} jogos total, ${liveMatches.length} ao vivo`
     );
@@ -169,13 +176,12 @@ async function checkAndNotify() {
     for (const match of matches) {
       const matchId = match.id;
 
-      // 1. Verificar se jogo COMEÇOU (mudou de pre para inProgress)
+      // 1. Verificar se jogo COMEÇOU (mudou de scheduled/pre para inprogress)
       const previousStatus = lastKnownStatus[matchId];
-      if (
-        match.status === "inProgress" &&
-        previousStatus === "pre" &&
-        !notifiedMatchStarts.has(matchId)
-      ) {
+      const isNowLive = match.isLive;
+      const wasNotLive = !previousStatus || previousStatus === "pre" || previousStatus === "scheduled";
+      
+      if (isNowLive && wasNotLive && !notifiedMatchStarts.has(matchId)) {
         console.log(
           `[Monitor] 🟢 Jogo começou: ${match.homeTeam} vs ${match.awayTeam}`
         );
@@ -187,7 +193,7 @@ async function checkAndNotify() {
       lastKnownStatus[matchId] = match.status;
 
       // 2. Verificar se houve GOL (apenas para jogos ao vivo)
-      if (match.status === "inProgress") {
+      if (isNowLive) {
         const previous = lastKnownScores[matchId];
 
         if (previous) {
