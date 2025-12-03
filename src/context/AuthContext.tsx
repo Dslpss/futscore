@@ -1,9 +1,17 @@
-import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
+import React, {
+  createContext,
+  useState,
+  useEffect,
+  useContext,
+  ReactNode,
+} from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
+import { registerForPushNotificationsAsync } from "../services/notifications";
+import { authApi } from "../services/authApi";
 
 // Backend URL - Railway Production
-export const API_URL = 'https://futscore-production.up.railway.app/auth'; 
+export const API_URL = "https://futscore-production.up.railway.app/auth";
 
 interface User {
   id: string;
@@ -23,7 +31,9 @@ interface AuthContextData {
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
 
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -32,19 +42,36 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     loadStorageData();
   }, []);
 
+  // Registrar push token quando usuário estiver logado
+  async function registerPushToken() {
+    try {
+      const pushToken = await registerForPushNotificationsAsync();
+      if (pushToken) {
+        await authApi.registerPushToken(pushToken);
+      }
+    } catch (error) {
+      console.error("[Auth] Erro ao registrar push token:", error);
+    }
+  }
+
   async function loadStorageData() {
     try {
-      const storedUser = await AsyncStorage.getItem('@FutScore:user');
-      const storedToken = await AsyncStorage.getItem('@FutScore:token');
+      const storedUser = await AsyncStorage.getItem("@FutScore:user");
+      const storedToken = await AsyncStorage.getItem("@FutScore:token");
 
       if (storedUser && storedToken) {
         setUser(JSON.parse(storedUser));
         setToken(storedToken);
         // Configure axios defaults
-        axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+        axios.defaults.headers.common[
+          "Authorization"
+        ] = `Bearer ${storedToken}`;
+
+        // Registrar push token ao carregar dados do usuário
+        registerPushToken();
       }
     } catch (error) {
-      console.error('Error loading auth data', error);
+      console.error("Error loading auth data", error);
     } finally {
       setLoading(false);
     }
@@ -54,35 +81,42 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       setUser(newUser);
       setToken(newToken);
-      
-      axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
 
-      await AsyncStorage.setItem('@FutScore:user', JSON.stringify(newUser));
-      await AsyncStorage.setItem('@FutScore:token', newToken);
+      axios.defaults.headers.common["Authorization"] = `Bearer ${newToken}`;
+
+      await AsyncStorage.setItem("@FutScore:user", JSON.stringify(newUser));
+      await AsyncStorage.setItem("@FutScore:token", newToken);
+
+      // Registrar push token após login
+      registerPushToken();
     } catch (error) {
-      console.error('Error signing in', error);
+      console.error("Error signing in", error);
     }
   }
 
   async function signOut() {
     try {
+      // Remover push token do servidor antes de deslogar
+      await authApi.removePushToken();
+
       setUser(null);
       setToken(null);
       await AsyncStorage.clear();
     } catch (error) {
-      console.error('Error signing out', error);
+      console.error("Error signing out", error);
     }
   }
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      token, 
-      loading, 
-      signIn, 
-      signOut,
-      isAuthenticated: !!user 
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        loading,
+        signIn,
+        signOut,
+        isAuthenticated: !!user,
+      }}>
       {children}
     </AuthContext.Provider>
   );
