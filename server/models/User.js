@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -18,28 +18,42 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
-  favoriteTeams: [{
-    id: {
-      type: Number,
-      required: true,
+  // Expo Push Token para notificações em segundo plano
+  pushToken: {
+    type: String,
+    default: null,
+  },
+  // Configurações de notificação
+  notificationSettings: {
+    allMatches: { type: Boolean, default: true }, // Notificar todos os jogos
+    favoritesOnly: { type: Boolean, default: false }, // Apenas favoritos
+    goals: { type: Boolean, default: true }, // Notificar gols
+    matchStart: { type: Boolean, default: true }, // Notificar início de jogo
+  },
+  favoriteTeams: [
+    {
+      id: {
+        type: Number,
+        required: true,
+      },
+      name: {
+        type: String,
+        required: true,
+      },
+      logo: {
+        type: String,
+        required: true,
+      },
+      country: {
+        type: String,
+        required: true,
+      },
     },
-    name: {
-      type: String,
-      required: true,
-    },
-    logo: {
-      type: String,
-      required: true,
-    },
-    country: {
-      type: String,
-      required: true,
-    },
-  }],
+  ],
   createdAt: {
     type: Date,
     default: Date.now,
   },
 });
 
-module.exports = mongoose.model('User', userSchema);
+module.exports = mongoose.model("User", userSchema);
