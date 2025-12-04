@@ -216,12 +216,258 @@ export const msnSportsApi = {
   },
 
   /**
+   * Get matches for a specific league and date
+   * Uses /liveschedules endpoint which supports date parameter for future/past matches
+   * @param leagueId - League ID (e.g., "Soccer_UEFAEuropaLeague")
+   * @param date - Date string in YYYY-MM-DD format
+   */
+  getScheduleByDate: async (leagueId: string, date: string): Promise<any[]> => {
+    const cacheKey = `schedule_${leagueId}_${date}`;
+    const cached = await getCachedData<any[]>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const params = {
+        ...CONFIG.MSN_SPORTS.BASE_PARAMS,
+        apikey: CONFIG.MSN_SPORTS.API_KEY,
+        activityId: generateActivityId(),
+        ids: leagueId,
+        date: date,
+        withcalendar: "false",
+        type: "LeagueSchedule",
+        tzoffset: Math.floor(-new Date().getTimezoneOffset() / 60).toString(),
+        ocid: "sports-league-schedule",
+      };
+
+      console.log(`[MSN API] Fetching schedule for ${leagueId} on ${date}...`);
+
+      const response = await msnApiClient.get("/liveschedules", { params });
+
+      if (!response.data || !response.data.value || !response.data.value[0]) {
+        console.log(`[MSN API] No schedule data for ${leagueId} on ${date}`);
+        // Cache empty result for 5 minutes to avoid repeated requests
+        await setCachedData(cacheKey, [], 5 * 60 * 1000);
+        return [];
+      }
+
+      const schedules = response.data.value[0].schedules || [];
+      const allGames: any[] = [];
+
+      schedules.forEach((schedule: any) => {
+        if (schedule.games && Array.isArray(schedule.games)) {
+          allGames.push(...schedule.games);
+        }
+      });
+
+      console.log(
+        `[MSN API] Fetched ${allGames.length} games for ${leagueId} on ${date}`
+      );
+
+      // Cache for 10 minutes (schedule data doesn't change frequently)
+      await setCachedData(cacheKey, allGames, 10 * 60 * 1000);
+      return allGames;
+    } catch (error: any) {
+      // 404 means no games scheduled for this date - not an error
+      if (error?.response?.status === 404) {
+        console.log(`[MSN API] No games for ${leagueId} on ${date} (404)`);
+        // Cache empty result for 5 minutes
+        await setCachedData(cacheKey, [], 5 * 60 * 1000);
+        return [];
+      }
+      console.error(
+        `[MSN API] Error fetching schedule for ${leagueId}:`,
+        error
+      );
+      return [];
+    }
+  },
+
+  /**
+   * Get calendar of match days for a specific league
+   * Returns array of dates (YYYY-MM-DD) that have matches
+   * @param leagueId - League ID (e.g., "Soccer_UEFAEuropaLeague")
+   * @param startDate - Start date for calendar (optional, defaults to today)
+   */
+  getLeagueCalendar: async (
+    leagueId: string,
+    startDate?: string
+  ): Promise<{ dates: string[]; calendar: any }> => {
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(
+      today.getMonth() + 1
+    ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    const cacheKey = `calendar_v2_${leagueId}_${todayStr}`;
+    const cached = await getCachedData<{ dates: string[]; calendar: any }>(
+      cacheKey
+    );
+    if (cached) return cached;
+
+    try {
+      const date = startDate || todayStr;
+      const params = {
+        ...CONFIG.MSN_SPORTS.BASE_PARAMS,
+        apikey: CONFIG.MSN_SPORTS.API_KEY,
+        activityId: generateActivityId(),
+        ids: leagueId,
+        date: date,
+        withcalendar: "true", // This enables calendar data
+        type: "LeagueSchedule",
+        tzoffset: Math.floor(-new Date().getTimezoneOffset() / 60).toString(),
+        ocid: "sports-league-schedule",
+      };
+
+      console.log(`[MSN API] Fetching calendar for ${leagueId}...`);
+
+      const response = await msnApiClient.get("/liveschedules", { params });
+
+      if (!response.data || !response.data.value || !response.data.value[0]) {
+        console.log(`[MSN API] No calendar data for ${leagueId}`);
+        return { dates: [], calendar: null };
+      }
+
+      const data = response.data.value[0];
+      const schedules = data.schedules || [];
+      const matchDates: string[] = [];
+
+      // Structure: schedules[0].days[] with date as timestamp in milliseconds
+      if (
+        schedules.length > 0 &&
+        schedules[0].days &&
+        Array.isArray(schedules[0].days)
+      ) {
+        schedules[0].days.forEach((day: any) => {
+          if (day.date) {
+            // Convert timestamp (milliseconds) to YYYY-MM-DD in local timezone
+            const timestamp = parseInt(day.date, 10);
+            const dateObj = new Date(timestamp);
+            // Format as local date to avoid UTC timezone shift
+            const year = dateObj.getFullYear();
+            const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+            const dayNum = String(dateObj.getDate()).padStart(2, "0");
+            const dateStr = `${year}-${month}-${dayNum}`;
+            matchDates.push(dateStr);
+          }
+        });
+      }
+
+      console.log(
+        `[MSN API] Found ${matchDates.length} match days for ${leagueId}:`,
+        matchDates.slice(0, 5)
+      );
+
+      const result = { dates: matchDates, calendar: schedules };
+
+      // Cache for 1 hour (calendar doesn't change often)
+      await setCachedData(cacheKey, result, 60 * 60 * 1000);
+      return result;
+    } catch (error: any) {
+      if (error?.response?.status === 404) {
+        console.log(`[MSN API] No calendar for ${leagueId} (404)`);
+        return { dates: [], calendar: null };
+      }
+      console.error(
+        `[MSN API] Error fetching calendar for ${leagueId}:`,
+        error
+      );
+      return { dates: [], calendar: null };
+    }
+  },
+
+  /**
    * Get league image URL
    * MSN Sports images are served via Bing thumbnail API
    */
   getLeagueImageUrl: (imageId: string): string => {
     // Format: https://www.bing.com/th?id=[imageId]&w=[width]&h=[height]
-    return `https://www.bing.com/th?id=${imageId}&w=100&h=100`;
+    // Encode the imageId to handle special characters like |
+    const encodedId = encodeURIComponent(imageId);
+    return `https://www.bing.com/th?id=${encodedId}&w=100&h=100`;
+  },
+
+  /**
+   * Get league logo URL by sportWithLeague ID
+   * Fetches from cached leagues data
+   */
+  getLeagueLogo: async (sportWithLeague: string): Promise<string> => {
+    try {
+      const leagues = await msnSportsApi.getPersonalizationStrip();
+      const league = leagues.find((l) => l.sportWithLeague === sportWithLeague);
+      if (league?.image?.id) {
+        return msnSportsApi.getLeagueImageUrl(league.image.id);
+      }
+      return "";
+    } catch (error) {
+      console.error("[MSN API] Error getting league logo:", error);
+      return "";
+    }
+  },
+
+  /**
+   * Get league info including image from /sports/leagues endpoint
+   */
+  getLeagueInfo: async (
+    sportWithLeague: string
+  ): Promise<{ name: string; logo: string; country: string } | null> => {
+    const cacheKey = `league_info_${sportWithLeague}`;
+    const cached = await getCachedData<{
+      name: string;
+      logo: string;
+      country: string;
+    }>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const params = {
+        ...CONFIG.MSN_SPORTS.BASE_PARAMS,
+        apikey: CONFIG.MSN_SPORTS.API_KEY,
+        activityId: generateActivityId(),
+        ids: sportWithLeague,
+        scope: "entityHeader",
+        ocid: "sports-league-schedule",
+      };
+
+      const response = await msnApiClient.get("/leagues", { params });
+
+      if (!response.data?.value?.[0]?.leagues?.[0]) {
+        return null;
+      }
+
+      const league = response.data.value[0].leagues[0];
+      const result = {
+        name: league.name?.localizedName || league.name?.rawName || "",
+        logo: league.image?.id
+          ? `https://www.bing.com/th?id=${league.image.id}&w=100&h=100`
+          : "",
+        country: "International",
+      };
+
+      // Cache for 24 hours
+      await setCachedData(cacheKey, result, 24 * 60 * 60 * 1000);
+      return result;
+    } catch (error) {
+      console.error("[MSN API] Error getting league info:", error);
+      return null;
+    }
+  },
+
+  /**
+   * Get all league logos for multiple leagues
+   */
+  getAllLeagueLogos: async (
+    sportWithLeagueIds: string[]
+  ): Promise<Record<string, string>> => {
+    const logos: Record<string, string> = {};
+
+    await Promise.all(
+      sportWithLeagueIds.map(async (id) => {
+        const info = await msnSportsApi.getLeagueInfo(id);
+        if (info?.logo) {
+          logos[id] = info.logo;
+        }
+      })
+    );
+
+    return logos;
   },
 
   /**
@@ -243,9 +489,17 @@ export const msnSportsApi = {
    * @param gameId - MSN Sports game ID (e.g., "SportRadar_Soccer_EnglandPremierLeague_2025_Game_61300775")
    */
   getLineups: async (gameId: string): Promise<any> => {
-    // Extract just the numeric ID from the full game ID
-    const numericId = gameId.split("_").pop() || gameId;
-    const cacheKey = `lineups_${numericId}`;
+    // Extract numeric ID from the full game ID
+    // Handles: "SportRadar_Soccer_..._Game_12345" -> "12345"
+    let queryId = gameId;
+    if (gameId.includes("_Game_")) {
+      queryId = gameId.split("_Game_")[1];
+    } else if (gameId.includes("_") && !/^[0-9a-f]{8}-/.test(gameId)) {
+      queryId = gameId.split("_").pop() || gameId;
+    }
+    // If it's a UUID, the API might not support it - but we try anyway
+
+    const cacheKey = `lineups_${queryId}`;
     const cached = await getCachedData<any>(cacheKey);
     if (cached) return cached;
 
@@ -255,10 +509,10 @@ export const msnSportsApi = {
         apikey: CONFIG.MSN_SPORTS.API_KEY,
         activityId: generateActivityId(),
         ocid: "sports-gamecenter",
-        ids: numericId,
+        ids: queryId,
       };
 
-      console.log(`[MSN API] Fetching lineups for game ${numericId}...`);
+      console.log(`[MSN API] Fetching lineups for game ${queryId}...`);
 
       const response = await msnApiClient.get("/lineups", { params });
 
@@ -936,11 +1190,23 @@ export const msnSportsApi = {
    */
   getGameDetails: async (gameId: string): Promise<any> => {
     // Extract numeric ID if full MSN ID is passed
-    const numericId = gameId.includes("_Game_")
-      ? gameId.split("_Game_")[1]
-      : gameId;
+    // Handles: "SportRadar_Soccer_..._Game_12345" -> "12345"
+    // Also handles UUIDs by using them directly
+    let numericId = gameId;
+    if (gameId.includes("_Game_")) {
+      numericId = gameId.split("_Game_")[1];
+    } else if (gameId.includes("_")) {
+      // Try to get the last segment
+      numericId = gameId.split("_").pop() || gameId;
+    }
+    // If it's still a UUID format, use the full gameId as the API might accept it
+    const isUUID =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        numericId
+      );
+    const queryId = isUUID ? gameId : numericId;
 
-    const cacheKey = `game_details_${numericId}`;
+    const cacheKey = `game_details_${queryId}`;
     const cached = await getCachedData<any>(cacheKey);
     if (cached) return cached;
 
@@ -949,12 +1215,12 @@ export const msnSportsApi = {
         ...CONFIG.MSN_SPORTS.BASE_PARAMS,
         apikey: CONFIG.MSN_SPORTS.API_KEY,
         activityId: generateActivityId(),
-        ids: numericId,
+        ids: queryId,
         scope: "Full",
         ocid: "sports-gamecenter",
       };
 
-      console.log(`[MSN API] Fetching game details for ${numericId}...`);
+      console.log(`[MSN API] Fetching game details for ${queryId}...`);
 
       const response = await msnApiClient.get("/livegames", { params });
 

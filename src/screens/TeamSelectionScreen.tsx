@@ -63,6 +63,7 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({
     { code: "favorites", name: "Favoritos" },
     { code: "BSA", name: "Brasileirão" },
     { code: "CL", name: "Champions" },
+    { code: "EL", name: "Europa League" },
     { code: "PD", name: "La Liga" },
     { code: "PL", name: "Premier League" },
     { code: "BL1", name: "Bundesliga" },
@@ -155,6 +156,12 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({
           sport: "Soccer",
           name: "PPL",
           country: "Portugal",
+        },
+        {
+          id: "Soccer_UEFAEuropaLeague",
+          sport: "Soccer",
+          name: "EL",
+          country: "Europe",
         },
         {
           id: "Basketball_NBA",
@@ -284,6 +291,11 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({
             id: "Soccer_PortugalPrimeiraLiga",
             sport: "Soccer",
             country: "Portugal",
+          },
+          EL: {
+            id: "Soccer_UEFAEuropaLeague",
+            sport: "Soccer",
+            country: "Europe",
           },
           NBA: { id: "Basketball_NBA", sport: "Basketball", country: "USA" },
         };

@@ -93,7 +93,8 @@ export function transformMsnGameToMatch(game: any, leagueInfo?: any): Match {
   const match: Match = {
     fixture: {
       id: game.id
-        ? parseInt(game.id.split("_").pop() || "0")
+        ? parseInt(game.id.split("_").pop() || "0") ||
+          Math.floor(Math.random() * 1000000)
         : Math.floor(Math.random() * 1000000),
       date: startDate,
       status: {
@@ -102,19 +103,67 @@ export function transformMsnGameToMatch(game: any, leagueInfo?: any): Match {
         elapsed: elapsed,
       },
       // Store the full MSN game ID for later use (statistics, lineups)
-      msnGameId: game.id,
+      // Some games have UUID format, others have SportRadar format
+      msnGameId: game.id || game.gameId || game.triggeringId,
     },
-    league: {
-      id: leagueInfo?.id || game.seasonId || "unknown",
-      name:
-        game.leagueName?.localizedName ||
-        game.leagueName?.rawName ||
-        "Unknown League",
-      logo: leagueInfo?.image?.id
-        ? `https://img-s-msn-com.akamaized.net/tenant/amp/entityid/${leagueInfo.image.id}`
-        : "",
-      country: leagueInfo?.country || "International",
-    },
+    league: (() => {
+      // Try to get league info from the MSN_LEAGUE_MAP using multiple possible sources
+      const seasonId = game.seasonId || "";
+      const leagueId = game.leagueId || game.league?.id || "";
+      const sportWithLeague = game.sportWithLeague || "";
+
+      // Try to find league in MSN_LEAGUE_MAP by different keys
+      let mappedLeague =
+        MSN_LEAGUE_MAP[seasonId] ||
+        MSN_LEAGUE_MAP[leagueId] ||
+        MSN_LEAGUE_MAP[sportWithLeague];
+
+      // Also try to match by partial name in the seasonId
+      if (!mappedLeague) {
+        const seasonIdLower = seasonId.toLowerCase();
+        for (const [key, value] of Object.entries(MSN_LEAGUE_MAP)) {
+          if (
+            seasonIdLower.includes(
+              key
+                .toLowerCase()
+                .replace("soccer_", "")
+                .replace("basketball_", "")
+            ) ||
+            key
+              .toLowerCase()
+              .includes(
+                seasonIdLower.replace("soccer_", "").replace("basketball_", "")
+              )
+          ) {
+            mappedLeague = value;
+            break;
+          }
+        }
+      }
+
+      if (mappedLeague) {
+        return {
+          id: mappedLeague.id,
+          name: mappedLeague.name,
+          logo: mappedLeague.logo,
+          country: mappedLeague.country,
+        };
+      }
+
+      // Fallback to leagueInfo or game data
+      return {
+        id: leagueInfo?.id || seasonId || "unknown",
+        name:
+          game.leagueName?.localizedName ||
+          game.leagueName?.rawName ||
+          leagueInfo?.name ||
+          "Unknown League",
+        logo: leagueInfo?.image?.id
+          ? `https://www.bing.com/th?id=${leagueInfo.image.id}&w=100&h=100`
+          : "",
+        country: leagueInfo?.country || "International",
+      };
+    })(),
     teams: {
       home: {
         id: homeParticipant?.team?.id
@@ -171,44 +220,147 @@ export function transformMsnGameToMatch(game: any, leagueInfo?: any): Match {
             away: awayParticipant?.probabilities?.[0]?.winProbability || 0,
           }
         : undefined,
+    // Add TV channels if available
+    // Format can be: { channelNames: ["ESPN", "TNT"] } or { name: "ESPN" }
+    channels: extractChannels(game.channels),
+    // Add round/week information
+    round: game.week || game.detailSeasonPhase || undefined,
   };
 
   return match;
 }
 
 /**
+ * Extract TV channels from MSN game data
+ * Handles multiple formats from the API
+ */
+function extractChannels(
+  channels: any[]
+): { name: string; logo?: string }[] | undefined {
+  if (!channels || !Array.isArray(channels) || channels.length === 0) {
+    return undefined;
+  }
+
+  const result: { name: string; logo?: string }[] = [];
+
+  for (const channel of channels) {
+    // Format 1: channelNames array (from livearoundtheleague)
+    if (channel.channelNames && Array.isArray(channel.channelNames)) {
+      for (const name of channel.channelNames) {
+        if (name && typeof name === "string") {
+          result.push({ name });
+        }
+      }
+    }
+    // Format 2: single name property
+    else if (channel.name || channel.localizedName) {
+      result.push({
+        name: channel.name || channel.localizedName,
+        logo: channel.image?.id
+          ? `https://img-s-msn-com.akamaized.net/tenant/amp/entityid/${channel.image.id}`
+          : undefined,
+      });
+    }
+  }
+
+  return result.length > 0 ? result : undefined;
+}
+
+/**
  * Map league IDs from MSN Sports format to app format
+ * imageId comes from MSN API for Bing thumbnail service
  */
 export const MSN_LEAGUE_MAP: Record<
   string,
-  { id: string; sport: string; name: string }
+  {
+    id: string;
+    sport: string;
+    name: string;
+    logo: string;
+    country: string;
+    imageId?: string;
+  }
 > = {
   Soccer_EnglandPremierLeague: {
     id: "PL",
     sport: "Soccer",
     name: "Premier League",
+    logo: "https://www.bing.com/th?id=OIP.K3lXJGMKkL9_L36T5h9_uwHaHa&w=100&h=100",
+    imageId: "OIP.K3lXJGMKkL9_L36T5h9_uwHaHa",
+    country: "Inglaterra",
   },
-  Soccer_GermanyBundesliga: { id: "BL1", sport: "Soccer", name: "Bundesliga" },
-  Soccer_ItalySerieA: { id: "SA", sport: "Soccer", name: "Serie A" },
-  Soccer_FranceLigue1: { id: "FL1", sport: "Soccer", name: "Ligue 1" },
-  Soccer_SpainLaLiga: { id: "PD", sport: "Soccer", name: "La Liga" },
+  Soccer_GermanyBundesliga: {
+    id: "BL1",
+    sport: "Soccer",
+    name: "Bundesliga",
+    logo: "https://www.bing.com/th?id=OIP.lYaZzOdvT7Y-7mJEzLOw8gHaHa&w=100&h=100",
+    imageId: "OIP.lYaZzOdvT7Y-7mJEzLOw8gHaHa",
+    country: "Alemanha",
+  },
+  Soccer_ItalySerieA: {
+    id: "SA",
+    sport: "Soccer",
+    name: "Serie A",
+    logo: "https://www.bing.com/th?id=OIP.XZW-WgOZE3kNLuCxvLPCVgHaHa&w=100&h=100",
+    imageId: "OIP.XZW-WgOZE3kNLuCxvLPCVgHaHa",
+    country: "Itália",
+  },
+  Soccer_FranceLigue1: {
+    id: "FL1",
+    sport: "Soccer",
+    name: "Ligue 1",
+    logo: "https://www.bing.com/th?id=OIP.GVdeDXOFaJXuq9GUMxNrUAHaHa&w=100&h=100",
+    imageId: "OIP.GVdeDXOFaJXuq9GUMxNrUAHaHa",
+    country: "França",
+  },
+  Soccer_SpainLaLiga: {
+    id: "PD",
+    sport: "Soccer",
+    name: "La Liga",
+    logo: "https://www.bing.com/th?id=OIP.OMJH6dHOt-2qoGzM12CQ4gHaHa&w=100&h=100",
+    imageId: "OIP.OMJH6dHOt-2qoGzM12CQ4gHaHa",
+    country: "Espanha",
+  },
   Soccer_PortugalPrimeiraLiga: {
     id: "PPL",
     sport: "Soccer",
     name: "Liga Portugal",
+    logo: "https://www.bing.com/th?id=OIP.qXPKHXkpvO_mdhKrT1v-_wHaHa&w=100&h=100",
+    imageId: "OIP.qXPKHXkpvO_mdhKrT1v-_wHaHa",
+    country: "Portugal",
   },
   Soccer_InternationalClubsUEFAChampionsLeague: {
     id: "CL",
     sport: "Soccer",
     name: "Champions League",
+    logo: "https://www.bing.com/th?id=OIP.4WfVpEPLtPcB8qxCj_QVpgHaHa&w=100&h=100",
+    imageId: "OIP.4WfVpEPLtPcB8qxCj_QVpgHaHa",
+    country: "Europa",
   },
-  Soccer_UEFAEuropaLeague: { id: "EL", sport: "Soccer", name: "Europa League" },
+  Soccer_UEFAEuropaLeague: {
+    id: "EL",
+    sport: "Soccer",
+    name: "Europa League",
+    logo: "https://www.bing.com/th?id=OIP.5CX8hcL8gQ8xnpEoG4KxjAHaHa&w=100&h=100",
+    imageId: "OIP.5CX8hcL8gQ8xnpEoG4KxjAHaHa",
+    country: "Europa",
+  },
   Soccer_BrazilBrasileiroSerieA: {
     id: "BSA",
     sport: "Soccer",
     name: "Brasileirão",
+    logo: "https://www.bing.com/th?id=OIP.m9vS1mQHE7rW0J8GqFWEJgHaHa&w=100&h=100",
+    imageId: "OIP.m9vS1mQHE7rW0J8GqFWEJgHaHa",
+    country: "Brasil",
   },
-  Basketball_NBA: { id: "NBA", sport: "Basketball", name: "NBA" },
+  Basketball_NBA: {
+    id: "NBA",
+    sport: "Basketball",
+    name: "NBA",
+    logo: "https://www.bing.com/th?id=OIP.KKy5O2PYIv3vQjFQjLAj2AHaHa&w=100&h=100",
+    imageId: "OIP.KKy5O2PYIv3vQjFQjLAj2AHaHa",
+    country: "EUA",
+  },
 };
 
 /**
@@ -219,6 +371,7 @@ export function getMsnLeagueIds(): string[] {
   return [
     "Soccer_BrazilBrasileiroSerieA",
     "Soccer_InternationalClubsUEFAChampionsLeague",
+    "Soccer_UEFAEuropaLeague",
     "Soccer_SpainLaLiga",
     "Soccer_EnglandPremierLeague",
     "Soccer_GermanyBundesliga",

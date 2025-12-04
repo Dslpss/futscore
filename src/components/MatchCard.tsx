@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
 import { Match } from "../types";
 import { format } from "date-fns";
 import { LinearGradient } from "expo-linear-gradient";
-import { Star, Clock, Calendar } from "lucide-react-native";
+import { Star, Clock, Calendar, Tv, Trophy } from "lucide-react-native";
 import { useFavorites } from "../context/FavoritesContext";
 import { MatchStatsModal } from "./MatchStatsModal";
 
@@ -207,6 +207,34 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
 
           {/* Tap hint */}
           <Text style={styles.tapHint}>Toque para ver detalhes</Text>
+
+          {/* Footer: TV Channels & Round */}
+          {(match.channels?.length || match.round) && (
+            <View style={styles.footer}>
+              {/* Round/Week */}
+              {match.round && (
+                <View style={styles.roundBadge}>
+                  <Trophy size={10} color="#a1a1aa" />
+                  <Text style={styles.roundText}>{match.round}</Text>
+                </View>
+              )}
+
+              {/* TV Channels */}
+              {match.channels && match.channels.length > 0 && (
+                <View style={styles.channelsBadge}>
+                  <Tv size={10} color="#60a5fa" />
+                  <Text style={styles.channelsText} numberOfLines={1}>
+                    {match.channels
+                      .slice(0, 2)
+                      .map((c) => c.name)
+                      .join(", ")}
+                    {match.channels.length > 2 &&
+                      ` +${match.channels.length - 2}`}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
         </LinearGradient>
       </TouchableOpacity>
 
@@ -553,5 +581,50 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 14,
     fontStyle: "italic",
+  },
+
+  // Footer: TV Channels & Round
+  footer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.05)",
+    gap: 12,
+    flexWrap: "wrap",
+  },
+  roundBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.06)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+    gap: 5,
+  },
+  roundText: {
+    color: "#a1a1aa",
+    fontSize: 10,
+    fontWeight: "600",
+  },
+  channelsBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(96, 165, 250, 0.1)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(96, 165, 250, 0.2)",
+    gap: 5,
+    maxWidth: 180,
+  },
+  channelsText: {
+    color: "#60a5fa",
+    fontSize: 10,
+    fontWeight: "600",
+    flex: 1,
   },
 });

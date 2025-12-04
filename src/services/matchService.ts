@@ -46,6 +46,12 @@ export const matchService = {
           name: "Champions League",
         },
         {
+          msn: "Soccer_UEFAEuropaLeague",
+          fd: null,
+          sport: "Soccer",
+          name: "Europa League",
+        },
+        {
           msn: "Soccer_SpainLaLiga",
           fd: "PD",
           sport: "Soccer",

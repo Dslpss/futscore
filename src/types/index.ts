@@ -110,6 +110,13 @@ export interface Match {
   };
   statistics?: Statistics[];
   lineups?: Lineup[];
+  // TV Channels where the match will be broadcast
+  channels?: {
+    name: string;
+    logo?: string;
+  }[];
+  // Match round/week information
+  round?: string;
 }
 
 export interface ApiResponse<T> {
