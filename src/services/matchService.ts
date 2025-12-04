@@ -17,6 +17,41 @@ const NOTIFIED_MATCHES_KEY = "futscore_notified_started";
 const NOTIFIED_HALFTIME_KEY = "futscore_notified_halftime";
 const NOTIFIED_FINISHED_KEY = "futscore_notified_finished";
 const CACHE_CLEANUP_KEY = "futscore_last_cleanup";
+const FAVORITE_MATCHES_KEY = "futscore_favorite_matches";
+
+// Interface do jogo favorito (mesmo formato do FavoritesContext)
+interface FavoriteMatchData {
+  fixtureId: number;
+  homeTeam: string;
+  awayTeam: string;
+  date: string;
+  leagueName: string;
+  msnGameId?: string;
+}
+
+// Helper para carregar partidas favoritas do AsyncStorage
+async function loadFavoriteMatches(): Promise<FavoriteMatchData[]> {
+  try {
+    const json = await AsyncStorage.getItem(FAVORITE_MATCHES_KEY);
+    return json ? JSON.parse(json) : [];
+  } catch {
+    return [];
+  }
+}
+
+// Helper para verificar se partida é favorita (por fixtureId ou msnGameId)
+function isMatchFavorited(
+  match: Match,
+  favoriteMatches: FavoriteMatchData[]
+): boolean {
+  const fixtureId = match.fixture.id;
+  const msnGameId = match.fixture.msnGameId;
+
+  return favoriteMatches.some(
+    (fav) =>
+      fav.fixtureId === fixtureId || (msnGameId && fav.msnGameId === msnGameId)
+  );
+}
 
 export const matchService = {
   /**
@@ -155,19 +190,22 @@ export const matchService = {
         ["1H", "2H", "HT", "ET", "P", "BT"].includes(m.fixture.status.short)
       );
 
+      // Carregar partidas favoritas
+      const favoriteMatches = await loadFavoriteMatches();
+
       // Check for matches that just STARTED (notify all users)
       if (liveMatches.length > 0) {
-        await checkMatchStarted(liveMatches, favoriteTeams);
+        await checkMatchStarted(liveMatches, favoriteTeams, favoriteMatches);
       }
 
       // Check for HALFTIME (notify all users)
       if (liveMatches.length > 0) {
-        await checkHalfTime(liveMatches, favoriteTeams);
+        await checkHalfTime(liveMatches, favoriteTeams, favoriteMatches);
       }
 
       // Check for score changes in ALL live matches
       if (liveMatches.length > 0) {
-        await checkScoreChanges(liveMatches, favoriteTeams);
+        await checkScoreChanges(liveMatches, favoriteTeams, favoriteMatches);
       }
 
       // Check for FINISHED matches (notify all users)
@@ -175,7 +213,11 @@ export const matchService = {
         ["FT", "AET", "PEN"].includes(m.fixture.status.short)
       );
       if (finishedMatches.length > 0) {
-        await checkMatchFinished(finishedMatches, favoriteTeams);
+        await checkMatchFinished(
+          finishedMatches,
+          favoriteTeams,
+          favoriteMatches
+        );
       }
 
       // Periodic cache cleanup (once per day)
@@ -204,7 +246,8 @@ export const matchService = {
 // Verifica se algum jogo acabou de COMEÇAR
 async function checkMatchStarted(
   currentMatches: Match[],
-  favoriteTeams: number[]
+  favoriteTeams: number[],
+  favoriteMatches: FavoriteMatchData[]
 ) {
   try {
     const notifiedJson = await AsyncStorage.getItem(NOTIFIED_MATCHES_KEY);
@@ -223,7 +266,11 @@ async function checkMatchStarted(
       if (status === "1H" && !notifiedMatches.includes(matchId)) {
         const isHomeFavorite = favoriteTeams.includes(match.teams.home.id);
         const isAwayFavorite = favoriteTeams.includes(match.teams.away.id);
-        const isFavoriteMatch = isHomeFavorite || isAwayFavorite;
+        const isTeamFavorite = isHomeFavorite || isAwayFavorite;
+        const isMatchFavorited_ = isMatchFavorited(match, favoriteMatches);
+
+        // Prioridade: partida favorita > time favorito
+        const isFavoriteMatch = isMatchFavorited_ || isTeamFavorite;
 
         // Notificar que o jogo começou
         await notifyMatchStarted(match, isFavoriteMatch);
@@ -250,7 +297,8 @@ async function checkMatchStarted(
 
 async function checkScoreChanges(
   currentMatches: Match[],
-  favoriteTeams: number[]
+  favoriteTeams: number[],
+  favoriteMatches: FavoriteMatchData[]
 ) {
   try {
     // Load last known scores
@@ -281,7 +329,11 @@ async function checkScoreChanges(
             : match.teams.away.name;
           const isHomeFavorite = favoriteTeams.includes(match.teams.home.id);
           const isAwayFavorite = favoriteTeams.includes(match.teams.away.id);
-          const isFavoriteMatch = isHomeFavorite || isAwayFavorite;
+          const isTeamFavorite = isHomeFavorite || isAwayFavorite;
+          const isMatchFavorited_ = isMatchFavorited(match, favoriteMatches);
+
+          // Prioridade: partida favorita > time favorito
+          const isFavoriteMatch = isMatchFavorited_ || isTeamFavorite;
 
           // Usar a nova função de notificação de gol
           await notifyGoal(match, scorerTeam, isFavoriteMatch);
@@ -311,7 +363,11 @@ async function checkScoreChanges(
 }
 
 // Verifica se algum jogo está no INTERVALO
-async function checkHalfTime(currentMatches: Match[], favoriteTeams: number[]) {
+async function checkHalfTime(
+  currentMatches: Match[],
+  favoriteTeams: number[],
+  favoriteMatches: FavoriteMatchData[]
+) {
   try {
     const notifiedJson = await AsyncStorage.getItem(NOTIFIED_HALFTIME_KEY);
     const notifiedMatches: number[] = notifiedJson
@@ -329,7 +385,11 @@ async function checkHalfTime(currentMatches: Match[], favoriteTeams: number[]) {
       if (status === "HT" && !notifiedMatches.includes(matchId)) {
         const isHomeFavorite = favoriteTeams.includes(match.teams.home.id);
         const isAwayFavorite = favoriteTeams.includes(match.teams.away.id);
-        const isFavoriteMatch = isHomeFavorite || isAwayFavorite;
+        const isTeamFavorite = isHomeFavorite || isAwayFavorite;
+        const isMatchFavorited_ = isMatchFavorited(match, favoriteMatches);
+
+        // Prioridade: partida favorita > time favorito
+        const isFavoriteMatch = isMatchFavorited_ || isTeamFavorite;
 
         // Notificar intervalo
         await notifyHalfTime(match, isFavoriteMatch);
@@ -356,7 +416,8 @@ async function checkHalfTime(currentMatches: Match[], favoriteTeams: number[]) {
 // Verifica se algum jogo TERMINOU
 async function checkMatchFinished(
   finishedMatches: Match[],
-  favoriteTeams: number[]
+  favoriteTeams: number[],
+  favoriteMatches: FavoriteMatchData[]
 ) {
   try {
     const notifiedJson = await AsyncStorage.getItem(NOTIFIED_FINISHED_KEY);
@@ -374,7 +435,11 @@ async function checkMatchFinished(
       if (!notifiedMatches.includes(matchId)) {
         const isHomeFavorite = favoriteTeams.includes(match.teams.home.id);
         const isAwayFavorite = favoriteTeams.includes(match.teams.away.id);
-        const isFavoriteMatch = isHomeFavorite || isAwayFavorite;
+        const isTeamFavorite = isHomeFavorite || isAwayFavorite;
+        const isMatchFavorited_ = isMatchFavorited(match, favoriteMatches);
+
+        // Prioridade: partida favorita > time favorito
+        const isFavoriteMatch = isMatchFavorited_ || isTeamFavorite;
 
         // Notificar fim de jogo
         await notifyMatchEnded(match, isFavoriteMatch);

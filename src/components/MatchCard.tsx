@@ -1,11 +1,33 @@
 import React from "react";
-import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  TouchableOpacity,
+  Modal,
+  Dimensions,
+} from "react-native";
 import { Match } from "../types";
 import { format } from "date-fns";
 import { LinearGradient } from "expo-linear-gradient";
-import { Star, Clock, Calendar, Tv, Trophy } from "lucide-react-native";
+import {
+  Star,
+  Clock,
+  Calendar,
+  Tv,
+  Trophy,
+  Bell,
+  BellRing,
+  BellOff,
+  X,
+  Check,
+} from "lucide-react-native";
+import { BlurView } from "expo-blur";
 import { useFavorites } from "../context/FavoritesContext";
 import { MatchStatsModal } from "./MatchStatsModal";
+
+const { width } = Dimensions.get("window");
 
 interface MatchCardProps {
   match: Match;
@@ -18,11 +40,42 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
     match.fixture.status.short === "2H" ||
     match.fixture.status.short === "HT";
   const isFinished = ["FT", "AET", "PEN"].includes(match.fixture.status.short);
-  const { isFavoriteTeam, toggleFavoriteTeam } = useFavorites();
+  const isScheduled = ["NS", "TBD", "TIMED"].includes(
+    match.fixture.status.short
+  );
+  const {
+    isFavoriteTeam,
+    toggleFavoriteTeam,
+    isFavoriteMatch,
+    toggleFavoriteMatch,
+  } = useFavorites();
   const [modalVisible, setModalVisible] = React.useState(false);
+  const [notifyModalVisible, setNotifyModalVisible] = React.useState(false);
 
   const isHomeFavorite = isFavoriteTeam(match.teams.home.id);
   const isAwayFavorite = isFavoriteTeam(match.teams.away.id);
+  const isMatchFavorite = isFavoriteMatch(match.fixture.id);
+
+  // Handler para abrir modal de confirmação
+  const handleToggleFavoriteMatch = (e: any) => {
+    e.stopPropagation();
+    setNotifyModalVisible(true);
+  };
+
+  // Confirmar toggle de notificação
+  const confirmToggleFavoriteMatch = () => {
+    const favoriteMatchData = {
+      fixtureId: match.fixture.id,
+      homeTeam: match.teams.home.name,
+      awayTeam: match.teams.away.name,
+      date: match.fixture.date,
+      leagueName: match.league.name,
+      msnGameId: match.fixture.msnGameId,
+    };
+
+    toggleFavoriteMatch(favoriteMatchData);
+    setNotifyModalVisible(false);
+  };
 
   // Determine gradient colors based on match state
   const gradientColors = isLive
@@ -52,36 +105,53 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
               </Text>
             </View>
 
-            {isHalfTime ? (
-              <View style={styles.halfTimeBadge}>
-                <Text style={styles.halfTimeIcon}>☕</Text>
-                <Text style={styles.halfTimeText}>INTERVALO</Text>
-              </View>
-            ) : isLive ? (
-              <View style={styles.liveBadge}>
-                <View style={styles.liveDot} />
-                <Text style={styles.liveText}>
-                  AO VIVO •{" "}
-                  {match.fixture.status.short === "1H"
-                    ? "1º TEMPO"
-                    : "2º TEMPO"}
-                  {match.fixture.status.elapsed
-                    ? ` ${match.fixture.status.elapsed}'`
-                    : ""}
-                </Text>
-              </View>
-            ) : isFinished ? (
-              <View style={styles.finishedBadge}>
-                <Text style={styles.finishedText}>ENCERRADO</Text>
-              </View>
-            ) : (
-              <View style={styles.scheduledBadge}>
-                <Clock size={12} color="#a1a1aa" />
-                <Text style={styles.scheduledText}>
-                  {format(new Date(match.fixture.date), "HH:mm")}
-                </Text>
-              </View>
-            )}
+            <View style={styles.headerRight}>
+              {/* Botão de notificação do jogo */}
+              <TouchableOpacity
+                onPress={handleToggleFavoriteMatch}
+                style={[
+                  styles.notifyButton,
+                  isMatchFavorite && styles.notifyButtonActive,
+                ]}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Bell
+                  size={16}
+                  color={isMatchFavorite ? "#fbbf24" : "#71717a"}
+                  fill={isMatchFavorite ? "#fbbf24" : "transparent"}
+                />
+              </TouchableOpacity>
+
+              {isHalfTime ? (
+                <View style={styles.halfTimeBadge}>
+                  <Text style={styles.halfTimeIcon}>☕</Text>
+                  <Text style={styles.halfTimeText}>INTERVALO</Text>
+                </View>
+              ) : isLive ? (
+                <View style={styles.liveBadge}>
+                  <View style={styles.liveDot} />
+                  <Text style={styles.liveText}>
+                    AO VIVO •{" "}
+                    {match.fixture.status.short === "1H"
+                      ? "1º TEMPO"
+                      : "2º TEMPO"}
+                    {match.fixture.status.elapsed
+                      ? ` ${match.fixture.status.elapsed}'`
+                      : ""}
+                  </Text>
+                </View>
+              ) : isFinished ? (
+                <View style={styles.finishedBadge}>
+                  <Text style={styles.finishedText}>ENCERRADO</Text>
+                </View>
+              ) : (
+                <View style={styles.scheduledBadge}>
+                  <Clock size={12} color="#a1a1aa" />
+                  <Text style={styles.scheduledText}>
+                    {format(new Date(match.fixture.date), "HH:mm")}
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
 
           {/* Match Content */}
@@ -238,6 +308,94 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
         </LinearGradient>
       </TouchableOpacity>
 
+      {/* Modal de Notificação */}
+      <Modal
+        visible={notifyModalVisible}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setNotifyModalVisible(false)}>
+        <BlurView intensity={20} tint="dark" style={styles.notifyModalOverlay}>
+          <View style={styles.notifyModalContainer}>
+            <LinearGradient
+              colors={["#1a1a2e", "#16213e", "#0f0f1a"]}
+              style={styles.notifyModalContent}>
+              {/* Icon */}
+              <View
+                style={[
+                  styles.notifyIconContainer,
+                  isMatchFavorite
+                    ? styles.notifyIconContainerOff
+                    : styles.notifyIconContainerOn,
+                ]}>
+                {isMatchFavorite ? (
+                  <BellOff size={32} color="#ef4444" />
+                ) : (
+                  <Bell size={32} color="#22c55e" />
+                )}
+              </View>
+
+              {/* Title */}
+              <Text style={styles.notifyModalTitle}>
+                {isMatchFavorite
+                  ? "Desativar Notificações?"
+                  : "Ativar Notificações?"}
+              </Text>
+
+              {/* Match Info */}
+              <View style={styles.notifyMatchInfo}>
+                <View style={styles.notifyTeamsRow}>
+                  <Image
+                    source={{ uri: match.teams.home.logo }}
+                    style={styles.notifyTeamLogo}
+                  />
+                  <Text style={styles.notifyVsText}>vs</Text>
+                  <Image
+                    source={{ uri: match.teams.away.logo }}
+                    style={styles.notifyTeamLogo}
+                  />
+                </View>
+                <Text style={styles.notifyMatchText}>
+                  {match.teams.home.name} vs {match.teams.away.name}
+                </Text>
+                <Text style={styles.notifyLeagueText}>{match.league.name}</Text>
+              </View>
+
+              {/* Description */}
+              <Text style={styles.notifyDescription}>
+                {isMatchFavorite
+                  ? "Você não receberá mais notificações sobre esta partida."
+                  : "Você receberá notificações sobre:\n• Início da partida\n• Gols\n• Intervalo\n• Fim de jogo"}
+              </Text>
+
+              {/* Buttons */}
+              <View style={styles.notifyButtonsRow}>
+                <TouchableOpacity
+                  style={styles.notifyCancelButton}
+                  onPress={() => setNotifyModalVisible(false)}>
+                  <X size={18} color="#a1a1aa" />
+                  <Text style={styles.notifyCancelText}>Cancelar</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.notifyConfirmButton,
+                    isMatchFavorite
+                      ? styles.notifyConfirmButtonOff
+                      : styles.notifyConfirmButtonOn,
+                  ]}
+                  onPress={confirmToggleFavoriteMatch}>
+                  <Check size={18} color="#fff" />
+                  <Text style={styles.notifyConfirmText}>
+                    {isMatchFavorite ? "Desativar" : "Ativar"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </LinearGradient>
+          </View>
+        </BlurView>
+      </Modal>
+
       <MatchStatsModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
@@ -315,6 +473,19 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 18,
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  notifyButton: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: "rgba(255,255,255,0.05)",
+  },
+  notifyButtonActive: {
+    backgroundColor: "rgba(251, 191, 36, 0.15)",
   },
   leagueBadge: {
     flexDirection: "row",
@@ -626,5 +797,132 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "600",
     flex: 1,
+  },
+
+  // Modal de Notificação
+  notifyModalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.6)",
+  },
+  notifyModalContainer: {
+    width: width * 0.85,
+    maxWidth: 340,
+  },
+  notifyModalContent: {
+    borderRadius: 20,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    alignItems: "center",
+  },
+  notifyIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  notifyIconContainerOn: {
+    backgroundColor: "rgba(34, 197, 94, 0.15)",
+    borderWidth: 2,
+    borderColor: "rgba(34, 197, 94, 0.3)",
+  },
+  notifyIconContainerOff: {
+    backgroundColor: "rgba(239, 68, 68, 0.15)",
+    borderWidth: 2,
+    borderColor: "rgba(239, 68, 68, 0.3)",
+  },
+  notifyModalTitle: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  notifyMatchInfo: {
+    alignItems: "center",
+    marginBottom: 16,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    padding: 16,
+    borderRadius: 12,
+    width: "100%",
+  },
+  notifyTeamsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 10,
+  },
+  notifyTeamLogo: {
+    width: 40,
+    height: 40,
+    resizeMode: "contain",
+  },
+  notifyVsText: {
+    color: "#71717a",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  notifyMatchText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  notifyLeagueText: {
+    color: "#a1a1aa",
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  notifyDescription: {
+    color: "#a1a1aa",
+    fontSize: 13,
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  notifyButtonsRow: {
+    flexDirection: "row",
+    gap: 12,
+    width: "100%",
+  },
+  notifyCancelButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.08)",
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 6,
+  },
+  notifyCancelText: {
+    color: "#a1a1aa",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  notifyConfirmButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 6,
+  },
+  notifyConfirmButtonOn: {
+    backgroundColor: "#22c55e",
+  },
+  notifyConfirmButtonOff: {
+    backgroundColor: "#ef4444",
+  },
+  notifyConfirmText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "700",
   },
 });

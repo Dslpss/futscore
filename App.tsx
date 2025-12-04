@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { AppState, AppStateStatus } from "react-native";
 import { MatchProvider } from "./src/context/MatchContext";
 import { FavoritesProvider } from "./src/context/FavoritesContext";
 import { AuthProvider, useAuth } from "./src/context/AuthContext";
@@ -13,11 +14,35 @@ import { StandingsScreen } from "./src/screens/StandingsScreen";
 import { NotificationSettingsScreen } from "./src/screens/NotificationSettingsScreen";
 import { StatusBar } from "expo-status-bar";
 import { View, ActivityIndicator } from "react-native";
+import { forceCheckMatches } from "./src/services/backgroundTask";
 
 const Stack = createNativeStackNavigator();
 
 function AppNavigation() {
   const { isAuthenticated, loading } = useAuth();
+  const appState = useRef(AppState.currentState);
+
+  // Verificar partidas quando app volta ao foreground
+  useEffect(() => {
+    const subscription = AppState.addEventListener(
+      "change",
+      (nextAppState: AppStateStatus) => {
+        // Se estava em background/inactive e voltou para active
+        if (
+          appState.current.match(/inactive|background/) &&
+          nextAppState === "active"
+        ) {
+          console.log("[App] Returned to foreground, checking matches...");
+          forceCheckMatches();
+        }
+        appState.current = nextAppState;
+      }
+    );
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
 
   if (loading) {
     return (

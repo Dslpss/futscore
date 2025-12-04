@@ -90,10 +90,18 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
       // Check if this is an MSN Sports match by looking for msnGameId or msnId on teams
       // The league.id may be short like "PL", "BSA" but msnGameId will have the full MSN format
       const hasMsnGameId = !!initialMatch.fixture.msnGameId;
-      const hasMsnTeamId = !!(initialMatch.teams.home as any).msnId || !!(initialMatch.teams.away as any).msnId;
-      const isMsnMatch = hasMsnGameId || hasMsnTeamId || leagueId.includes("Soccer_") || leagueId.includes("Basketball_");
+      const hasMsnTeamId =
+        !!(initialMatch.teams.home as any).msnId ||
+        !!(initialMatch.teams.away as any).msnId;
+      const isMsnMatch =
+        hasMsnGameId ||
+        hasMsnTeamId ||
+        leagueId.includes("Soccer_") ||
+        leagueId.includes("Basketball_");
 
-      console.log(`[MatchStatsModal] Match detection - leagueId: ${leagueId}, msnGameId: ${initialMatch.fixture.msnGameId}, isMsnMatch: ${isMsnMatch}`);
+      console.log(
+        `[MatchStatsModal] Match detection - leagueId: ${leagueId}, msnGameId: ${initialMatch.fixture.msnGameId}, isMsnMatch: ${isMsnMatch}`
+      );
 
       if (isMsnMatch) {
         // For MSN matches, fetch lineups and statistics
@@ -112,8 +120,12 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
             initialMatch.fixture.id.toString();
 
           console.log(`[MatchStatsModal] Using gameId: ${gameId}`);
-          console.log(`[MatchStatsModal] Match fixture ID: ${initialMatch.fixture.id}`);
-          console.log(`[MatchStatsModal] Match msnGameId: ${initialMatch.fixture.msnGameId}`);
+          console.log(
+            `[MatchStatsModal] Match fixture ID: ${initialMatch.fixture.id}`
+          );
+          console.log(
+            `[MatchStatsModal] Match msnGameId: ${initialMatch.fixture.msnGameId}`
+          );
 
           // Fetch game details (venue, channels, weather)
           const details = await msnSportsApi.getGameDetails(gameId);
@@ -129,9 +141,14 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
           const { transformMsnLineupsToLineups } = await import(
             "../utils/msnLineupsTransformer"
           );
-          console.log(`[MatchStatsModal] Fetching lineups for gameId: ${gameId}`);
+          console.log(
+            `[MatchStatsModal] Fetching lineups for gameId: ${gameId}`
+          );
           const msnLineupsData = await msnSportsApi.getLineups(gameId);
-          console.log(`[MatchStatsModal] Lineups response:`, msnLineupsData ? 'has data' : 'null');
+          console.log(
+            `[MatchStatsModal] Lineups response:`,
+            msnLineupsData ? "has data" : "null"
+          );
 
           if (msnLineupsData && msnLineupsData.lineups) {
             const lineups = transformMsnLineupsToLineups(msnLineupsData);
@@ -157,37 +174,45 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
             const { transformMsnStatsToStatistics } = await import(
               "../utils/msnStatsTransformer"
             );
-            
+
             // Map short league IDs to full MSN format
             const leagueIdMap: Record<string, string> = {
-              "PL": "Soccer_EnglandPremierLeague",
-              "BL1": "Soccer_GermanyBundesliga",
-              "SA": "Soccer_ItalySerieA",
-              "FL1": "Soccer_FranceLigue1",
-              "PD": "Soccer_SpainLaLiga",
-              "PPL": "Soccer_PortugalPrimeiraLiga",
-              "CL": "Soccer_InternationalClubsUEFAChampionsLeague",
-              "EL": "Soccer_UEFAEuropaLeague",
-              "BSA": "Soccer_BrazilBrasileiroSerieA",
-              "NBA": "Basketball_NBA",
+              PL: "Soccer_EnglandPremierLeague",
+              BL1: "Soccer_GermanyBundesliga",
+              SA: "Soccer_ItalySerieA",
+              FL1: "Soccer_FranceLigue1",
+              PD: "Soccer_SpainLaLiga",
+              PPL: "Soccer_PortugalPrimeiraLiga",
+              CL: "Soccer_InternationalClubsUEFAChampionsLeague",
+              EL: "Soccer_UEFAEuropaLeague",
+              BSA: "Soccer_BrazilBrasileiroSerieA",
+              NBA: "Basketball_NBA",
             };
-            
+
             // Get full league ID from map or use the original if it's already in full format
             let fullLeagueId = leagueIdMap[leagueId] || leagueId;
-            
+
             // If still short and we have msnGameId, extract league from it
-            if (!fullLeagueId.includes("Soccer_") && !fullLeagueId.includes("Basketball_") && initialMatch.fixture.msnGameId) {
+            if (
+              !fullLeagueId.includes("Soccer_") &&
+              !fullLeagueId.includes("Basketball_") &&
+              initialMatch.fixture.msnGameId
+            ) {
               // Extract from msnGameId format: SportRadar_Soccer_EnglandPremierLeague_2025_Game_12345
               const msnParts = initialMatch.fixture.msnGameId.split("_");
               if (msnParts.length >= 3) {
                 // Skip "SportRadar" and reconstruct league ID
-                const sportIndex = msnParts.findIndex(p => p === "Soccer" || p === "Basketball");
+                const sportIndex = msnParts.findIndex(
+                  (p) => p === "Soccer" || p === "Basketball"
+                );
                 if (sportIndex !== -1 && msnParts[sportIndex + 1]) {
-                  fullLeagueId = `${msnParts[sportIndex]}_${msnParts[sportIndex + 1]}`;
+                  fullLeagueId = `${msnParts[sportIndex]}_${
+                    msnParts[sportIndex + 1]
+                  }`;
                 }
               }
             }
-            
+
             const sport = fullLeagueId.includes("Basketball")
               ? "Basketball"
               : "Soccer";
@@ -198,7 +223,9 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
               .replace(/^SportRadar_/, "") // Remove SportRadar_ prefix
               .replace(/_\d{4}$/, ""); // Remove _2025 suffix
 
-            console.log(`[MatchStatsModal] Original leagueId: ${leagueId}, Full leagueId: ${fullLeagueId}, Clean LeagueId: ${cleanLeagueId}`);
+            console.log(
+              `[MatchStatsModal] Original leagueId: ${leagueId}, Full leagueId: ${fullLeagueId}, Clean LeagueId: ${cleanLeagueId}`
+            );
 
             const msnStatsData = await msnSportsApi.getStatistics(
               gameId,
@@ -210,13 +237,17 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
               // Use msnId from teams if available, otherwise construct from fullLeagueId
               const homeTeamMsnId = (initialMatch.teams.home as any).msnId;
               const awayTeamMsnId = (initialMatch.teams.away as any).msnId;
-              
-              const homeTeamId = homeTeamMsnId || `SportRadar_${fullLeagueId}_${new Date().getFullYear()}_Team_${
-                initialMatch.teams.home.id
-              }`;
-              const awayTeamId = awayTeamMsnId || `SportRadar_${fullLeagueId}_${new Date().getFullYear()}_Team_${
-                initialMatch.teams.away.id
-              }`;
+
+              const homeTeamId =
+                homeTeamMsnId ||
+                `SportRadar_${fullLeagueId}_${new Date().getFullYear()}_Team_${
+                  initialMatch.teams.home.id
+                }`;
+              const awayTeamId =
+                awayTeamMsnId ||
+                `SportRadar_${fullLeagueId}_${new Date().getFullYear()}_Team_${
+                  initialMatch.teams.away.id
+                }`;
 
               console.log(`[MatchStatsModal] HomeTeamId: ${homeTeamId}`);
               console.log(`[MatchStatsModal] AwayTeamId: ${awayTeamId}`);
