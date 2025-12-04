@@ -1,33 +1,101 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, RefreshControl, ActivityIndicator } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronLeft } from 'lucide-react-native';
-import { msnSportsApi } from '../services/msnSportsApi';
-import { transformMsnStandings, StandingTeam } from '../utils/msnStandingsTransformer';
-import { LEAGUES } from '../constants/leagues';
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  RefreshControl,
+  ActivityIndicator,
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { ChevronLeft, Shield } from "lucide-react-native";
+import { msnSportsApi } from "../services/msnSportsApi";
+import {
+  transformMsnStandings,
+  StandingTeam,
+} from "../utils/msnStandingsTransformer";
+import { LEAGUES } from "../constants/leagues";
 
 interface StandingsScreenProps {
   navigation: any;
   route: any;
 }
 
-export const StandingsScreen: React.FC<StandingsScreenProps> = ({ navigation, route }) => {
+// Componente de logo do time com fallback
+const TeamLogo: React.FC<{ uri: string; size?: number }> = ({
+  uri,
+  size = 24,
+}) => {
+  const [hasError, setHasError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  if (!uri || hasError) {
+    return (
+      <View style={[styles.teamLogoFallback, { width: size, height: size }]}>
+        <Shield color="#71717a" size={size * 0.7} />
+      </View>
+    );
+  }
+
+  return (
+    <View style={{ width: size, height: size }}>
+      {isLoading && (
+        <View
+          style={[
+            styles.teamLogoFallback,
+            { width: size, height: size, position: "absolute" },
+          ]}>
+          <Shield color="#71717a" size={size * 0.7} />
+        </View>
+      )}
+      <Image
+        source={{ uri }}
+        style={{ width: size, height: size, resizeMode: "contain" }}
+        onError={() => {
+          console.log("[TeamLogo] Error loading:", uri);
+          setHasError(true);
+        }}
+        onLoad={() => {
+          console.log("[TeamLogo] Loaded:", uri.substring(uri.length - 30));
+          setIsLoading(false);
+        }}
+      />
+    </View>
+  );
+};
+
+export const StandingsScreen: React.FC<StandingsScreenProps> = ({
+  navigation,
+  route,
+}) => {
   const [standings, setStandings] = useState<StandingTeam[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedLeague, setSelectedLeague] = useState(route.params?.leagueId || 'Soccer_EnglandPremierLeague');
+  const [selectedLeague, setSelectedLeague] = useState(
+    route.params?.leagueId || "Soccer_EnglandPremierLeague"
+  );
 
   const loadStandings = async () => {
     try {
       const data = await msnSportsApi.getStandings(selectedLeague);
+      console.log(
+        "[StandingsScreen] Raw data sample:",
+        JSON.stringify(data?.standings?.[0]?.team, null, 2)
+      );
       if (data && data.standings) {
         const transformed = transformMsnStandings(data);
+        console.log(
+          "[StandingsScreen] Transformed sample:",
+          JSON.stringify(transformed?.[0], null, 2)
+        );
         setStandings(transformed);
       } else {
         setStandings([]);
       }
     } catch (error) {
-      console.error('[StandingsScreen] Error loading standings:', error);
+      console.error("[StandingsScreen] Error loading standings:", error);
       setStandings([]);
     } finally {
       setLoading(false);
@@ -46,20 +114,21 @@ export const StandingsScreen: React.FC<StandingsScreenProps> = ({ navigation, ro
 
   const getPositionColor = (position: number) => {
     // Champions League spots (top 4 for most leagues)
-    if (position <= 4) return '#22c55e';
+    if (position <= 4) return "#22c55e";
     // Europa League spots
-    if (position <= 6) return '#3b82f6';
+    if (position <= 6) return "#3b82f6";
     // Relegation zone (bottom 3)
-    if (position >= standings.length - 2) return '#ef4444';
-    return 'transparent';
+    if (position >= standings.length - 2) return "#ef4444";
+    return "transparent";
   };
-
 
   return (
     <View style={styles.container}>
       {/* Header */}
-      <LinearGradient colors={['#1a1a1a', '#0a0a0a']} style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+      <LinearGradient colors={["#1a1a1a", "#0a0a0a"]} style={styles.header}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}>
           <ChevronLeft color="#fff" size={24} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Classificação</Text>
@@ -68,28 +137,31 @@ export const StandingsScreen: React.FC<StandingsScreenProps> = ({ navigation, ro
 
       {/* League Selector */}
       <View style={styles.leagueSelectorContainer}>
-        <ScrollView 
-          horizontal 
+        <ScrollView
+          horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.leagueSelectorContent}
-        >
+          contentContainerStyle={styles.leagueSelectorContent}>
           {LEAGUES.map((league) => (
             <TouchableOpacity
               key={league.id}
               style={[
                 styles.leagueItem,
-                selectedLeague === league.id && styles.leagueItemActive
+                selectedLeague === league.id && styles.leagueItemActive,
               ]}
               onPress={() => {
                 setLoading(true);
                 setSelectedLeague(league.id);
-              }}
-            >
-              <Image source={{ uri: league.logo }} style={styles.leagueSelectorLogo} />
-              <Text style={[
-                styles.leagueSelectorName,
-                selectedLeague === league.id && styles.leagueSelectorNameActive
-              ]}>
+              }}>
+              <Image
+                source={{ uri: league.logo }}
+                style={styles.leagueSelectorLogo}
+              />
+              <Text
+                style={[
+                  styles.leagueSelectorName,
+                  selectedLeague === league.id &&
+                    styles.leagueSelectorNameActive,
+                ]}>
                 {league.name}
               </Text>
             </TouchableOpacity>
@@ -109,13 +181,18 @@ export const StandingsScreen: React.FC<StandingsScreenProps> = ({ navigation, ro
         <ScrollView
           style={styles.scrollView}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#22c55e" />
-          }
-        >
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#22c55e"
+            />
+          }>
           {/* Table Header */}
           <View style={styles.tableHeader}>
             <Text style={[styles.headerCell, styles.positionCell]}>#</Text>
-            <Text style={[styles.headerCell, { flex: 1, textAlign: 'left' }]}>TIME</Text>
+            <Text style={[styles.headerCell, { flex: 1, textAlign: "left" }]}>
+              TIME
+            </Text>
             <Text style={[styles.headerCell, styles.statCell]}>J</Text>
             <Text style={[styles.headerCell, styles.statCell]}>V</Text>
             <Text style={[styles.headerCell, styles.statCell]}>E</Text>
@@ -127,10 +204,17 @@ export const StandingsScreen: React.FC<StandingsScreenProps> = ({ navigation, ro
           {/* Standings */}
           {standings.map((team, index) => (
             <View key={team.team.id || index} style={styles.row}>
-              <View style={[styles.positionIndicator, { backgroundColor: getPositionColor(team.position) }]} />
-              <Text style={[styles.cell, styles.positionCell]}>{team.position}</Text>
+              <View
+                style={[
+                  styles.positionIndicator,
+                  { backgroundColor: getPositionColor(team.position) },
+                ]}
+              />
+              <Text style={[styles.cell, styles.positionCell]}>
+                {team.position}
+              </Text>
               <View style={[styles.teamCellContainer]}>
-                <Image source={{ uri: team.team.logo }} style={styles.teamLogo} />
+                <TeamLogo uri={team.team.logo} size={24} />
                 <Text style={styles.teamName} numberOfLines={1}>
                   {team.team.shortName || team.team.name}
                 </Text>
@@ -139,25 +223,39 @@ export const StandingsScreen: React.FC<StandingsScreenProps> = ({ navigation, ro
               <Text style={[styles.cell, styles.statCell]}>{team.won}</Text>
               <Text style={[styles.cell, styles.statCell]}>{team.draw}</Text>
               <Text style={[styles.cell, styles.statCell]}>{team.lost}</Text>
-              <Text style={[styles.cell, styles.statCell, team.goalDifference > 0 && styles.positiveGD]}>
-                {team.goalDifference > 0 ? '+' : ''}{team.goalDifference}
+              <Text
+                style={[
+                  styles.cell,
+                  styles.statCell,
+                  team.goalDifference > 0 && styles.positiveGD,
+                ]}>
+                {team.goalDifference > 0 ? "+" : ""}
+                {team.goalDifference}
               </Text>
-              <Text style={[styles.cell, styles.pointsCell, styles.pointsText]}>{team.points}</Text>
+              <Text style={[styles.cell, styles.pointsCell, styles.pointsText]}>
+                {team.points}
+              </Text>
             </View>
           ))}
 
           {/* Legend */}
           <View style={styles.legend}>
             <View style={styles.legendItem}>
-              <View style={[styles.legendColor, { backgroundColor: '#22c55e' }]} />
+              <View
+                style={[styles.legendColor, { backgroundColor: "#22c55e" }]}
+              />
               <Text style={styles.legendText}>Champions League</Text>
             </View>
             <View style={styles.legendItem}>
-              <View style={[styles.legendColor, { backgroundColor: '#3b82f6' }]} />
+              <View
+                style={[styles.legendColor, { backgroundColor: "#3b82f6" }]}
+              />
               <Text style={styles.legendText}>Europa League</Text>
             </View>
             <View style={styles.legendItem}>
-              <View style={[styles.legendColor, { backgroundColor: '#ef4444' }]} />
+              <View
+                style={[styles.legendColor, { backgroundColor: "#ef4444" }]}
+              />
               <Text style={styles.legendText}>Rebaixamento</Text>
             </View>
           </View>
@@ -170,142 +268,148 @@ export const StandingsScreen: React.FC<StandingsScreenProps> = ({ navigation, ro
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#09090b',
+    backgroundColor: "#09090b",
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingTop: 50,
     paddingBottom: 16,
     paddingHorizontal: 16,
   },
   backButton: {
     padding: 8,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: "rgba(255,255,255,0.1)",
     borderRadius: 20,
   },
   headerTitle: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   placeholder: {
     width: 40,
   },
   leagueSelectorContainer: {
     height: 60,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: "rgba(255,255,255,0.03)",
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
+    borderBottomColor: "rgba(255,255,255,0.05)",
   },
   leagueSelectorContent: {
     paddingHorizontal: 16,
-    alignItems: 'center',
+    alignItems: "center",
     gap: 12,
   },
   leagueItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: "rgba(255,255,255,0.05)",
     borderWidth: 1,
-    borderColor: 'transparent',
+    borderColor: "transparent",
     gap: 8,
   },
   leagueItemActive: {
-    backgroundColor: 'rgba(34, 197, 94, 0.15)',
-    borderColor: '#22c55e',
+    backgroundColor: "rgba(34, 197, 94, 0.15)",
+    borderColor: "#22c55e",
   },
   leagueSelectorLogo: {
     width: 20,
     height: 20,
-    resizeMode: 'contain',
+    resizeMode: "contain",
   },
   leagueSelectorName: {
-    color: '#a1a1aa',
+    color: "#a1a1aa",
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   leagueSelectorNameActive: {
-    color: '#22c55e',
-    fontWeight: '700',
+    color: "#22c55e",
+    fontWeight: "700",
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   emptyContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   emptyText: {
-    color: '#71717a',
+    color: "#71717a",
     fontSize: 16,
   },
   scrollView: {
     flex: 1,
   },
   tableHeader: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    flexDirection: "row",
+    backgroundColor: "rgba(255,255,255,0.05)",
     paddingVertical: 12,
     paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.1)',
+    borderBottomColor: "rgba(255,255,255,0.1)",
   },
   headerCell: {
-    color: '#a1a1aa',
+    color: "#a1a1aa",
     fontSize: 11,
-    fontWeight: '700',
-    textAlign: 'center',
-    textTransform: 'uppercase',
+    fontWeight: "700",
+    textAlign: "center",
+    textTransform: "uppercase",
   },
   row: {
-    flexDirection: 'row',
+    flexDirection: "row",
     paddingVertical: 12,
     paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
-    alignItems: 'center',
+    borderBottomColor: "rgba(255,255,255,0.05)",
+    alignItems: "center",
   },
   positionIndicator: {
     width: 3,
-    height: '100%',
-    position: 'absolute',
+    height: "100%",
+    position: "absolute",
     left: 0,
     borderTopRightRadius: 2,
     borderBottomRightRadius: 2,
   },
   cell: {
-    color: '#e4e4e7',
+    color: "#e4e4e7",
     fontSize: 13,
-    textAlign: 'center',
+    textAlign: "center",
   },
   positionCell: {
     width: 32,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   teamCellContainer: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   teamLogo: {
     width: 24,
     height: 24,
-    resizeMode: 'contain',
+    resizeMode: "contain",
+  },
+  teamLogoFallback: {
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderRadius: 12,
   },
   teamName: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
     flex: 1,
   },
   statCell: {
@@ -315,19 +419,19 @@ const styles = StyleSheet.create({
     width: 36,
   },
   pointsText: {
-    fontWeight: '800',
-    color: '#22c55e',
+    fontWeight: "800",
+    color: "#22c55e",
   },
   positiveGD: {
-    color: '#22c55e',
+    color: "#22c55e",
   },
   legend: {
     padding: 20,
     gap: 12,
   },
   legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   legendColor: {
@@ -336,7 +440,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   legendText: {
-    color: '#a1a1aa',
+    color: "#a1a1aa",
     fontSize: 13,
   },
 });

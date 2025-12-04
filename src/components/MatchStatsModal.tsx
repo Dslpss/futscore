@@ -21,6 +21,7 @@ import {
   CloudSnow,
   CloudFog,
   Thermometer,
+  User,
 } from "lucide-react-native";
 import { Match } from "../types";
 import { api } from "../services/api";
@@ -760,10 +761,20 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                             Gols da Partida
                           </Text>
                           {goals.map((goal, index) => (
-                            <View key={index} style={styles.goalCard}>
+                            <View
+                              key={index}
+                              style={[
+                                styles.goalCard,
+                                goal.isDisallowed && styles.goalCardDisallowed,
+                              ]}>
                               <View style={styles.goalHeader}>
                                 <View style={styles.goalTimeContainer}>
-                                  <Text style={styles.goalMinute}>
+                                  <Text
+                                    style={[
+                                      styles.goalMinute,
+                                      goal.isDisallowed &&
+                                        styles.goalMinuteDisallowed,
+                                    ]}>
                                     {goal.minute}'
                                   </Text>
                                   <View
@@ -771,23 +782,44 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                                       styles.goalPeriodBadge,
                                       goal.period === 2 &&
                                         styles.goalPeriodBadgeSecond,
+                                      goal.isDisallowed &&
+                                        styles.goalPeriodBadgeDisallowed,
                                     ]}>
                                     <Text style={styles.goalPeriodText}>
                                       {goal.period === 1 ? "1º T" : "2º T"}
                                     </Text>
                                   </View>
+                                  {goal.isDisallowed && (
+                                    <View style={styles.disallowedBadge}>
+                                      <Text style={styles.disallowedText}>
+                                        ANULADO
+                                      </Text>
+                                    </View>
+                                  )}
                                 </View>
-                                <Text style={styles.goalIcon}>⚽</Text>
+                                <Text style={styles.goalIcon}>
+                                  {goal.isDisallowed ? "❌" : "⚽"}
+                                </Text>
                               </View>
-                              <Text style={styles.goalPlayer}>
+                              <Text
+                                style={[
+                                  styles.goalPlayer,
+                                  goal.isDisallowed &&
+                                    styles.goalPlayerDisallowed,
+                                ]}>
                                 {goal.player.number}. {goal.player.name}
                                 {goal.isPenalty && " (Pênalti)"}
                                 {goal.isOwnGoal && " (Gol Contra)"}
                               </Text>
-                              {goal.assist && (
+                              {goal.assist && !goal.isDisallowed && (
                                 <Text style={styles.goalAssist}>
                                   Assistência: {goal.assist.number}.{" "}
                                   {goal.assist.name}
+                                </Text>
+                              )}
+                              {goal.isDisallowed && goal.description && (
+                                <Text style={styles.disallowedReason}>
+                                  {goal.description}
                                 </Text>
                               )}
                             </View>
@@ -822,6 +854,16 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                         <Text style={styles.lineupSectionTitle}>Titulares</Text>
                         {match.lineups[0].startXI.map((player) => (
                           <View key={player.id} style={styles.playerRow}>
+                            {player.photo ? (
+                              <Image
+                                source={{ uri: player.photo }}
+                                style={styles.playerPhoto}
+                              />
+                            ) : (
+                              <View style={styles.playerPhotoPlaceholder}>
+                                <User size={16} color="#71717a" />
+                              </View>
+                            )}
                             <Text style={styles.playerNumber}>
                               {player.number}
                             </Text>
@@ -835,6 +877,16 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                         <Text style={styles.lineupSectionTitle}>Reservas</Text>
                         {match.lineups[0].substitutes.map((player) => (
                           <View key={player.id} style={styles.playerRow}>
+                            {player.photo ? (
+                              <Image
+                                source={{ uri: player.photo }}
+                                style={styles.playerPhoto}
+                              />
+                            ) : (
+                              <View style={styles.playerPhotoPlaceholder}>
+                                <User size={16} color="#71717a" />
+                              </View>
+                            )}
                             <Text style={styles.playerNumber}>
                               {player.number}
                             </Text>
@@ -874,6 +926,16 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                         <Text style={styles.lineupSectionTitle}>Titulares</Text>
                         {match.lineups[1].startXI.map((player) => (
                           <View key={player.id} style={styles.playerRow}>
+                            {player.photo ? (
+                              <Image
+                                source={{ uri: player.photo }}
+                                style={styles.playerPhoto}
+                              />
+                            ) : (
+                              <View style={styles.playerPhotoPlaceholder}>
+                                <User size={16} color="#71717a" />
+                              </View>
+                            )}
                             <Text style={styles.playerNumber}>
                               {player.number}
                             </Text>
@@ -887,6 +949,16 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                         <Text style={styles.lineupSectionTitle}>Reservas</Text>
                         {match.lineups[1].substitutes.map((player) => (
                           <View key={player.id} style={styles.playerRow}>
+                            {player.photo ? (
+                              <Image
+                                source={{ uri: player.photo }}
+                                style={styles.playerPhoto}
+                              />
+                            ) : (
+                              <View style={styles.playerPhotoPlaceholder}>
+                                <User size={16} color="#71717a" />
+                              </View>
+                            )}
                             <Text style={styles.playerNumber}>
                               {player.number}
                             </Text>
@@ -1297,9 +1369,25 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 8,
-    paddingVertical: 4,
+    paddingVertical: 6,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.03)",
+  },
+  playerPhoto: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 10,
+    backgroundColor: "rgba(255,255,255,0.1)",
+  },
+  playerPhotoPlaceholder: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 10,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   playerNumber: {
     color: "#a1a1aa",
@@ -1448,6 +1536,9 @@ const styles = StyleSheet.create({
   goalPeriodBadgeSecond: {
     backgroundColor: "rgba(59, 130, 246, 0.2)",
   },
+  goalPeriodBadgeDisallowed: {
+    backgroundColor: "rgba(239, 68, 68, 0.2)",
+  },
   goalPeriodText: {
     color: "#a1a1aa",
     fontSize: 11,
@@ -1457,6 +1548,38 @@ const styles = StyleSheet.create({
     color: "#71717a",
     fontSize: 13,
     fontStyle: "italic",
+  },
+  // Estilos para gol anulado
+  goalCardDisallowed: {
+    borderLeftColor: "#ef4444",
+    backgroundColor: "rgba(239, 68, 68, 0.05)",
+    opacity: 0.8,
+  },
+  goalMinuteDisallowed: {
+    color: "#ef4444",
+    textDecorationLine: "line-through",
+  },
+  goalPlayerDisallowed: {
+    color: "#71717a",
+    textDecorationLine: "line-through",
+  },
+  disallowedBadge: {
+    backgroundColor: "rgba(239, 68, 68, 0.2)",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginLeft: 8,
+  },
+  disallowedText: {
+    color: "#ef4444",
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  disallowedReason: {
+    color: "#71717a",
+    fontSize: 12,
+    fontStyle: "italic",
+    marginTop: 4,
   },
   emptyIconContainer: {
     width: 64,

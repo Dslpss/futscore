@@ -7,6 +7,7 @@ const {
   notifyVAR,
   notifySubstitution,
   notifyHalfTime,
+  notifySecondHalfStarted,
   notifyMatchEnded,
 } = require("./pushNotifications");
 
@@ -15,6 +16,7 @@ let lastKnownScores = {};
 let lastKnownStatus = {};
 let notifiedMatchStarts = new Set();
 let notifiedHalfTime = new Set();
+let notifiedSecondHalf = new Set();
 let notifiedMatchEnds = new Set();
 // Cache para eventos já notificados (por matchId -> Set de eventIds)
 let notifiedEvents = {};
@@ -500,6 +502,21 @@ async function checkAndNotify() {
           notifiedHalfTime.add(matchId);
         }
 
+        // 3.5. Verificar INÍCIO DO 2º TEMPO (saiu do intervalo)
+        // Se já notificamos o intervalo E agora o jogo voltou (não está mais no halfTime)
+        // E ainda não notificamos o 2º tempo
+        if (
+          notifiedHalfTime.has(matchId) &&
+          !match.isHalfTime &&
+          !notifiedSecondHalf.has(matchId)
+        ) {
+          console.log(
+            `[Monitor] 🔄 2º Tempo começou: ${match.homeTeam} ${match.homeScore} x ${match.awayScore} ${match.awayTeam}`
+          );
+          await notifySecondHalfStarted(match);
+          notifiedSecondHalf.add(matchId);
+        }
+
         // 4. Buscar e processar eventos da timeline (cartões, pênaltis, VAR, etc)
         const timelineEvents = await fetchMatchTimeline(matchId);
         if (timelineEvents) {
@@ -564,6 +581,7 @@ function cleanOldCache() {
     lastKnownStatus = {};
     notifiedMatchStarts.clear();
     notifiedHalfTime.clear();
+    notifiedSecondHalf.clear();
     notifiedMatchEnds.clear();
     notifiedEvents = {};
     lastCleanup = now;

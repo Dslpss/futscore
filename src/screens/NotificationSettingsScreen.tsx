@@ -1,0 +1,492 @@
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Switch,
+  ScrollView,
+  ActivityIndicator,
+  Alert,
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  Bell,
+  BellOff,
+  Star,
+  Goal,
+  Play,
+  ChevronLeft,
+  Info,
+} from "lucide-react-native";
+import { authApi } from "../services/authApi";
+
+interface NotificationSettings {
+  allMatches: boolean;
+  favoritesOnly: boolean;
+  goals: boolean;
+  matchStart: boolean;
+}
+
+export function NotificationSettingsScreen({ navigation }: any) {
+  const [settings, setSettings] = useState<NotificationSettings>({
+    allMatches: true,
+    favoritesOnly: false,
+    goals: true,
+    matchStart: true,
+  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const loadSettings = async () => {
+    try {
+      setLoading(true);
+      const data: any = await authApi.getNotificationSettings();
+      // Garantir que todos os campos existam (para compatibilidade com dados antigos)
+      setSettings({
+        allMatches: data.allMatches ?? true,
+        favoritesOnly: data.favoritesOnly ?? false,
+        goals: data.goals ?? true,
+        matchStart: data.matchStart ?? true,
+      });
+    } catch (error) {
+      console.error("Erro ao carregar configurações:", error);
+      Alert.alert("Erro", "Não foi possível carregar as configurações");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateSetting = async (
+    key: keyof NotificationSettings,
+    value: boolean
+  ) => {
+    try {
+      setSaving(true);
+
+      let newSettings = { ...settings, [key]: value };
+
+      // Lógica: se ativar "apenas favoritos", desativar "todos os jogos"
+      if (key === "favoritesOnly" && value) {
+        newSettings.allMatches = false;
+      }
+      // Se ativar "todos os jogos", desativar "apenas favoritos"
+      if (key === "allMatches" && value) {
+        newSettings.favoritesOnly = false;
+      }
+      // Se desativar ambos, ativar favoritos por padrão
+      if (
+        (key === "allMatches" && !value && !settings.favoritesOnly) ||
+        (key === "favoritesOnly" && !value && !settings.allMatches)
+      ) {
+        newSettings.favoritesOnly = true;
+      }
+
+      setSettings(newSettings);
+      await authApi.updateNotificationSettings(newSettings);
+      console.log("[Settings] Configurações salvas:", newSettings);
+    } catch (error) {
+      console.error("Erro ao salvar configuração:", error);
+      Alert.alert("Erro", "Não foi possível salvar a configuração");
+      // Reverter em caso de erro
+      loadSettings();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#22c55e" />
+        <Text style={styles.loadingText}>Carregando configurações...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <LinearGradient
+        colors={["#09090b", "#18181b", "#09090b"]}
+        style={styles.gradient}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}>
+            <ChevronLeft size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Configurações de Notificação</Text>
+          <View style={styles.headerRight} />
+        </View>
+
+        <ScrollView
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}>
+          {/* Info Card */}
+          <View style={styles.infoCard}>
+            <Info size={20} color="#60a5fa" />
+            <Text style={styles.infoText}>
+              Configure como você quer receber notificações sobre as partidas.
+              Você pode escolher receber alertas de todos os jogos ou apenas dos
+              seus times favoritos.
+            </Text>
+          </View>
+
+          {/* Seção: Quais jogos notificar */}
+          <Text style={styles.sectionTitle}>Quais jogos notificar</Text>
+
+          <View style={styles.settingCard}>
+            <TouchableOpacity
+              style={[
+                styles.optionButton,
+                settings.allMatches && styles.optionButtonActive,
+              ]}
+              onPress={() => updateSetting("allMatches", true)}
+              disabled={saving}>
+              <View style={styles.optionIconContainer}>
+                <Bell
+                  size={24}
+                  color={settings.allMatches ? "#22c55e" : "#71717a"}
+                />
+              </View>
+              <View style={styles.optionContent}>
+                <Text
+                  style={[
+                    styles.optionTitle,
+                    settings.allMatches && styles.optionTitleActive,
+                  ]}>
+                  Todos os Jogos
+                </Text>
+                <Text style={styles.optionDescription}>
+                  Receba notificações de todas as partidas ao vivo
+                </Text>
+              </View>
+              <View
+                style={[
+                  styles.radioButton,
+                  settings.allMatches && styles.radioButtonActive,
+                ]}>
+                {settings.allMatches && <View style={styles.radioInner} />}
+              </View>
+            </TouchableOpacity>
+
+            <View style={styles.divider} />
+
+            <TouchableOpacity
+              style={[
+                styles.optionButton,
+                settings.favoritesOnly && styles.optionButtonActive,
+              ]}
+              onPress={() => updateSetting("favoritesOnly", true)}
+              disabled={saving}>
+              <View style={styles.optionIconContainer}>
+                <Star
+                  size={24}
+                  color={settings.favoritesOnly ? "#fbbf24" : "#71717a"}
+                  fill={settings.favoritesOnly ? "#fbbf24" : "transparent"}
+                />
+              </View>
+              <View style={styles.optionContent}>
+                <Text
+                  style={[
+                    styles.optionTitle,
+                    settings.favoritesOnly && styles.optionTitleActive,
+                  ]}>
+                  Apenas Favoritos
+                </Text>
+                <Text style={styles.optionDescription}>
+                  Receba notificações apenas dos seus times favoritos
+                </Text>
+              </View>
+              <View
+                style={[
+                  styles.radioButton,
+                  settings.favoritesOnly && styles.radioButtonActive,
+                ]}>
+                {settings.favoritesOnly && <View style={styles.radioInner} />}
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          {/* Seção: Tipos de notificação */}
+          <Text style={styles.sectionTitle}>Tipos de alerta</Text>
+
+          <View style={styles.settingCard}>
+            <View style={styles.switchRow}>
+              <View style={styles.switchIcon}>
+                <Goal size={22} color="#22c55e" />
+              </View>
+              <View style={styles.switchContent}>
+                <Text style={styles.switchTitle}>Gols</Text>
+                <Text style={styles.switchDescription}>
+                  Ser notificado quando houver gol
+                </Text>
+              </View>
+              <Switch
+                value={settings.goals}
+                onValueChange={(value) => updateSetting("goals", value)}
+                trackColor={{ false: "#3f3f46", true: "#22c55e50" }}
+                thumbColor={settings.goals ? "#22c55e" : "#71717a"}
+                disabled={saving}
+              />
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.switchRow}>
+              <View style={styles.switchIcon}>
+                <Play size={22} color="#3b82f6" />
+              </View>
+              <View style={styles.switchContent}>
+                <Text style={styles.switchTitle}>Início da Partida</Text>
+                <Text style={styles.switchDescription}>
+                  Ser notificado quando o jogo começar
+                </Text>
+              </View>
+              <Switch
+                value={settings.matchStart}
+                onValueChange={(value) => updateSetting("matchStart", value)}
+                trackColor={{ false: "#3f3f46", true: "#3b82f650" }}
+                thumbColor={settings.matchStart ? "#3b82f6" : "#71717a"}
+                disabled={saving}
+              />
+            </View>
+          </View>
+
+          {/* Status atual */}
+          <View style={styles.statusCard}>
+            <Text style={styles.statusTitle}>📱 Configuração Atual</Text>
+            <Text style={styles.statusText}>
+              {settings.favoritesOnly
+                ? "Você receberá notificações apenas dos seus times favoritos"
+                : "Você receberá notificações de todos os jogos"}
+              {(() => {
+                const types = [];
+                if (settings.goals) types.push("gols");
+                if (settings.matchStart) types.push("início de partida");
+
+                if (types.length === 0) return " (nenhum tipo selecionado).";
+                if (types.length === 1) return ` (apenas ${types[0]}).`;
+                if (types.length === 2) return ` (${types[0]} e ${types[1]}).`;
+                return ` (${types.slice(0, -1).join(", ")} e ${
+                  types[types.length - 1]
+                }).`;
+              })()}
+            </Text>
+          </View>
+
+          {saving && (
+            <View style={styles.savingIndicator}>
+              <ActivityIndicator size="small" color="#22c55e" />
+              <Text style={styles.savingText}>Salvando...</Text>
+            </View>
+          )}
+
+          <View style={styles.bottomSpacing} />
+        </ScrollView>
+      </LinearGradient>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#09090b",
+  },
+  gradient: {
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#09090b",
+  },
+  loadingText: {
+    color: "#a1a1aa",
+    marginTop: 12,
+    fontSize: 14,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.1)",
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.05)",
+  },
+  headerTitle: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  headerRight: {
+    width: 40,
+  },
+  scrollView: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  infoCard: {
+    flexDirection: "row",
+    backgroundColor: "rgba(59, 130, 246, 0.1)",
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 16,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: "rgba(59, 130, 246, 0.2)",
+  },
+  infoText: {
+    flex: 1,
+    color: "#a1a1aa",
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  sectionTitle: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
+    marginTop: 24,
+    marginBottom: 12,
+  },
+  settingCard: {
+    backgroundColor: "rgba(255,255,255,0.03)",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+    overflow: "hidden",
+  },
+  optionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    gap: 12,
+  },
+  optionButtonActive: {
+    backgroundColor: "rgba(34, 197, 94, 0.05)",
+  },
+  optionIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  optionContent: {
+    flex: 1,
+  },
+  optionTitle: {
+    color: "#a1a1aa",
+    fontSize: 15,
+    fontWeight: "600",
+    marginBottom: 2,
+  },
+  optionTitleActive: {
+    color: "#fff",
+  },
+  optionDescription: {
+    color: "#71717a",
+    fontSize: 12,
+  },
+  radioButton: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: "#3f3f46",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  radioButtonActive: {
+    borderColor: "#22c55e",
+  },
+  radioInner: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: "#22c55e",
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    marginHorizontal: 16,
+  },
+  switchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    gap: 12,
+  },
+  switchIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  switchContent: {
+    flex: 1,
+  },
+  switchTitle: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "600",
+    marginBottom: 2,
+  },
+  switchDescription: {
+    color: "#71717a",
+    fontSize: 12,
+  },
+  statusCard: {
+    backgroundColor: "rgba(34, 197, 94, 0.1)",
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 24,
+    borderWidth: 1,
+    borderColor: "rgba(34, 197, 94, 0.2)",
+  },
+  statusTitle: {
+    color: "#22c55e",
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+  statusText: {
+    color: "#a1a1aa",
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  savingIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 16,
+    gap: 8,
+  },
+  savingText: {
+    color: "#a1a1aa",
+    fontSize: 13,
+  },
+  bottomSpacing: {
+    height: 40,
+  },
+});

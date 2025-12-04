@@ -407,6 +407,23 @@ async function notifyHalfTime(match) {
 }
 
 /**
+ * Notifica início do segundo tempo
+ */
+async function notifySecondHalfStarted(match) {
+  const title = `🔄 VOLTOU!`;
+  const body = `${match.homeTeam} ${match.homeScore} x ${match.awayScore} ${
+    match.awayTeam
+  }\nSegundo tempo começou${match.league ? ` • ${match.league}` : ""}`;
+
+  await sendPushToAll(title, body, {
+    type: "second_half_start",
+    matchId: match.id,
+    homeTeamId: match.homeTeamId,
+    awayTeamId: match.awayTeamId,
+  });
+}
+
+/**
  * Notifica fim do jogo
  */
 async function notifyMatchEnded(match) {
@@ -441,6 +458,7 @@ module.exports = {
   notifyVAR,
   notifySubstitution,
   notifyHalfTime,
+  notifySecondHalfStarted,
   notifyMatchEnded,
   expo,
 };

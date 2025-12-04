@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -11,14 +11,27 @@ import {
   Alert,
   Platform,
   StatusBar,
+  Animated,
+  Dimensions,
+  ScrollView,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import {
+  Search,
+  Heart,
+  ChevronLeft,
+  Check,
+  Users,
+  Star,
+} from "lucide-react-native";
 import { api } from "../services/api";
 import { authApi, FavoriteTeam } from "../services/authApi";
 import { useAuth } from "../context/AuthContext";
 import { TeamCard } from "../components/TeamCard";
 import { TeamDetailsModal } from "../components/TeamDetailsModal";
+
+const { width } = Dimensions.get("window");
 
 interface TeamWithCountry {
   id: number;
@@ -42,6 +55,8 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({
     null
   );
   const [modalVisible, setModalVisible] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
+  const searchAnimation = useRef(new Animated.Value(0)).current;
 
   const leagues = [
     { code: "all", name: "Todas" },
@@ -348,7 +363,7 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({
     try {
       await authApi.saveFavoriteTeams(favoriteTeams);
       Alert.alert("Sucesso", "Times favoritos salvos com sucesso!");
-      navigation.goBack();
+      // Não navega mais automaticamente - usuário pode continuar editando
     } catch (error) {
       console.error("Error saving favorites:", error);
       Alert.alert("Erro", "Não foi possível salvar os times favoritos");
@@ -362,124 +377,201 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({
     setModalVisible(true);
   };
 
+  const handleSearchFocus = (focused: boolean) => {
+    setSearchFocused(focused);
+    Animated.timing(searchAnimation, {
+      toValue: focused ? 1 : 0,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
+  };
+
   const filteredTeams = teams;
+
+  const searchBorderColor = searchAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["rgba(255,255,255,0.05)", "#22c55e"],
+  });
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={["#1a1a2e", "#16213e", "#0f3460"]}
-        style={styles.gradient}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
+      <StatusBar barStyle="light-content" backgroundColor="#09090b" />
+
+      {/* Header Premium */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+          activeOpacity={0.7}>
+          <LinearGradient
+            colors={["#2a2a2a", "#1a1a1a"]}
+            style={styles.backButtonGradient}>
+            <ChevronLeft size={22} color="#e4e4e7" />
+          </LinearGradient>
+        </TouchableOpacity>
+
+        <View style={styles.headerTitleContainer}>
           <Text style={styles.headerTitle}>Meus Times</Text>
-          <TouchableOpacity
-            onPress={saveFavorites}
-            style={styles.saveButton}
-            disabled={saving}>
-            {saving ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
-            ) : (
-              <Ionicons name="checkmark" size={24} color="#FFFFFF" />
-            )}
-          </TouchableOpacity>
+          <Text style={styles.headerSubtitle}>Selecione seus favoritos</Text>
         </View>
 
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <Ionicons
-            name="search"
-            size={20}
-            color="#888"
-            style={styles.searchIcon}
-          />
+        <TouchableOpacity
+          onPress={saveFavorites}
+          style={styles.saveButton}
+          disabled={saving}
+          activeOpacity={0.7}>
+          <LinearGradient
+            colors={saving ? ["#2a2a2a", "#1a1a1a"] : ["#22c55e", "#16a34a"]}
+            style={styles.saveButtonGradient}>
+            {saving ? (
+              <ActivityIndicator color="#22c55e" size="small" />
+            ) : (
+              <Check size={20} color="#FFFFFF" />
+            )}
+          </LinearGradient>
+        </TouchableOpacity>
+      </View>
+
+      {/* Stats Card */}
+      <View style={styles.statsContainer}>
+        <LinearGradient
+          colors={["#18181b", "#1f1f23"]}
+          style={styles.statsCard}>
+          <View style={styles.statItem}>
+            <View style={styles.statIconWrapper}>
+              <LinearGradient
+                colors={["#22c55e20", "#22c55e10"]}
+                style={styles.statIconBg}>
+                <Heart size={18} color="#22c55e" fill="#22c55e" />
+              </LinearGradient>
+            </View>
+            <View>
+              <Text style={styles.statNumber}>{favoriteTeams.length}</Text>
+              <Text style={styles.statLabel}>Favoritos</Text>
+            </View>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <View style={styles.statIconWrapper}>
+              <LinearGradient
+                colors={["#3b82f620", "#3b82f610"]}
+                style={styles.statIconBg}>
+                <Users size={18} color="#3b82f6" />
+              </LinearGradient>
+            </View>
+            <View>
+              <Text style={styles.statNumber}>{teams.length}</Text>
+              <Text style={styles.statLabel}>Times</Text>
+            </View>
+          </View>
+        </LinearGradient>
+      </View>
+
+      {/* Search Bar Premium */}
+      <View style={styles.searchWrapper}>
+        <Animated.View
+          style={[styles.searchContainer, { borderColor: searchBorderColor }]}>
+          <Search size={18} color={searchFocused ? "#22c55e" : "#71717a"} />
           <TextInput
             style={styles.searchInput}
             placeholder="Buscar times..."
-            placeholderTextColor="#888"
+            placeholderTextColor="#71717a"
             value={searchQuery}
             onChangeText={handleSearch}
+            onFocus={() => handleSearchFocus(true)}
+            onBlur={() => handleSearchFocus(false)}
           />
-        </View>
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery("")}>
+              <Ionicons name="close-circle" size={18} color="#71717a" />
+            </TouchableOpacity>
+          )}
+        </Animated.View>
+      </View>
 
-        {/* League Filter */}
-        <View style={styles.filterContainer}>
-          <FlatList
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            data={leagues}
-            keyExtractor={(item) => item.code}
-            renderItem={({ item }) => (
-              <TouchableOpacity
+      {/* League Filter Premium */}
+      <View style={styles.filterWrapper}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterContainer}>
+          {leagues.map((item) => (
+            <TouchableOpacity
+              key={item.code}
+              style={[
+                styles.filterButton,
+                selectedLeague === item.code && styles.filterButtonActive,
+              ]}
+              onPress={() => handleLeagueFilter(item.code)}
+              activeOpacity={0.7}>
+              {selectedLeague === item.code && (
+                <LinearGradient
+                  colors={["#22c55e", "#16a34a"]}
+                  style={StyleSheet.absoluteFill}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                />
+              )}
+              <Text
                 style={[
-                  styles.filterButton,
-                  selectedLeague === item.code && styles.filterButtonActive,
-                ]}
-                onPress={() => handleLeagueFilter(item.code)}>
-                <Text
-                  style={[
-                    styles.filterButtonText,
-                    selectedLeague === item.code &&
-                      styles.filterButtonTextActive,
-                  ]}>
-                  {item.name}
-                </Text>
-              </TouchableOpacity>
-            )}
-          />
-        </View>
+                  styles.filterButtonText,
+                  selectedLeague === item.code && styles.filterButtonTextActive,
+                ]}>
+                {item.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
 
-        {/* Favorite Count */}
-        <View style={styles.favoriteCount}>
-          <Ionicons name="heart" size={16} color="#FF6B6B" />
-          <Text style={styles.favoriteCountText}>
-            {favoriteTeams.length}{" "}
-            {favoriteTeams.length === 1
-              ? "time selecionado"
-              : "times selecionados"}
-          </Text>
-        </View>
-
-        {/* Teams Grid */}
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#FFFFFF" />
-            <Text style={styles.loadingText}>Carregando times...</Text>
+      {/* Teams Grid */}
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <View style={styles.loadingSpinner}>
+            <ActivityIndicator size="large" color="#22c55e" />
           </View>
-        ) : (
-          <FlatList
-            data={filteredTeams}
-            keyExtractor={(item) => item.id.toString()}
-            numColumns={2}
-            columnWrapperStyle={styles.row}
-            contentContainerStyle={styles.listContent}
-            renderItem={({ item }) => (
-              <TeamCard
-                team={item}
-                isFavorite={favoriteTeams.some((fav) => fav.id === item.id)}
-                onToggleFavorite={() => toggleFavorite(item)}
-                onPress={() => handleTeamPress(item)}
-              />
-            )}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Ionicons name="football-outline" size={64} color="#888" />
-                <Text style={styles.emptyText}>Nenhum time encontrado</Text>
+          <Text style={styles.loadingText}>Carregando times...</Text>
+          <Text style={styles.loadingSubtext}>Aguarde um momento</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={filteredTeams}
+          keyExtractor={(item) => item.id.toString()}
+          numColumns={2}
+          columnWrapperStyle={styles.row}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          renderItem={({ item }) => (
+            <TeamCard
+              team={item}
+              isFavorite={favoriteTeams.some((fav) => fav.id === item.id)}
+              onToggleFavorite={() => toggleFavorite(item)}
+              onPress={() => handleTeamPress(item)}
+            />
+          )}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <View style={styles.emptyIconWrapper}>
+                <LinearGradient
+                  colors={["#22c55e20", "#22c55e05"]}
+                  style={styles.emptyIconBg}>
+                  <Star size={40} color="#22c55e" />
+                </LinearGradient>
               </View>
-            }
-          />
-        )}
-
-        <TeamDetailsModal
-          visible={modalVisible}
-          onClose={() => setModalVisible(false)}
-          team={selectedTeam}
+              <Text style={styles.emptyTitle}>Nenhum time encontrado</Text>
+              <Text style={styles.emptyText}>
+                Tente buscar por outro termo ou selecione uma liga diferente
+              </Text>
+            </View>
+          }
         />
-      </LinearGradient>
+      )}
+
+      <TeamDetailsModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        team={selectedTeam}
+      />
     </SafeAreaView>
   );
 };
@@ -487,91 +579,155 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#1a1a2e",
-  },
-  gradient: {
-    flex: 1,
+    backgroundColor: "#09090b",
+    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingVertical: 16,
-    paddingTop:
-      Platform.OS === "android" ? (StatusBar.currentHeight || 0) + 16 : 16,
+    paddingVertical: 12,
   },
   backButton: {
-    padding: 8,
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  backButtonGradient: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+  },
+  headerTitleContainer: {
+    flex: 1,
+    marginHorizontal: 16,
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: "700",
-    color: "#FFFFFF",
+    fontWeight: "800",
+    color: "#e4e4e7",
+    letterSpacing: 0.3,
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    color: "#71717a",
+    marginTop: 2,
   },
   saveButton: {
-    padding: 8,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    borderRadius: 20,
+    borderRadius: 12,
+    overflow: "hidden",
+    shadowColor: "#22c55e",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  saveButtonGradient: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  statsContainer: {
+    paddingHorizontal: 16,
+    marginBottom: 16,
+  },
+  statsCard: {
+    flexDirection: "row",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+  },
+  statItem: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  statIconWrapper: {
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  statIconBg: {
     width: 40,
     height: 40,
-    alignItems: "center",
+    borderRadius: 12,
     justifyContent: "center",
+    alignItems: "center",
+  },
+  statNumber: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#e4e4e7",
+  },
+  statLabel: {
+    fontSize: 12,
+    color: "#71717a",
+    marginTop: 2,
+  },
+  statDivider: {
+    width: 1,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    marginHorizontal: 16,
+  },
+  searchWrapper: {
+    paddingHorizontal: 16,
+    marginBottom: 16,
   },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    backgroundColor: "#18181b",
     borderRadius: 12,
-    marginHorizontal: 16,
-    marginBottom: 16,
-    paddingHorizontal: 12,
-  },
-  searchIcon: {
-    marginRight: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderWidth: 1,
+    gap: 10,
   },
   searchInput: {
     flex: 1,
-    color: "#FFFFFF",
-    fontSize: 16,
-    paddingVertical: 12,
+    color: "#e4e4e7",
+    fontSize: 15,
+    padding: 0,
+  },
+  filterWrapper: {
+    marginBottom: 16,
   },
   filterContainer: {
-    marginBottom: 16,
     paddingHorizontal: 16,
+    gap: 8,
   },
   filterButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    backgroundColor: "#18181b",
     marginRight: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+    overflow: "hidden",
   },
   filterButtonActive: {
-    backgroundColor: "#FF6B6B",
+    borderColor: "transparent",
   },
   filterButtonText: {
-    color: "#FFFFFF",
-    fontSize: 14,
+    color: "#71717a",
+    fontSize: 13,
     fontWeight: "600",
   },
   filterButtonTextActive: {
     color: "#FFFFFF",
-  },
-  favoriteCount: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-  },
-  favoriteCountText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    marginLeft: 8,
+    fontWeight: "700",
   },
   listContent: {
     paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingBottom: 24,
   },
   row: {
     justifyContent: "space-between",
@@ -580,21 +736,56 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    paddingBottom: 60,
+  },
+  loadingSpinner: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "rgba(34, 197, 94, 0.1)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
   },
   loadingText: {
-    color: "#FFFFFF",
-    marginTop: 16,
+    color: "#e4e4e7",
     fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  loadingSubtext: {
+    color: "#71717a",
+    fontSize: 14,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingVertical: 64,
+    paddingVertical: 80,
+    paddingHorizontal: 32,
+  },
+  emptyIconWrapper: {
+    marginBottom: 20,
+  },
+  emptyIconBg: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(34, 197, 94, 0.2)",
+  },
+  emptyTitle: {
+    color: "#e4e4e7",
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 8,
   },
   emptyText: {
-    color: "#888",
-    fontSize: 16,
-    marginTop: 16,
+    color: "#71717a",
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 20,
   },
 });

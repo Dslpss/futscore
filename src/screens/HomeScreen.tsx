@@ -24,6 +24,7 @@ import { UpcomingMatchesSlider } from "../components/UpcomingMatchesSlider";
 import { LinearGradient } from "expo-linear-gradient";
 import { WarningCard } from "../components/WarningCard";
 import { UpdateModal } from "../components/UpdateModal";
+import { Bell, User, LogOut, X } from "lucide-react-native";
 import axios from "axios";
 import { api } from "../services/api";
 import { CONFIG } from "../constants/config";
@@ -261,16 +262,29 @@ export const HomeScreen = ({ navigation }: any) => {
           </View>
         </View>
 
-        <TouchableOpacity
-          style={styles.profileButton}
-          onPress={() => setShowProfileModal(true)}
-          activeOpacity={0.8}>
-          <LinearGradient
-            colors={["#2a2a2a", "#1a1a1a"]}
-            style={styles.profileGradient}>
-            <Text style={{ fontSize: 20 }}>👤</Text>
-          </LinearGradient>
-        </TouchableOpacity>
+        <View style={styles.headerButtonsRow}>
+          <TouchableOpacity
+            style={styles.notificationButton}
+            onPress={() => navigation.navigate("NotificationSettings")}
+            activeOpacity={0.8}>
+            <LinearGradient
+              colors={["#2a2a2a", "#1a1a1a"]}
+              style={styles.notificationGradient}>
+              <Bell size={18} color="#a1a1aa" />
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.profileButton}
+            onPress={() => setShowProfileModal(true)}
+            activeOpacity={0.8}>
+            <LinearGradient
+              colors={["#2a2a2a", "#1a1a1a"]}
+              style={styles.profileGradient}>
+              <User size={18} color="#a1a1aa" />
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Date Selector */}
@@ -663,14 +677,24 @@ export const HomeScreen = ({ navigation }: any) => {
             style={styles.modalContent}
             onStartShouldSetResponder={() => true}>
             <LinearGradient
-              colors={["#1a1a2e", "#16213e"]}
+              colors={["#18181b", "#09090b"]}
               style={styles.profileModalGradient}>
+              {/* Close Button */}
+              <TouchableOpacity
+                style={styles.modalCloseBtn}
+                onPress={() => setShowProfileModal(false)}
+                activeOpacity={0.7}>
+                <X size={20} color="#71717a" />
+              </TouchableOpacity>
+
               <View style={styles.profileModalHeader}>
-                <View style={styles.profileAvatar}>
+                <LinearGradient
+                  colors={["#22c55e", "#16a34a"]}
+                  style={styles.profileAvatar}>
                   <Text style={styles.profileAvatarText}>
                     {user?.name?.charAt(0).toUpperCase() || "?"}
                   </Text>
-                </View>
+                </LinearGradient>
                 <Text style={styles.profileName}>
                   {user?.name || "Usuário"}
                 </Text>
@@ -678,6 +702,25 @@ export const HomeScreen = ({ navigation }: any) => {
               </View>
 
               <View style={styles.profileModalDivider} />
+
+              {/* Menu Options */}
+              <TouchableOpacity
+                style={styles.menuOption}
+                onPress={() => {
+                  setShowProfileModal(false);
+                  navigation.navigate("TeamSelection");
+                }}
+                activeOpacity={0.7}>
+                <View style={styles.menuOptionIcon}>
+                  <User size={18} color="#22c55e" />
+                </View>
+                <View style={styles.menuOptionContent}>
+                  <Text style={styles.menuOptionTitle}>Meus Times</Text>
+                  <Text style={styles.menuOptionSubtitle}>
+                    Gerenciar favoritos
+                  </Text>
+                </View>
+              </TouchableOpacity>
 
               <TouchableOpacity
                 style={styles.logoutButton}
@@ -697,21 +740,14 @@ export const HomeScreen = ({ navigation }: any) => {
                     },
                   ]);
                 }}
-                activeOpacity={0.8}>
-                <LinearGradient
-                  colors={["#ef4444", "#dc2626"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.logoutGradient}>
-                  <Text style={styles.logoutIcon}>🚪</Text>
-                  <Text style={styles.logoutText}>Sair da Conta</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.closeModalButton}
-                onPress={() => setShowProfileModal(false)}>
-                <Text style={styles.closeModalText}>Fechar</Text>
+                activeOpacity={0.7}>
+                <View style={styles.logoutIconWrapper}>
+                  <LogOut size={18} color="#ef4444" />
+                </View>
+                <View style={styles.menuOptionContent}>
+                  <Text style={styles.logoutTitle}>Sair da Conta</Text>
+                  <Text style={styles.logoutSubtitle}>Encerrar sessão</Text>
+                </View>
               </TouchableOpacity>
             </LinearGradient>
           </View>
@@ -833,6 +869,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
+  headerButtonsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  notificationButton: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  notificationGradient: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   profileButton: {
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
@@ -864,73 +919,121 @@ const styles = StyleSheet.create({
   },
   profileModalGradient: {
     padding: 24,
+    paddingTop: 16,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+  },
+  modalCloseBtn: {
+    position: "absolute",
+    top: 16,
+    right: 16,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 10,
   },
   profileModalHeader: {
     alignItems: "center",
     marginBottom: 24,
+    marginTop: 8,
   },
   profileAvatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "#22c55e",
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 16,
+    shadowColor: "#22c55e",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
   },
   profileAvatarText: {
-    fontSize: 32,
-    fontWeight: "700",
+    fontSize: 28,
+    fontWeight: "800",
     color: "#FFFFFF",
   },
   profileName: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: "#e4e4e7",
     marginBottom: 4,
   },
   profileEmail: {
-    fontSize: 14,
-    color: "#9CA3AF",
+    fontSize: 13,
+    color: "#71717a",
   },
   profileModalDivider: {
     height: 1,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    marginBottom: 24,
-  },
-  logoutButton: {
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
     marginBottom: 16,
-    shadowColor: "#ef4444",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 5,
   },
-  logoutGradient: {
+  menuOption: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 24,
+    backgroundColor: "rgba(255,255,255,0.03)",
     borderRadius: 12,
-    gap: 8,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
   },
-  logoutIcon: {
-    fontSize: 18,
-  },
-  logoutText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  closeModalButton: {
+  menuOptionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "rgba(34, 197, 94, 0.1)",
+    justifyContent: "center",
     alignItems: "center",
-    paddingVertical: 12,
+    marginRight: 12,
   },
-  closeModalText: {
-    color: "#9CA3AF",
-    fontSize: 14,
+  menuOptionContent: {
+    flex: 1,
+  },
+  menuOptionTitle: {
+    fontSize: 15,
     fontWeight: "600",
+    color: "#e4e4e7",
+    marginBottom: 2,
+  },
+  menuOptionSubtitle: {
+    fontSize: 12,
+    color: "#71717a",
+  },
+  logoutButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(239, 68, 68, 0.08)",
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: "rgba(239, 68, 68, 0.2)",
+  },
+  logoutIconWrapper: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "rgba(239, 68, 68, 0.15)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  logoutTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#ef4444",
+    marginBottom: 2,
+  },
+  logoutSubtitle: {
+    fontSize: 12,
+    color: "#71717a",
   },
 
   dateSelectorWrapper: {

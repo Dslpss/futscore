@@ -13,6 +13,7 @@ export interface GoalEvent {
   description: string;
   isPenalty?: boolean;
   isOwnGoal?: boolean;
+  isDisallowed?: boolean; // Gol anulado (VAR, impedimento, etc.)
 }
 
 export interface CardEvent {
@@ -136,6 +137,19 @@ export function transformMsnTimeline(timelineData: any): MatchTimeline {
             event.description?.toLowerCase().includes("own goal") ||
             event.description?.toLowerCase().includes("gol contra");
 
+          // Detectar gol anulado
+          const descLower = (event.description || "").toLowerCase();
+          const isDisallowed =
+            event.scoreChangeType === "Disallowed" ||
+            event.isDisallowed === true ||
+            event.status === "Disallowed" ||
+            descLower.includes("disallowed") ||
+            descLower.includes("anulado") ||
+            descLower.includes("offside") ||
+            descLower.includes("impedimento") ||
+            (descLower.includes("var") && descLower.includes("no goal")) ||
+            descLower.includes("ruled out");
+
           const goal: GoalEvent = {
             minute,
             period,
@@ -145,6 +159,7 @@ export function transformMsnTimeline(timelineData: any): MatchTimeline {
             description: event.description || "",
             isPenalty,
             isOwnGoal,
+            isDisallowed,
           };
 
           result.goals.push(goal);
@@ -271,6 +286,31 @@ export function transformMsnTimeline(timelineData: any): MatchTimeline {
           });
           break;
         }
+
+        case "GoalDisallowed":
+        case "DisallowedGoal": {
+          // GOL ANULADO (evento específico)
+          const playerName =
+            event.player?.name?.rawName ||
+            `${event.player?.firstName?.rawName || ""} ${
+              event.player?.lastName?.rawName || ""
+            }`.trim() ||
+            "Desconhecido";
+          const playerNumber = parseInt(event.player?.jerseyNumber) || 0;
+
+          const goal: GoalEvent = {
+            minute,
+            period,
+            player: { name: playerName, number: playerNumber },
+            teamId,
+            description: event.description || "Gol anulado",
+            isDisallowed: true,
+          };
+
+          result.goals.push(goal);
+          result.allEvents.push({ type: "goal", minute, teamId, data: goal });
+          break;
+        }
       }
     }
   }
@@ -295,6 +335,11 @@ export function getEventDescription(event: MatchEvent): string {
   switch (event.type) {
     case "goal": {
       const goal = event.data as GoalEvent;
+      if (goal.isDisallowed) {
+        return `❌ ${goal.minute}' - GOL ANULADO: ${goal.player.name}${
+          goal.description ? ` (${goal.description})` : ""
+        }`;
+      }
       let desc = `⚽ ${goal.minute}' - GOL! ${goal.player.name}`;
       if (goal.isPenalty) desc += " (Pênalti)";
       if (goal.isOwnGoal) desc += " (Gol Contra)";
