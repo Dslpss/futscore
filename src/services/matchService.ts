@@ -6,12 +6,17 @@ import {
   scheduleMatchStartNotification,
   notifyMatchStarted,
   notifyGoal,
+  notifyHalfTime,
+  notifyMatchEnded,
 } from "./notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const LAST_KNOWN_SCORES_KEY = "futscore_last_known_scores";
 const LAST_KNOWN_STATUS_KEY = "futscore_last_known_status";
 const NOTIFIED_MATCHES_KEY = "futscore_notified_started";
+const NOTIFIED_HALFTIME_KEY = "futscore_notified_halftime";
+const NOTIFIED_FINISHED_KEY = "futscore_notified_finished";
+const CACHE_CLEANUP_KEY = "futscore_last_cleanup";
 
 export const matchService = {
   /**
@@ -155,10 +160,26 @@ export const matchService = {
         await checkMatchStarted(liveMatches, favoriteTeams);
       }
 
+      // Check for HALFTIME (notify all users)
+      if (liveMatches.length > 0) {
+        await checkHalfTime(liveMatches, favoriteTeams);
+      }
+
       // Check for score changes in ALL live matches
       if (liveMatches.length > 0) {
         await checkScoreChanges(liveMatches, favoriteTeams);
       }
+
+      // Check for FINISHED matches (notify all users)
+      const finishedMatches = filteredFixtures.filter((m) =>
+        ["FT", "AET", "PEN"].includes(m.fixture.status.short)
+      );
+      if (finishedMatches.length > 0) {
+        await checkMatchFinished(finishedMatches, favoriteTeams);
+      }
+
+      // Periodic cache cleanup (once per day)
+      await cleanupOldCache();
 
       // Schedule start notifications for ALL upcoming matches today
       const upcomingMatches = filteredFixtures.filter((m) =>
@@ -286,5 +307,149 @@ async function checkScoreChanges(
     }
   } catch (error) {
     console.error("[MatchService] Error checking score changes:", error);
+  }
+}
+
+// Verifica se algum jogo está no INTERVALO
+async function checkHalfTime(
+  currentMatches: Match[],
+  favoriteTeams: number[]
+) {
+  try {
+    const notifiedJson = await AsyncStorage.getItem(NOTIFIED_HALFTIME_KEY);
+    const notifiedMatches: number[] = notifiedJson
+      ? JSON.parse(notifiedJson)
+      : [];
+
+    let hasChanges = false;
+    const updatedNotified = [...notifiedMatches];
+
+    for (const match of currentMatches) {
+      const matchId = match.fixture.id;
+      const status = match.fixture.status.short;
+
+      // Se está no intervalo e ainda não notificamos
+      if (status === "HT" && !notifiedMatches.includes(matchId)) {
+        const isHomeFavorite = favoriteTeams.includes(match.teams.home.id);
+        const isAwayFavorite = favoriteTeams.includes(match.teams.away.id);
+        const isFavoriteMatch = isHomeFavorite || isAwayFavorite;
+
+        // Notificar intervalo
+        await notifyHalfTime(match, isFavoriteMatch);
+
+        updatedNotified.push(matchId);
+        hasChanges = true;
+      }
+    }
+
+    // Manter apenas os últimos 100 jogos notificados
+    const trimmedNotified = updatedNotified.slice(-100);
+
+    if (hasChanges) {
+      await AsyncStorage.setItem(
+        NOTIFIED_HALFTIME_KEY,
+        JSON.stringify(trimmedNotified)
+      );
+    }
+  } catch (error) {
+    console.error("[MatchService] Error checking half time:", error);
+  }
+}
+
+// Verifica se algum jogo TERMINOU
+async function checkMatchFinished(
+  finishedMatches: Match[],
+  favoriteTeams: number[]
+) {
+  try {
+    const notifiedJson = await AsyncStorage.getItem(NOTIFIED_FINISHED_KEY);
+    const notifiedMatches: number[] = notifiedJson
+      ? JSON.parse(notifiedJson)
+      : [];
+
+    let hasChanges = false;
+    const updatedNotified = [...notifiedMatches];
+
+    for (const match of finishedMatches) {
+      const matchId = match.fixture.id;
+
+      // Se o jogo terminou e ainda não notificamos
+      if (!notifiedMatches.includes(matchId)) {
+        const isHomeFavorite = favoriteTeams.includes(match.teams.home.id);
+        const isAwayFavorite = favoriteTeams.includes(match.teams.away.id);
+        const isFavoriteMatch = isHomeFavorite || isAwayFavorite;
+
+        // Notificar fim de jogo
+        await notifyMatchEnded(match, isFavoriteMatch);
+
+        updatedNotified.push(matchId);
+        hasChanges = true;
+      }
+    }
+
+    // Manter apenas os últimos 100 jogos notificados
+    const trimmedNotified = updatedNotified.slice(-100);
+
+    if (hasChanges) {
+      await AsyncStorage.setItem(
+        NOTIFIED_FINISHED_KEY,
+        JSON.stringify(trimmedNotified)
+      );
+    }
+  } catch (error) {
+    console.error("[MatchService] Error checking match finished:", error);
+  }
+}
+
+// Limpeza periódica do cache (uma vez por dia)
+async function cleanupOldCache() {
+  try {
+    const lastCleanup = await AsyncStorage.getItem(CACHE_CLEANUP_KEY);
+    const now = new Date();
+    const today = now.toDateString();
+
+    // Se já limpou hoje, não fazer nada
+    if (lastCleanup === today) {
+      return;
+    }
+
+    console.log("[MatchService] Running daily cache cleanup...");
+
+    // Limpar scores de jogos antigos (manter apenas os de hoje)
+    const scoresJson = await AsyncStorage.getItem(LAST_KNOWN_SCORES_KEY);
+    if (scoresJson) {
+      const scores = JSON.parse(scoresJson);
+      // Limpar tudo - os jogos de hoje serão re-adicionados automaticamente
+      // Isso evita acúmulo infinito de dados
+      const keysCount = Object.keys(scores).length;
+      if (keysCount > 200) {
+        // Se tiver mais de 200 jogos, limpar
+        await AsyncStorage.setItem(LAST_KNOWN_SCORES_KEY, JSON.stringify({}));
+        console.log(`[MatchService] Cleared ${keysCount} old score entries`);
+      }
+    }
+
+    // Limpar listas de notificados (manter apenas últimos 50)
+    const cleanupList = async (key: string) => {
+      const json = await AsyncStorage.getItem(key);
+      if (json) {
+        const list = JSON.parse(json);
+        if (list.length > 50) {
+          const trimmed = list.slice(-50);
+          await AsyncStorage.setItem(key, JSON.stringify(trimmed));
+          console.log(`[MatchService] Trimmed ${key}: ${list.length} -> 50`);
+        }
+      }
+    };
+
+    await cleanupList(NOTIFIED_MATCHES_KEY);
+    await cleanupList(NOTIFIED_HALFTIME_KEY);
+    await cleanupList(NOTIFIED_FINISHED_KEY);
+
+    // Marcar que limpou hoje
+    await AsyncStorage.setItem(CACHE_CLEANUP_KEY, today);
+    console.log("[MatchService] Cache cleanup completed");
+  } catch (error) {
+    console.error("[MatchService] Error during cache cleanup:", error);
   }
 }
