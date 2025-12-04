@@ -867,8 +867,7 @@ export const HomeScreen = ({ navigation }: any) => {
                           colors={["#1a1a2e", "#16213e"]}
                           start={{ x: 0, y: 0 }}
                           end={{ x: 1, y: 1 }}
-                          style={styles.leagueHeader}
-                        >
+                          style={styles.leagueHeader}>
                           {/* Logo Container with glow effect */}
                           <View style={styles.leagueLogoContainer}>
                             {league.logo ? (
@@ -886,11 +885,13 @@ export const HomeScreen = ({ navigation }: any) => {
                               />
                             ) : (
                               <View style={styles.leagueHeaderLogoPlaceholder}>
-                                <Text style={styles.leagueHeaderLogoText}>⚽</Text>
+                                <Text style={styles.leagueHeaderLogoText}>
+                                  ⚽
+                                </Text>
                               </View>
                             )}
                           </View>
-                          
+
                           {/* League Info */}
                           <View style={styles.leagueHeaderInfo}>
                             <Text style={styles.leagueHeaderName}>
@@ -902,7 +903,7 @@ export const HomeScreen = ({ navigation }: any) => {
                               </Text>
                             )}
                           </View>
-                          
+
                           {/* Match Count Badge */}
                           <View style={styles.leagueCountBadge}>
                             <Text style={styles.leagueCountNumber}>

@@ -4,19 +4,26 @@ import { Lineup, Player } from "../types";
  * Transform MSN Sports lineup data to app Lineup format
  */
 export function transformMsnLineupsToLineups(msnLineupsData: any): Lineup[] {
+  console.log("[LineupsTransformer] Input data:", JSON.stringify(msnLineupsData)?.substring(0, 500));
+  
   if (
     !msnLineupsData ||
     !msnLineupsData.lineups ||
     !Array.isArray(msnLineupsData.lineups)
   ) {
+    console.log("[LineupsTransformer] No lineups array found");
     return [];
   }
+
+  console.log(`[LineupsTransformer] Found ${msnLineupsData.lineups.length} lineups`);
 
   return msnLineupsData.lineups.map((lineupData: any) => {
     // Separate starters and substitutes
     const allPlayers = lineupData.players || [];
     const starters = allPlayers.filter((p: any) => p.isStarter === true);
     const substitutes = allPlayers.filter((p: any) => p.isStarter === false);
+
+    console.log(`[LineupsTransformer] Team: ${lineupData.team?.name?.rawName}, Starters: ${starters.length}, Subs: ${substitutes.length}`);
 
     // Transform players
     const transformPlayer = (player: any): Player => ({

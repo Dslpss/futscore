@@ -311,10 +311,7 @@ async function checkScoreChanges(
 }
 
 // Verifica se algum jogo está no INTERVALO
-async function checkHalfTime(
-  currentMatches: Match[],
-  favoriteTeams: number[]
-) {
+async function checkHalfTime(currentMatches: Match[], favoriteTeams: number[]) {
   try {
     const notifiedJson = await AsyncStorage.getItem(NOTIFIED_HALFTIME_KEY);
     const notifiedMatches: number[] = notifiedJson
