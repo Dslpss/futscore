@@ -14,6 +14,7 @@ import {
   ScrollView,
   Modal,
   Alert,
+  Linking,
 } from "react-native";
 import { useMatches } from "../context/MatchContext";
 import { useFavorites } from "../context/FavoritesContext";
@@ -24,7 +25,7 @@ import { UpcomingMatchesSlider } from "../components/UpcomingMatchesSlider";
 import { LinearGradient } from "expo-linear-gradient";
 import { WarningCard } from "../components/WarningCard";
 import { UpdateModal } from "../components/UpdateModal";
-import { Bell, User, LogOut, X } from "lucide-react-native";
+import { Bell, User, LogOut, X, Instagram, Heart } from "lucide-react-native";
 import axios from "axios";
 import { api } from "../services/api";
 import { CONFIG } from "../constants/config";
@@ -722,6 +723,25 @@ export const HomeScreen = ({ navigation }: any) => {
                 </View>
               </TouchableOpacity>
 
+              {/* Suporte */}
+              <TouchableOpacity
+                style={styles.menuOption}
+                onPress={() => {
+                  Linking.openURL("https://www.instagram.com/programadorpro_/");
+                }}
+                activeOpacity={0.7}>
+                <View style={[styles.menuOptionIcon, styles.instagramIcon]}>
+                  <Instagram size={18} color="#E1306C" />
+                </View>
+                <View style={styles.menuOptionContent}>
+                  <Text style={styles.menuOptionTitle}>Suporte</Text>
+                  <Text style={styles.menuOptionSubtitle}>
+                    Fale conosco no Instagram
+                  </Text>
+                </View>
+                <Heart size={14} color="#71717a" />
+              </TouchableOpacity>
+
               <TouchableOpacity
                 style={styles.logoutButton}
                 onPress={() => {
@@ -992,6 +1012,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
+  },
+  instagramIcon: {
+    backgroundColor: "rgba(225, 48, 108, 0.1)",
   },
   menuOptionContent: {
     flex: 1,
