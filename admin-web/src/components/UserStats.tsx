@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Users, Bell, UserPlus, Star, Shield, TrendingUp } from "lucide-react";
+import axios from "axios";
 
 interface UserStatsData {
   totalUsers: number;
@@ -20,8 +21,6 @@ interface User {
   favoriteTeamsCount: number;
 }
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
-
 export const UserStats = () => {
   const [stats, setStats] = useState<UserStatsData | null>(null);
   const [users, setUsers] = useState<User[]>([]);
@@ -34,14 +33,8 @@ export const UserStats = () => {
 
   const fetchStats = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_URL}/api/admin/users/stats`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const data = await response.json();
-      setStats(data);
+      const response = await axios.get("/admin/users/stats");
+      setStats(response.data);
     } catch (error) {
       console.error("Error fetching user stats:", error);
     } finally {
@@ -51,14 +44,8 @@ export const UserStats = () => {
 
   const fetchUsers = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_URL}/api/admin/users`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const data = await response.json();
-      setUsers(data);
+      const response = await axios.get("/admin/users");
+      setUsers(response.data);
       setShowUserList(true);
     } catch (error) {
       console.error("Error fetching users:", error);

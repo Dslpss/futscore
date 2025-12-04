@@ -27,7 +27,9 @@
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
-        "POST_NOTIFICATIONS"
+        "POST_NOTIFICATIONS",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.WAKE_LOCK"
       ],
       "googleServicesFile": "./google-services.json"
     },
@@ -53,8 +55,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "c060407a-d600-45dd-88b2-f4dcd4ee3eed"
+        "projectId": "f4992830-2819-4f76-aa40-95358ba22784"
       }
-    }
+    },
+    "owner": "dslpss"
   }
 }
