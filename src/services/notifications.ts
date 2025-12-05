@@ -6,6 +6,9 @@ import { Platform, Vibration } from "react-native";
 // Padrão de vibração para notificações (em ms)
 const VIBRATION_PATTERN = [0, 300, 100, 300, 100, 300];
 
+// Cache em memória de notificações já agendadas (evita chamadas repetidas à API)
+const scheduledNotificationsCache = new Set<string>();
+
 // Vibrar o celular (funciona mesmo no modo silencioso)
 export function vibratePhone() {
   Vibration.vibrate(VIBRATION_PATTERN);
@@ -150,38 +153,60 @@ export async function scheduleMatchStartNotification(match: any) {
 
   const identifier = `match_start_${match.fixture.id}`;
 
-  // Check if already scheduled to avoid duplicates
-  const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-  const isScheduled = scheduled.some((n) => n.identifier === identifier);
-
-  if (isScheduled) {
+  // Verificar cache em memória primeiro (mais rápido)
+  if (scheduledNotificationsCache.has(identifier)) {
     return;
+  }
+
+  // Check if already scheduled to avoid duplicates
+  try {
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    const isScheduled = scheduled.some((n) => n.identifier === identifier);
+
+    if (isScheduled) {
+      // Adicionar ao cache e pular silenciosamente
+      scheduledNotificationsCache.add(identifier);
+      return;
+    }
+  } catch (error) {
+    console.log(
+      "[Notifications] Error checking scheduled notifications:",
+      error
+    );
   }
 
   const title = `Vai começar: ${match.teams.home.name} vs ${match.teams.away.name}`;
   const body = `A partida começa em 15 minutos! ⚽`;
 
-  await Notifications.scheduleNotificationAsync({
-    content: {
-      title,
-      body,
-      data: { matchId: match.fixture.id },
-      sound: "default",
-      priority: Notifications.AndroidNotificationPriority.MAX,
-      ...(Platform.OS === "android" && { channelId: "match-alerts" }),
-    },
-    trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.DATE,
-      date: triggerDate,
-    },
-    identifier,
-  });
+  try {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title,
+        body,
+        data: { matchId: match.fixture.id },
+        sound: "default",
+        priority: Notifications.AndroidNotificationPriority.MAX,
+        ...(Platform.OS === "android" && { channelId: "match-alerts" }),
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: triggerDate,
+      },
+      identifier,
+    });
 
-  console.log(
-    `[Notifications] Scheduled for ${match.teams.home.name} vs ${
-      match.teams.away.name
-    } at ${triggerDate.toLocaleTimeString()}`
-  );
+    // Adicionar ao cache após agendar com sucesso
+    scheduledNotificationsCache.add(identifier);
+
+    console.log(
+      `[Notifications] Scheduled for ${match.teams.home.name} vs ${
+        match.teams.away.name
+      } at ${triggerDate.toLocaleTimeString()}`
+    );
+  } catch (error) {
+    // Silenciosamente ignorar erros de agendamento duplicado
+    // console.log("[Notifications] Could not schedule:", error);
+  }
 }
 
 export async function cancelMatchNotification(matchId: number) {

@@ -21,6 +21,9 @@ import {
   Info,
 } from "lucide-react-native";
 import { authApi } from "../services/authApi";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+const NOTIFICATION_SETTINGS_KEY = "futscore_notification_settings";
 
 interface NotificationSettings {
   allMatches: boolean;
@@ -48,15 +51,32 @@ export function NotificationSettingsScreen({ navigation }: any) {
       setLoading(true);
       const data: any = await authApi.getNotificationSettings();
       // Garantir que todos os campos existam (para compatibilidade com dados antigos)
-      setSettings({
-        allMatches: data.allMatches ?? true,
-        favoritesOnly: data.favoritesOnly ?? false,
+      const loadedSettings = {
+        allMatches: data.allMatches ?? false,
+        favoritesOnly: data.favoritesOnly ?? true,
         goals: data.goals ?? true,
         matchStart: data.matchStart ?? true,
-      });
+      };
+      setSettings(loadedSettings);
+
+      // Salvar localmente também para uso offline
+      await AsyncStorage.setItem(
+        NOTIFICATION_SETTINGS_KEY,
+        JSON.stringify(loadedSettings)
+      );
     } catch (error) {
       console.error("Erro ao carregar configurações:", error);
-      Alert.alert("Erro", "Não foi possível carregar as configurações");
+      // Tentar carregar do cache local
+      try {
+        const localSettings = await AsyncStorage.getItem(
+          NOTIFICATION_SETTINGS_KEY
+        );
+        if (localSettings) {
+          setSettings(JSON.parse(localSettings));
+        }
+      } catch {
+        // Usar valores padrão
+      }
     } finally {
       setLoading(false);
     }
@@ -88,6 +108,14 @@ export function NotificationSettingsScreen({ navigation }: any) {
       }
 
       setSettings(newSettings);
+
+      // Salvar localmente PRIMEIRO (para uso imediato pelo matchService)
+      await AsyncStorage.setItem(
+        NOTIFICATION_SETTINGS_KEY,
+        JSON.stringify(newSettings)
+      );
+
+      // Depois sincronizar com o servidor
       await authApi.updateNotificationSettings(newSettings);
       console.log("[Settings] Configurações salvas:", newSettings);
     } catch (error) {

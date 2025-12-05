@@ -22,8 +22,10 @@ function AppNavigation() {
   const { isAuthenticated, loading } = useAuth();
   const appState = useRef(AppState.currentState);
 
-  // Verificar partidas quando app volta ao foreground
+  // Verificar partidas quando app volta ao foreground (apenas se autenticado)
   useEffect(() => {
+    if (!isAuthenticated) return;
+
     const subscription = AppState.addEventListener(
       "change",
       (nextAppState: AppStateStatus) => {
@@ -42,7 +44,7 @@ function AppNavigation() {
     return () => {
       subscription.remove();
     };
-  }, []);
+  }, [isAuthenticated]);
 
   if (loading) {
     return (
@@ -58,25 +60,34 @@ function AppNavigation() {
     );
   }
 
+  // Renderizar navegação autenticada COM providers de dados
+  if (isAuthenticated) {
+    return (
+      <FavoritesProvider>
+        <MatchProvider>
+          <Stack.Navigator screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="Home" component={HomeScreen} />
+            <Stack.Screen
+              name="TeamSelection"
+              component={TeamSelectionScreen}
+            />
+            <Stack.Screen name="LeaguesExplorer" component={LeaguesExplorer} />
+            <Stack.Screen name="Standings" component={StandingsScreen} />
+            <Stack.Screen
+              name="NotificationSettings"
+              component={NotificationSettingsScreen}
+            />
+          </Stack.Navigator>
+        </MatchProvider>
+      </FavoritesProvider>
+    );
+  }
+
+  // Renderizar navegação não autenticada SEM providers de dados
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {isAuthenticated ? (
-        <>
-          <Stack.Screen name="Home" component={HomeScreen} />
-          <Stack.Screen name="TeamSelection" component={TeamSelectionScreen} />
-          <Stack.Screen name="LeaguesExplorer" component={LeaguesExplorer} />
-          <Stack.Screen name="Standings" component={StandingsScreen} />
-          <Stack.Screen
-            name="NotificationSettings"
-            component={NotificationSettingsScreen}
-          />
-        </>
-      ) : (
-        <>
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="Register" component={RegisterScreen} />
-        </>
-      )}
+      <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="Register" component={RegisterScreen} />
     </Stack.Navigator>
   );
 }
@@ -84,14 +95,10 @@ function AppNavigation() {
 export default function App() {
   return (
     <AuthProvider>
-      <FavoritesProvider>
-        <MatchProvider>
-          <NavigationContainer>
-            <StatusBar style="light" />
-            <AppNavigation />
-          </NavigationContainer>
-        </MatchProvider>
-      </FavoritesProvider>
+      <NavigationContainer>
+        <StatusBar style="light" />
+        <AppNavigation />
+      </NavigationContainer>
     </AuthProvider>
   );
 }

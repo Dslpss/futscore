@@ -40,12 +40,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Flag para evitar registro duplicado de push token
+  const pushTokenRegistered = React.useRef(false);
+
   useEffect(() => {
     loadStorageData();
   }, []);
 
   // Registrar push token quando usuário estiver logado
-  async function registerPushToken(authToken?: string) {
+  async function registerPushToken(authToken?: string, force: boolean = false) {
+    // Evitar registros duplicados na mesma sessão
+    if (pushTokenRegistered.current && !force) {
+      console.log("[Auth] Push token já registrado nesta sessão, pulando...");
+      return;
+    }
+
     try {
       console.log("[Auth] Iniciando registro de push token...");
       const pushToken = await registerForPushNotificationsAsync();
@@ -71,6 +80,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
             console.log(
               "[Auth] Push token registrado no servidor com sucesso!"
             );
+            pushTokenRegistered.current = true;
           } else {
             const error = await response.json();
             console.error("[Auth] Erro ao registrar push token:", error);
@@ -79,6 +89,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           // Usar authApi que pega token do AsyncStorage
           await authApi.registerPushToken(pushToken);
           console.log("[Auth] Push token registrado no servidor com sucesso!");
+          pushTokenRegistered.current = true;
         }
       } else {
         console.log(

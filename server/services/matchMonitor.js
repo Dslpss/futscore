@@ -465,26 +465,31 @@ async function checkAndNotify() {
         // Se o jogo já está no segundo tempo, ou se já tem gols, não notificar início
         // Isso evita notificações falsas quando o servidor reinicia ou o cache é limpo
         const hasScore = match.homeScore > 0 || match.awayScore > 0;
-        const matchStartTime = match.startTime ? new Date(match.startTime) : null;
-        const minutesSinceStart = matchStartTime 
-          ? Math.floor((Date.now() - matchStartTime.getTime()) / 60000) 
+        const matchStartTime = match.startTime
+          ? new Date(match.startTime)
+          : null;
+        const minutesSinceStart = matchStartTime
+          ? Math.floor((Date.now() - matchStartTime.getTime()) / 60000)
           : 0;
-        
+
         // Verificar também se já está no intervalo ou segundo tempo
-        const isInHalfTimeOrSecondHalf = match.isHalfTime || 
-          match.detailedStatus?.includes('halftime') ||
-          match.detailedStatus?.includes('secondhalf') ||
+        const isInHalfTimeOrSecondHalf =
+          match.isHalfTime ||
+          match.detailedStatus?.includes("halftime") ||
+          match.detailedStatus?.includes("secondhalf") ||
           minutesSinceStart > 45;
-        
+
         // Só notifica se:
         // 1. O jogo começou há menos de 3 minutos E não tem placar ainda
         // 2. OU se estávamos monitorando antes (previousStatus existe)
-        const isReallyJustStarted = minutesSinceStart <= 3 && !hasScore && !isInHalfTimeOrSecondHalf;
-        const wasMonitoringBefore = previousStatus !== undefined && 
+        const isReallyJustStarted =
+          minutesSinceStart <= 3 && !hasScore && !isInHalfTimeOrSecondHalf;
+        const wasMonitoringBefore =
+          previousStatus !== undefined &&
           (previousStatus === "pre" || previousStatus === "scheduled");
-        
+
         const shouldNotifyStart = wasMonitoringBefore || isReallyJustStarted;
-        
+
         if (shouldNotifyStart) {
           console.log(
             `[Monitor] 🟢 Jogo começou: ${match.homeTeam} vs ${match.awayTeam} (${minutesSinceStart}min)`
@@ -509,7 +514,7 @@ async function checkAndNotify() {
       // 2. Verificar se houve GOL (apenas para jogos ao vivo)
       if (isNowLive) {
         const previous = lastKnownScores[matchId];
-        
+
         // Inicializar cache de gols notificados para este jogo
         if (!notifiedGoals[matchId]) {
           notifiedGoals[matchId] = { home: 0, away: 0 };
@@ -518,10 +523,12 @@ async function checkAndNotify() {
         if (previous) {
           const homeScored = match.homeScore > previous.home;
           const awayScored = match.awayScore > previous.away;
-          
+
           // Verificar se já notificamos esse placar específico (evita duplicatas)
-          const homeAlreadyNotified = match.homeScore <= notifiedGoals[matchId].home;
-          const awayAlreadyNotified = match.awayScore <= notifiedGoals[matchId].away;
+          const homeAlreadyNotified =
+            match.homeScore <= notifiedGoals[matchId].home;
+          const awayAlreadyNotified =
+            match.awayScore <= notifiedGoals[matchId].away;
 
           if (homeScored && !homeAlreadyNotified) {
             console.log(
@@ -560,11 +567,13 @@ async function checkAndNotify() {
         if (match.isHalfTime && !notifiedHalfTime.has(matchId)) {
           // Verificar se estamos realmente detectando o intervalo pela primeira vez
           // e não é só porque o servidor reiniciou durante o intervalo
-          const matchStartTime = match.startTime ? new Date(match.startTime) : null;
-          const minutesSinceStart = matchStartTime 
-            ? Math.floor((Date.now() - matchStartTime.getTime()) / 60000) 
+          const matchStartTime = match.startTime
+            ? new Date(match.startTime)
+            : null;
+          const minutesSinceStart = matchStartTime
+            ? Math.floor((Date.now() - matchStartTime.getTime()) / 60000)
             : 45;
-          
+
           // O intervalo normalmente ocorre entre 45-60 minutos após o início
           // Se já passou muito tempo (> 60min), provavelmente já estamos no segundo tempo
           // e isso é só um glitch de dados
@@ -590,11 +599,13 @@ async function checkAndNotify() {
           !notifiedSecondHalf.has(matchId)
         ) {
           // Verificar se faz sentido notificar o segundo tempo
-          const matchStartTime = match.startTime ? new Date(match.startTime) : null;
-          const minutesSinceStart = matchStartTime 
-            ? Math.floor((Date.now() - matchStartTime.getTime()) / 60000) 
+          const matchStartTime = match.startTime
+            ? new Date(match.startTime)
+            : null;
+          const minutesSinceStart = matchStartTime
+            ? Math.floor((Date.now() - matchStartTime.getTime()) / 60000)
             : 50;
-          
+
           // Só notifica se estiver entre 45-70 minutos (tempo normal para início do 2º tempo)
           if (minutesSinceStart >= 45 && minutesSinceStart <= 75) {
             console.log(
@@ -620,15 +631,17 @@ async function checkAndNotify() {
       if (match.isFinished && !notifiedMatchEnds.has(matchId)) {
         // Só notifica se o jogo estava sendo monitorado (já tinha começado)
         // E se o jogo não terminou há muito tempo (evita notificações de jogos antigos)
-        const matchStartTime = match.startTime ? new Date(match.startTime) : null;
-        const minutesSinceStart = matchStartTime 
-          ? Math.floor((Date.now() - matchStartTime.getTime()) / 60000) 
+        const matchStartTime = match.startTime
+          ? new Date(match.startTime)
+          : null;
+        const minutesSinceStart = matchStartTime
+          ? Math.floor((Date.now() - matchStartTime.getTime()) / 60000)
           : 120;
-        
+
         // Um jogo dura em média 90-120 minutos com acréscimos
         // Só notifica se terminou há pouco tempo (< 150 minutos desde o início)
         const recentlyFinished = minutesSinceStart <= 150;
-        
+
         if (notifiedMatchStarts.has(matchId)) {
           console.log(
             `[Monitor] 🏁 Fim de jogo: ${match.homeTeam} ${match.homeScore} x ${match.awayScore} ${match.awayTeam}`
@@ -681,25 +694,25 @@ let lastCleanup = Date.now();
 function cleanOldCache() {
   const now = Date.now();
   const THREE_HOURS = 3 * 60 * 60 * 1000; // 3 horas em ms
-  
+
   // Limpar cache a cada 3 horas (ao invés de 1 hora) para maior segurança
   if (now - lastCleanup > THREE_HOURS) {
     console.log("[Monitor] 🧹 Limpando cache antigo (jogos > 3h)...");
-    
+
     // Limpar apenas jogos que terminaram há mais de 3 horas
     // Manter dados de jogos recentes para evitar notificações duplicadas
     const matchesToClean = [];
-    
+
     for (const matchId in firstSeenTime) {
       const seenAt = firstSeenTime[matchId];
       const hoursSinceSeen = (now - seenAt) / (60 * 60 * 1000);
-      
+
       // Só limpa se o jogo foi visto há mais de 4 horas
       if (hoursSinceSeen > 4) {
         matchesToClean.push(matchId);
       }
     }
-    
+
     for (const matchId of matchesToClean) {
       delete lastKnownScores[matchId];
       delete lastKnownStatus[matchId];
@@ -711,8 +724,10 @@ function cleanOldCache() {
       notifiedSecondHalf.delete(matchId);
       notifiedMatchEnds.delete(matchId);
     }
-    
-    console.log(`[Monitor] 🧹 ${matchesToClean.length} jogos antigos removidos do cache`);
+
+    console.log(
+      `[Monitor] 🧹 ${matchesToClean.length} jogos antigos removidos do cache`
+    );
     lastCleanup = now;
   }
 }

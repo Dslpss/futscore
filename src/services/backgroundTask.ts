@@ -41,16 +41,30 @@ TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
   }
 });
 
+// Flag para evitar registro duplicado na mesma sessão
+let isBackgroundTaskRegistered = false;
+
 export async function registerBackgroundFetchAsync() {
+  // Evitar registros duplicados na mesma sessão do app
+  if (isBackgroundTaskRegistered) {
+    console.log(
+      "[BackgroundFetch] Already registered in this session, skipping..."
+    );
+    return;
+  }
+
   try {
-    // Verificar se já está registrado
+    // Verificar se já está registrado no sistema
     const isRegistered = await TaskManager.isTaskRegisteredAsync(
       BACKGROUND_FETCH_TASK
     );
 
     if (isRegistered) {
-      console.log("[BackgroundFetch] Task already registered, updating...");
-      await BackgroundFetch.unregisterTaskAsync(BACKGROUND_FETCH_TASK);
+      console.log(
+        "[BackgroundFetch] Task already registered in system, skipping re-registration..."
+      );
+      isBackgroundTaskRegistered = true;
+      return;
     }
 
     console.log("[BackgroundFetch] Registering task...");
@@ -65,6 +79,7 @@ export async function registerBackgroundFetchAsync() {
     await BackgroundFetch.setMinimumIntervalAsync(15 * 60);
 
     console.log("[BackgroundFetch] Task registered with 15min interval!");
+    isBackgroundTaskRegistered = true;
 
     // Verificar status
     const status = await BackgroundFetch.getStatusAsync();

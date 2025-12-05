@@ -19,6 +19,20 @@ const NOTIFIED_FINISHED_KEY = "futscore_notified_finished";
 const NOTIFIED_GOALS_KEY = "futscore_notified_goals"; // Cache de gols já notificados
 const CACHE_CLEANUP_KEY = "futscore_last_cleanup";
 const FAVORITE_MATCHES_KEY = "futscore_favorite_matches";
+const NOTIFICATION_SETTINGS_KEY = "futscore_notification_settings";
+
+// Lock para evitar verificações simultâneas (evita notificações duplicadas)
+let isCheckingMatches = false;
+let lastCheckTime = 0;
+const MIN_CHECK_INTERVAL = 5000; // 5 segundos entre verificações
+
+// Interface das configurações de notificação
+interface NotificationSettings {
+  allMatches: boolean;
+  favoritesOnly: boolean;
+  goals: boolean;
+  matchStart: boolean;
+}
 
 // Interface do jogo favorito (mesmo formato do FavoritesContext)
 interface FavoriteMatchData {
@@ -38,6 +52,56 @@ async function loadFavoriteMatches(): Promise<FavoriteMatchData[]> {
   } catch {
     return [];
   }
+}
+
+// Helper para carregar configurações de notificação
+async function loadNotificationSettings(): Promise<NotificationSettings> {
+  try {
+    const json = await AsyncStorage.getItem(NOTIFICATION_SETTINGS_KEY);
+    if (json) {
+      return JSON.parse(json);
+    }
+    // Valores padrão: apenas favoritos, não todos os jogos
+    return {
+      allMatches: false,
+      favoritesOnly: true,
+      goals: true,
+      matchStart: true,
+    };
+  } catch {
+    return {
+      allMatches: false,
+      favoritesOnly: true,
+      goals: true,
+      matchStart: true,
+    };
+  }
+}
+
+// Helper para verificar se deve notificar uma partida
+function shouldNotifyMatch(
+  match: Match,
+  favoriteTeams: number[],
+  favoriteMatches: FavoriteMatchData[],
+  settings: NotificationSettings
+): boolean {
+  // Se allMatches está habilitado, notificar tudo
+  if (settings.allMatches) {
+    return true;
+  }
+
+  // Se favoritesOnly está habilitado, verificar se é favorito
+  if (settings.favoritesOnly) {
+    const isTeamFavorite =
+      favoriteTeams.includes(match.teams.home.id) ||
+      favoriteTeams.includes(match.teams.away.id);
+    const isMatchFavorite = isMatchFavorited(match, favoriteMatches);
+
+    return isTeamFavorite || isMatchFavorite;
+  }
+
+  // Se nenhuma opção está habilitada, não notificar
+  return false;
 }
 
 // Helper para verificar se partida é favorita (por fixtureId ou msnGameId)
@@ -62,6 +126,23 @@ export const matchService = {
    * @returns List of live matches
    */
   checkMatchesAndNotify: async (favoriteTeams: number[] = []) => {
+    // Proteção contra chamadas simultâneas/muito frequentes
+    const now = Date.now();
+    if (isCheckingMatches) {
+      console.log("[MatchService] Already checking matches, skipping...");
+      return { liveMatches: [], todaysMatches: [] };
+    }
+
+    if (now - lastCheckTime < MIN_CHECK_INTERVAL) {
+      console.log(
+        "[MatchService] Called too soon, skipping to avoid duplicates..."
+      );
+      return { liveMatches: [], todaysMatches: [] };
+    }
+
+    isCheckingMatches = true;
+    lastCheckTime = now;
+
     try {
       console.log(
         "[MatchService] Checking matches with PRIORITY API (MSN → football-data)..."
@@ -194,19 +275,44 @@ export const matchService = {
       // Carregar partidas favoritas
       const favoriteMatches = await loadFavoriteMatches();
 
+      // Carregar configurações de notificação
+      const notificationSettings = await loadNotificationSettings();
+
+      console.log(
+        `[MatchService] Notification settings: allMatches=${notificationSettings.allMatches}, favoritesOnly=${notificationSettings.favoritesOnly}, goals=${notificationSettings.goals}, matchStart=${notificationSettings.matchStart}`
+      );
+      console.log(
+        `[MatchService] Favorite teams: ${favoriteTeams.length}, Favorite matches: ${favoriteMatches.length}`
+      );
+
       // Check for matches that just STARTED (notify all users)
       if (liveMatches.length > 0) {
-        await checkMatchStarted(liveMatches, favoriteTeams, favoriteMatches);
+        await checkMatchStarted(
+          liveMatches,
+          favoriteTeams,
+          favoriteMatches,
+          notificationSettings
+        );
       }
 
       // Check for HALFTIME (notify all users)
       if (liveMatches.length > 0) {
-        await checkHalfTime(liveMatches, favoriteTeams, favoriteMatches);
+        await checkHalfTime(
+          liveMatches,
+          favoriteTeams,
+          favoriteMatches,
+          notificationSettings
+        );
       }
 
       // Check for score changes in ALL live matches
       if (liveMatches.length > 0) {
-        await checkScoreChanges(liveMatches, favoriteTeams, favoriteMatches);
+        await checkScoreChanges(
+          liveMatches,
+          favoriteTeams,
+          favoriteMatches,
+          notificationSettings
+        );
       }
 
       // Check for FINISHED matches (notify all users)
@@ -217,20 +323,33 @@ export const matchService = {
         await checkMatchFinished(
           finishedMatches,
           favoriteTeams,
-          favoriteMatches
+          favoriteMatches,
+          notificationSettings
         );
       }
 
       // Periodic cache cleanup (once per day)
       await cleanupOldCache();
 
-      // Schedule start notifications for ALL upcoming matches today
+      // Schedule start notifications ONLY for relevant matches (based on settings)
       const upcomingMatches = filteredFixtures.filter((m) =>
         ["NS", "TBD"].includes(m.fixture.status.short)
       );
 
+      // Filtrar apenas partidas que devem ser notificadas
       for (const match of upcomingMatches) {
-        await scheduleMatchStartNotification(match);
+        // Só agendar notificação se matchStart estiver habilitado E for um jogo relevante
+        if (
+          notificationSettings.matchStart &&
+          shouldNotifyMatch(
+            match,
+            favoriteTeams,
+            favoriteMatches,
+            notificationSettings
+          )
+        ) {
+          await scheduleMatchStartNotification(match);
+        }
       }
 
       return {
@@ -240,6 +359,9 @@ export const matchService = {
     } catch (error) {
       console.error("[MatchService] Error checking matches:", error);
       return { liveMatches: [], todaysMatches: [] };
+    } finally {
+      // Sempre liberar o lock, mesmo se houver erro
+      isCheckingMatches = false;
     }
   },
 };
@@ -248,8 +370,12 @@ export const matchService = {
 async function checkMatchStarted(
   currentMatches: Match[],
   favoriteTeams: number[],
-  favoriteMatches: FavoriteMatchData[]
+  favoriteMatches: FavoriteMatchData[],
+  settings: NotificationSettings
 ) {
+  // Se matchStart está desabilitado, não notificar
+  if (!settings.matchStart) return;
+
   try {
     const notifiedJson = await AsyncStorage.getItem(NOTIFIED_MATCHES_KEY);
     const notifiedMatches: number[] = notifiedJson
@@ -265,6 +391,15 @@ async function checkMatchStarted(
 
       // Se está no primeiro tempo e ainda não notificamos
       if (status === "1H" && !notifiedMatches.includes(matchId)) {
+        // Verificar se deve notificar esta partida
+        if (
+          !shouldNotifyMatch(match, favoriteTeams, favoriteMatches, settings)
+        ) {
+          updatedNotified.push(matchId); // Marcar como processado mesmo sem notificar
+          hasChanges = true;
+          continue;
+        }
+
         const isHomeFavorite = favoriteTeams.includes(match.teams.home.id);
         const isAwayFavorite = favoriteTeams.includes(match.teams.away.id);
         const isTeamFavorite = isHomeFavorite || isAwayFavorite;
@@ -299,8 +434,12 @@ async function checkMatchStarted(
 async function checkScoreChanges(
   currentMatches: Match[],
   favoriteTeams: number[],
-  favoriteMatches: FavoriteMatchData[]
+  favoriteMatches: FavoriteMatchData[],
+  settings: NotificationSettings
 ) {
+  // Se goals está desabilitado, não notificar
+  if (!settings.goals) return;
+
   try {
     // Load last known scores
     const lastKnownJson = await AsyncStorage.getItem(LAST_KNOWN_SCORES_KEY);
@@ -334,8 +473,19 @@ async function checkScoreChanges(
         // Criar identificador único para o gol: matchId_home_away
         const goalKey = `${matchId}_${currentHome}_${currentAway}`;
 
-        // Só notifica se o gol ainda não foi notificado
+        // Só notifica se o gol ainda não foi notificado E se deve notificar esta partida
         if ((homeChanged || awayChanged) && !notifiedGoals.includes(goalKey)) {
+          // Marcar gol como processado independentemente
+          updatedNotifiedGoals.push(goalKey);
+          hasGoalChanges = true;
+
+          // Verificar se deve notificar esta partida
+          if (
+            !shouldNotifyMatch(match, favoriteTeams, favoriteMatches, settings)
+          ) {
+            continue;
+          }
+
           const scorerTeam = homeChanged
             ? match.teams.home.name
             : match.teams.away.name;
@@ -349,10 +499,6 @@ async function checkScoreChanges(
 
           // Usar a nova função de notificação de gol
           await notifyGoal(match, scorerTeam, isFavoriteMatch);
-
-          // Marcar gol como notificado
-          updatedNotifiedGoals.push(goalKey);
-          hasGoalChanges = true;
 
           console.log(`[MatchService] Goal notified: ${goalKey}`);
         }
@@ -399,7 +545,8 @@ async function checkScoreChanges(
 async function checkHalfTime(
   currentMatches: Match[],
   favoriteTeams: number[],
-  favoriteMatches: FavoriteMatchData[]
+  favoriteMatches: FavoriteMatchData[],
+  settings: NotificationSettings
 ) {
   try {
     const notifiedJson = await AsyncStorage.getItem(NOTIFIED_HALFTIME_KEY);
@@ -416,6 +563,16 @@ async function checkHalfTime(
 
       // Se está no intervalo e ainda não notificamos
       if (status === "HT" && !notifiedMatches.includes(matchId)) {
+        updatedNotified.push(matchId);
+        hasChanges = true;
+
+        // Verificar se deve notificar esta partida
+        if (
+          !shouldNotifyMatch(match, favoriteTeams, favoriteMatches, settings)
+        ) {
+          continue;
+        }
+
         const isHomeFavorite = favoriteTeams.includes(match.teams.home.id);
         const isAwayFavorite = favoriteTeams.includes(match.teams.away.id);
         const isTeamFavorite = isHomeFavorite || isAwayFavorite;
@@ -426,9 +583,6 @@ async function checkHalfTime(
 
         // Notificar intervalo
         await notifyHalfTime(match, isFavoriteMatch);
-
-        updatedNotified.push(matchId);
-        hasChanges = true;
       }
     }
 
@@ -450,7 +604,8 @@ async function checkHalfTime(
 async function checkMatchFinished(
   finishedMatches: Match[],
   favoriteTeams: number[],
-  favoriteMatches: FavoriteMatchData[]
+  favoriteMatches: FavoriteMatchData[],
+  settings: NotificationSettings
 ) {
   try {
     const notifiedJson = await AsyncStorage.getItem(NOTIFIED_FINISHED_KEY);
@@ -466,6 +621,16 @@ async function checkMatchFinished(
 
       // Se o jogo terminou e ainda não notificamos
       if (!notifiedMatches.includes(matchId)) {
+        updatedNotified.push(matchId);
+        hasChanges = true;
+
+        // Verificar se deve notificar esta partida
+        if (
+          !shouldNotifyMatch(match, favoriteTeams, favoriteMatches, settings)
+        ) {
+          continue;
+        }
+
         const isHomeFavorite = favoriteTeams.includes(match.teams.home.id);
         const isAwayFavorite = favoriteTeams.includes(match.teams.away.id);
         const isTeamFavorite = isHomeFavorite || isAwayFavorite;
@@ -476,9 +641,6 @@ async function checkMatchFinished(
 
         // Notificar fim de jogo
         await notifyMatchEnded(match, isFavoriteMatch);
-
-        updatedNotified.push(matchId);
-        hasChanges = true;
       }
     }
 
