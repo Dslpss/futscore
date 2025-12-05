@@ -28,6 +28,7 @@ import {
 import { api } from "../services/api";
 import { authApi, FavoriteTeam } from "../services/authApi";
 import { useAuth } from "../context/AuthContext";
+import { useFavorites } from "../context/FavoritesContext";
 import { TeamCard } from "../components/TeamCard";
 import { TeamDetailsModal } from "../components/TeamDetailsModal";
 
@@ -45,6 +46,7 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({
   navigation,
 }) => {
   const { user, signOut } = useAuth();
+  const { refreshFromBackend } = useFavorites();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLeague, setSelectedLeague] = useState<string>("all");
   const [teams, setTeams] = useState<TeamWithCountry[]>([]);
@@ -367,8 +369,9 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({
     setSaving(true);
     try {
       await authApi.saveFavoriteTeams(favoriteTeams);
+      // Refresh the context so HomeScreen updates immediately
+      await refreshFromBackend();
       Alert.alert("Sucesso", "Times favoritos salvos com sucesso!");
-      // Não navega mais automaticamente - usuário pode continuar editando
     } catch (error) {
       console.error("Error saving favorites:", error);
       Alert.alert("Erro", "Não foi possível salvar os times favoritos");
