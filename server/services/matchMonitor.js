@@ -20,6 +20,10 @@ let notifiedSecondHalf = new Set();
 let notifiedMatchEnds = new Set();
 // Cache para eventos já notificados (por matchId -> Set de eventIds)
 let notifiedEvents = {};
+// Cache para gols notificados (matchId -> {home: x, away: y}) - evita duplicatas
+let notifiedGoals = {};
+// Cache para rastrear quando cada jogo foi visto pela primeira vez
+let firstSeenTime = {};
 
 // Configuração - intervalos mais espaçados para evitar detecção
 const CHECK_INTERVAL_LIVE = 60 * 1000; // 1 minuto quando há jogos ao vivo
@@ -457,37 +461,93 @@ async function checkAndNotify() {
         previousStatus === "scheduled";
 
       if (isNowLive && wasNotLive && !notifiedMatchStarts.has(matchId)) {
-        console.log(
-          `[Monitor] 🟢 Jogo começou: ${match.homeTeam} vs ${match.awayTeam}`
-        );
-        await notifyMatchStarted(match);
+        // IMPORTANTE: Verificar se o jogo já está em andamento há muito tempo
+        // Se o jogo já está no segundo tempo, ou se já tem gols, não notificar início
+        // Isso evita notificações falsas quando o servidor reinicia ou o cache é limpo
+        const hasScore = match.homeScore > 0 || match.awayScore > 0;
+        const matchStartTime = match.startTime ? new Date(match.startTime) : null;
+        const minutesSinceStart = matchStartTime 
+          ? Math.floor((Date.now() - matchStartTime.getTime()) / 60000) 
+          : 0;
+        
+        // Verificar também se já está no intervalo ou segundo tempo
+        const isInHalfTimeOrSecondHalf = match.isHalfTime || 
+          match.detailedStatus?.includes('halftime') ||
+          match.detailedStatus?.includes('secondhalf') ||
+          minutesSinceStart > 45;
+        
+        // Só notifica se:
+        // 1. O jogo começou há menos de 3 minutos E não tem placar ainda
+        // 2. OU se estávamos monitorando antes (previousStatus existe)
+        const isReallyJustStarted = minutesSinceStart <= 3 && !hasScore && !isInHalfTimeOrSecondHalf;
+        const wasMonitoringBefore = previousStatus !== undefined && 
+          (previousStatus === "pre" || previousStatus === "scheduled");
+        
+        const shouldNotifyStart = wasMonitoringBefore || isReallyJustStarted;
+        
+        if (shouldNotifyStart) {
+          console.log(
+            `[Monitor] 🟢 Jogo começou: ${match.homeTeam} vs ${match.awayTeam} (${minutesSinceStart}min)`
+          );
+          await notifyMatchStarted(match);
+        } else {
+          console.log(
+            `[Monitor] ⏭️ Jogo já em andamento (${minutesSinceStart}min, placar: ${match.homeScore}x${match.awayScore}), pulando notificação de início: ${match.homeTeam} vs ${match.awayTeam}`
+          );
+        }
         notifiedMatchStarts.add(matchId);
       }
 
       // Atualizar status conhecido
       lastKnownStatus[matchId] = match.status;
 
+      // Rastrear quando vimos este jogo pela primeira vez
+      if (!firstSeenTime[matchId]) {
+        firstSeenTime[matchId] = Date.now();
+      }
+
       // 2. Verificar se houve GOL (apenas para jogos ao vivo)
       if (isNowLive) {
         const previous = lastKnownScores[matchId];
+        
+        // Inicializar cache de gols notificados para este jogo
+        if (!notifiedGoals[matchId]) {
+          notifiedGoals[matchId] = { home: 0, away: 0 };
+        }
 
         if (previous) {
           const homeScored = match.homeScore > previous.home;
           const awayScored = match.awayScore > previous.away;
+          
+          // Verificar se já notificamos esse placar específico (evita duplicatas)
+          const homeAlreadyNotified = match.homeScore <= notifiedGoals[matchId].home;
+          const awayAlreadyNotified = match.awayScore <= notifiedGoals[matchId].away;
 
-          if (homeScored) {
+          if (homeScored && !homeAlreadyNotified) {
             console.log(
               `[Monitor] ⚽ GOL ${match.homeTeam}! ${match.homeTeam} ${match.homeScore} x ${match.awayScore} ${match.awayTeam}`
             );
             await notifyGoal(match, match.homeTeam);
+            notifiedGoals[matchId].home = match.homeScore;
           }
 
-          if (awayScored) {
+          if (awayScored && !awayAlreadyNotified) {
             console.log(
               `[Monitor] ⚽ GOL ${match.awayTeam}! ${match.homeTeam} ${match.homeScore} x ${match.awayScore} ${match.awayTeam}`
             );
             await notifyGoal(match, match.awayTeam);
+            notifiedGoals[matchId].away = match.awayScore;
           }
+        } else {
+          // Primeira vez vendo este jogo ao vivo - NÃO notificar gols existentes
+          // Apenas registrar o placar atual como já notificado
+          console.log(
+            `[Monitor] 📋 Primeira vez vendo ${match.homeTeam} ${match.homeScore} x ${match.awayScore} ${match.awayTeam} - registrando placar atual`
+          );
+          notifiedGoals[matchId] = {
+            home: match.homeScore,
+            away: match.awayScore,
+          };
         }
 
         // Atualizar score conhecido
@@ -498,10 +558,26 @@ async function checkAndNotify() {
 
         // 3. Verificar INTERVALO
         if (match.isHalfTime && !notifiedHalfTime.has(matchId)) {
-          console.log(
-            `[Monitor] ⏸️ Intervalo: ${match.homeTeam} ${match.homeScore} x ${match.awayScore} ${match.awayTeam}`
-          );
-          await notifyHalfTime(match);
+          // Verificar se estamos realmente detectando o intervalo pela primeira vez
+          // e não é só porque o servidor reiniciou durante o intervalo
+          const matchStartTime = match.startTime ? new Date(match.startTime) : null;
+          const minutesSinceStart = matchStartTime 
+            ? Math.floor((Date.now() - matchStartTime.getTime()) / 60000) 
+            : 45;
+          
+          // O intervalo normalmente ocorre entre 45-60 minutos após o início
+          // Se já passou muito tempo (> 60min), provavelmente já estamos no segundo tempo
+          // e isso é só um glitch de dados
+          if (minutesSinceStart >= 40 && minutesSinceStart <= 65) {
+            console.log(
+              `[Monitor] ⏸️ Intervalo: ${match.homeTeam} ${match.homeScore} x ${match.awayScore} ${match.awayTeam}`
+            );
+            await notifyHalfTime(match);
+          } else {
+            console.log(
+              `[Monitor] ⏭️ Intervalo detectado mas fora do tempo esperado (${minutesSinceStart}min), pulando: ${match.homeTeam} vs ${match.awayTeam}`
+            );
+          }
           notifiedHalfTime.add(matchId);
         }
 
@@ -513,10 +589,23 @@ async function checkAndNotify() {
           !match.isHalfTime &&
           !notifiedSecondHalf.has(matchId)
         ) {
-          console.log(
-            `[Monitor] 🔄 2º Tempo começou: ${match.homeTeam} ${match.homeScore} x ${match.awayScore} ${match.awayTeam}`
-          );
-          await notifySecondHalfStarted(match);
+          // Verificar se faz sentido notificar o segundo tempo
+          const matchStartTime = match.startTime ? new Date(match.startTime) : null;
+          const minutesSinceStart = matchStartTime 
+            ? Math.floor((Date.now() - matchStartTime.getTime()) / 60000) 
+            : 50;
+          
+          // Só notifica se estiver entre 45-70 minutos (tempo normal para início do 2º tempo)
+          if (minutesSinceStart >= 45 && minutesSinceStart <= 75) {
+            console.log(
+              `[Monitor] 🔄 2º Tempo começou: ${match.homeTeam} ${match.homeScore} x ${match.awayScore} ${match.awayTeam}`
+            );
+            await notifySecondHalfStarted(match);
+          } else {
+            console.log(
+              `[Monitor] ⏭️ 2º tempo detectado mas fora do tempo esperado (${minutesSinceStart}min), pulando: ${match.homeTeam} vs ${match.awayTeam}`
+            );
+          }
           notifiedSecondHalf.add(matchId);
         }
 
@@ -530,13 +619,27 @@ async function checkAndNotify() {
       // 5. Verificar FIM DE JOGO (fora do if isLive para pegar jogos que acabaram de terminar)
       if (match.isFinished && !notifiedMatchEnds.has(matchId)) {
         // Só notifica se o jogo estava sendo monitorado (já tinha começado)
+        // E se o jogo não terminou há muito tempo (evita notificações de jogos antigos)
+        const matchStartTime = match.startTime ? new Date(match.startTime) : null;
+        const minutesSinceStart = matchStartTime 
+          ? Math.floor((Date.now() - matchStartTime.getTime()) / 60000) 
+          : 120;
+        
+        // Um jogo dura em média 90-120 minutos com acréscimos
+        // Só notifica se terminou há pouco tempo (< 150 minutos desde o início)
+        const recentlyFinished = minutesSinceStart <= 150;
+        
         if (notifiedMatchStarts.has(matchId)) {
           console.log(
             `[Monitor] 🏁 Fim de jogo: ${match.homeTeam} ${match.homeScore} x ${match.awayScore} ${match.awayTeam}`
           );
           await notifyMatchEnded(match);
-          notifiedMatchEnds.add(matchId);
+        } else if (recentlyFinished) {
+          console.log(
+            `[Monitor] ⏭️ Fim de jogo detectado mas não estava monitorando: ${match.homeTeam} vs ${match.awayTeam} (${minutesSinceStart}min desde início)`
+          );
         }
+        notifiedMatchEnds.add(matchId);
       }
     }
 
@@ -572,21 +675,44 @@ function adjustCheckInterval(hasLiveMatches) {
 }
 
 /**
- * Limpa cache de jogos antigos
+ * Limpa cache de jogos antigos - mais inteligente para não perder dados de jogos em andamento
  */
 let lastCleanup = Date.now();
 function cleanOldCache() {
   const now = Date.now();
-  if (now - lastCleanup > 60 * 60 * 1000) {
-    // A cada 1 hora
-    console.log("[Monitor] Limpando cache antigo...");
-    lastKnownScores = {};
-    lastKnownStatus = {};
-    notifiedMatchStarts.clear();
-    notifiedHalfTime.clear();
-    notifiedSecondHalf.clear();
-    notifiedMatchEnds.clear();
-    notifiedEvents = {};
+  const THREE_HOURS = 3 * 60 * 60 * 1000; // 3 horas em ms
+  
+  // Limpar cache a cada 3 horas (ao invés de 1 hora) para maior segurança
+  if (now - lastCleanup > THREE_HOURS) {
+    console.log("[Monitor] 🧹 Limpando cache antigo (jogos > 3h)...");
+    
+    // Limpar apenas jogos que terminaram há mais de 3 horas
+    // Manter dados de jogos recentes para evitar notificações duplicadas
+    const matchesToClean = [];
+    
+    for (const matchId in firstSeenTime) {
+      const seenAt = firstSeenTime[matchId];
+      const hoursSinceSeen = (now - seenAt) / (60 * 60 * 1000);
+      
+      // Só limpa se o jogo foi visto há mais de 4 horas
+      if (hoursSinceSeen > 4) {
+        matchesToClean.push(matchId);
+      }
+    }
+    
+    for (const matchId of matchesToClean) {
+      delete lastKnownScores[matchId];
+      delete lastKnownStatus[matchId];
+      delete notifiedEvents[matchId];
+      delete notifiedGoals[matchId];
+      delete firstSeenTime[matchId];
+      notifiedMatchStarts.delete(matchId);
+      notifiedHalfTime.delete(matchId);
+      notifiedSecondHalf.delete(matchId);
+      notifiedMatchEnds.delete(matchId);
+    }
+    
+    console.log(`[Monitor] 🧹 ${matchesToClean.length} jogos antigos removidos do cache`);
     lastCleanup = now;
   }
 }
@@ -626,7 +752,10 @@ function getMonitorStatus() {
     currentInterval: currentInterval / 1000 + "s",
     notifiedMatches: notifiedMatchStarts.size,
     notifiedHalfTimes: notifiedHalfTime.size,
+    notifiedSecondHalfs: notifiedSecondHalf.size,
     notifiedEnds: notifiedMatchEnds.size,
+    trackedMatches: Object.keys(firstSeenTime).length,
+    goalsTracked: Object.keys(notifiedGoals).length,
   };
 }
 

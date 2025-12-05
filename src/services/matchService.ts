@@ -353,12 +353,14 @@ async function checkScoreChanges(
           // Marcar gol como notificado
           updatedNotifiedGoals.push(goalKey);
           hasGoalChanges = true;
-          
+
           console.log(`[MatchService] Goal notified: ${goalKey}`);
         }
       } else {
         // Primeira vez vendo este jogo - apenas salvar o placar atual SEM notificar
-        console.log(`[MatchService] First time seeing match ${matchId}, saving score without notification`);
+        console.log(
+          `[MatchService] First time seeing match ${matchId}, saving score without notification`
+        );
       }
 
       // Update known score

@@ -1,5 +1,6 @@
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
+import Constants from "expo-constants";
 import { Platform, Vibration } from "react-native";
 
 // Padrão de vibração para notificações (em ms)
@@ -92,7 +93,11 @@ export async function registerForPushNotificationsAsync(): Promise<
     console.log("[Push] Tentando obter Expo Push Token...");
 
     // Usar Constants para pegar projectId dinamicamente
-    const projectId = "f4992830-2819-4f76-aa40-95358ba22784";
+    const projectId =
+      Constants.expoConfig?.extra?.eas?.projectId ??
+      Constants.manifest?.extra?.eas?.projectId ??
+      "f4992830-2819-4f76-aa40-95358ba22784";
+
     console.log("[Push] ProjectId:", projectId);
 
     const tokenData = await Notifications.getExpoPushTokenAsync({
