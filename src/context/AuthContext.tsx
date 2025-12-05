@@ -50,15 +50,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       console.log("[Auth] Iniciando registro de push token...");
       const pushToken = await registerForPushNotificationsAsync();
 
-      // DEBUG: Mostrar resultado para o usuário
-      const { Alert } = require("react-native");
-      Alert.alert(
-        "Debug Push Token",
-        pushToken 
-          ? `Token obtido: ${pushToken.substring(0, 50)}...` 
-          : "Falha ao obter token (permissão negada ou erro)"
-      );
-
       if (pushToken) {
         console.log(
           "[Auth] Push token obtido:",

@@ -59,11 +59,11 @@ export async function registerForPushNotificationsAsync(): Promise<
   string | null
 > {
   // Verificar se é dispositivo físico (emuladores não suportam push)
+  // Alguns dispositivos podem retornar false incorretamente, então apenas logamos
   if (!Device.isDevice) {
     console.log(
-      "[Push] ⚠️ Push notifications só funcionam em dispositivos físicos"
+      "[Push] ⚠️ Device.isDevice retornou false - tentando registrar mesmo assim..."
     );
-    return null;
   }
 
   // Configura o canal de notificação para Android (heads-up)
