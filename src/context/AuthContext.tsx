@@ -56,8 +56,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     }
 
     try {
-      console.log("[Auth] Iniciando registro de push token...");
+      console.log("[Auth] ========== INICIANDO REGISTRO DE PUSH TOKEN ==========");
+      console.log("[Auth] authToken fornecido:", authToken ? "SIM" : "NÃO");
+      console.log("[Auth] BACKEND_URL:", BACKEND_URL);
+      
       const pushToken = await registerForPushNotificationsAsync();
+      console.log("[Auth] Resultado de registerForPushNotificationsAsync:", pushToken ? "TOKEN OBTIDO" : "NULL/UNDEFINED");
 
       if (pushToken) {
         console.log(
@@ -67,6 +71,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
         // Se authToken foi passado, usar diretamente no header
         if (authToken) {
+          console.log("[Auth] Enviando push token com authToken direto...");
           const response = await fetch(`${BACKEND_URL}/user/push-token`, {
             method: "POST",
             headers: {
@@ -76,28 +81,37 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
             body: JSON.stringify({ pushToken }),
           });
 
+          console.log("[Auth] Response status:", response.status);
+          
           if (response.ok) {
             console.log(
-              "[Auth] Push token registrado no servidor com sucesso!"
+              "[Auth] ✅ Push token registrado no servidor com sucesso!"
             );
             pushTokenRegistered.current = true;
           } else {
             const error = await response.json();
-            console.error("[Auth] Erro ao registrar push token:", error);
+            console.error("[Auth] ❌ Erro ao registrar push token:", error);
           }
         } else {
           // Usar authApi que pega token do AsyncStorage
+          console.log("[Auth] Enviando push token via authApi...");
           await authApi.registerPushToken(pushToken);
-          console.log("[Auth] Push token registrado no servidor com sucesso!");
+          console.log("[Auth] ✅ Push token registrado no servidor com sucesso!");
           pushTokenRegistered.current = true;
         }
       } else {
         console.log(
-          "[Auth] Não foi possível obter push token (permissão negada ou emulador)"
+          "[Auth] ⚠️ Não foi possível obter push token (permissão negada ou emulador)"
         );
+        console.log("[Auth] Isso pode significar:");
+        console.log("[Auth] - Permissão de notificação não foi concedida");
+        console.log("[Auth] - O dispositivo é um emulador sem Google Play Services");
+        console.log("[Auth] - Houve um erro na comunicação com o Expo Push Service");
       }
-    } catch (error) {
-      console.error("[Auth] Erro ao registrar push token:", error);
+      console.log("[Auth] ========== FIM REGISTRO DE PUSH TOKEN ==========");
+    } catch (error: any) {
+      console.error("[Auth] ❌ Erro crítico ao registrar push token:", error?.message || error);
+      console.error("[Auth] Stack:", error?.stack);
     }
   }
 

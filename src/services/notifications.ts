@@ -62,8 +62,13 @@ export async function schedulePushNotification(title: string, body: string) {
 export async function registerForPushNotificationsAsync(): Promise<
   string | null
 > {
+  console.log("[Push] ========== INICIANDO registerForPushNotificationsAsync ==========");
+  
   // Verificar se é dispositivo físico (emuladores não suportam push)
   // Alguns dispositivos podem retornar false incorretamente, então apenas logamos
+  console.log("[Push] Device.isDevice:", Device.isDevice);
+  console.log("[Push] Platform.OS:", Platform.OS);
+  
   if (!Device.isDevice) {
     console.log(
       "[Push] ⚠️ Device.isDevice retornou false - tentando registrar mesmo assim..."
@@ -72,6 +77,7 @@ export async function registerForPushNotificationsAsync(): Promise<
 
   // Configura o canal de notificação para Android (heads-up)
   await setupNotificationChannel();
+  console.log("[Push] Canal de notificação configurado");
 
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
@@ -94,6 +100,7 @@ export async function registerForPushNotificationsAsync(): Promise<
   // Obter o Expo Push Token
   try {
     console.log("[Push] Tentando obter Expo Push Token...");
+    console.log("[Push] Constants.expoConfig:", JSON.stringify(Constants.expoConfig?.extra?.eas, null, 2));
 
     // Usar Constants para pegar projectId dinamicamente
     const projectId =
@@ -101,11 +108,13 @@ export async function registerForPushNotificationsAsync(): Promise<
       Constants.manifest?.extra?.eas?.projectId ??
       "f4992830-2819-4f76-aa40-95358ba22784";
 
-    console.log("[Push] ProjectId:", projectId);
+    console.log("[Push] ProjectId a ser usado:", projectId);
 
     const tokenData = await Notifications.getExpoPushTokenAsync({
       projectId: projectId,
     });
+
+    console.log("[Push] tokenData completo:", JSON.stringify(tokenData, null, 2));
 
     if (!tokenData || !tokenData.data) {
       console.error("[Push] ❌ Token retornado é inválido:", tokenData);
@@ -114,6 +123,7 @@ export async function registerForPushNotificationsAsync(): Promise<
 
     console.log("[Push] ✅ Expo Push Token obtido com sucesso!");
     console.log("[Push] Token completo:", tokenData.data);
+    console.log("[Push] ========== FIM registerForPushNotificationsAsync ==========");
     return tokenData.data;
   } catch (error: any) {
     console.error(
@@ -121,6 +131,8 @@ export async function registerForPushNotificationsAsync(): Promise<
       error?.message || error
     );
     console.error("[Push] Detalhes do erro:", JSON.stringify(error, null, 2));
+    console.error("[Push] Error code:", error?.code);
+    console.error("[Push] Error stack:", error?.stack);
 
     // Verificar se é erro de Expo Go
     if (
