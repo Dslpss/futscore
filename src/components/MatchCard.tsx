@@ -194,7 +194,11 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
               <TouchableOpacity
                 onPress={(e) => {
                   e.stopPropagation();
-                  toggleFavoriteTeam(match.teams.home.id);
+                  toggleFavoriteTeam(match.teams.home.id, {
+                    name: match.teams.home.name,
+                    logo: match.teams.home.logo,
+                    country: match.league.country || 'Unknown',
+                  });
                 }}
                 style={styles.favoriteButton}>
                 <Star
@@ -277,7 +281,11 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
               <TouchableOpacity
                 onPress={(e) => {
                   e.stopPropagation();
-                  toggleFavoriteTeam(match.teams.away.id);
+                  toggleFavoriteTeam(match.teams.away.id, {
+                    name: match.teams.away.name,
+                    logo: match.teams.away.logo,
+                    country: match.league.country || 'Unknown',
+                  });
                 }}
                 style={styles.favoriteButton}>
                 <Star

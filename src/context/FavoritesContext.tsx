@@ -6,6 +6,7 @@ import React, {
   ReactNode,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { authApi, FavoriteTeam } from "../services/authApi";
 
 // Interface para jogo favorito
 interface FavoriteMatch {
@@ -21,7 +22,8 @@ interface FavoritesContextData {
   favoriteTeams: number[];
   favoriteLeagues: number[];
   favoriteMatches: FavoriteMatch[];
-  toggleFavoriteTeam: (teamId: number) => Promise<void>;
+  backendFavorites: FavoriteTeam[]; // Expose backend favorites
+  toggleFavoriteTeam: (teamId: number, teamInfo?: { name: string; logo: string; country: string; msnId?: string }) => Promise<void>;
   toggleFavoriteLeague: (leagueId: number) => Promise<void>;
   toggleFavoriteMatch: (match: FavoriteMatch) => Promise<void>;
   isFavoriteTeam: (teamId: number) => boolean;
@@ -29,6 +31,7 @@ interface FavoritesContextData {
   isFavoriteMatch: (fixtureId: number) => boolean;
   getFavoriteMatches: () => FavoriteMatch[];
   clearExpiredFavoriteMatches: () => Promise<void>;
+  refreshFromBackend: () => Promise<void>;
 }
 
 const FavoritesContext = createContext<FavoritesContextData>(
@@ -45,9 +48,11 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({
   const [favoriteTeams, setFavoriteTeams] = useState<number[]>([]);
   const [favoriteLeagues, setFavoriteLeagues] = useState<number[]>([]);
   const [favoriteMatches, setFavoriteMatches] = useState<FavoriteMatch[]>([]);
+  const [backendFavorites, setBackendFavorites] = useState<FavoriteTeam[]>([]);
 
   useEffect(() => {
     loadFavorites();
+    refreshFromBackend();
   }, []);
 
   // Limpar jogos expirados periodicamente
@@ -69,9 +74,28 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({
     }
   };
 
-  const toggleFavoriteTeam = async (teamId: number) => {
+  // Refresh favorites from backend
+  const refreshFromBackend = async () => {
     try {
-      const newFavorites = favoriteTeams.includes(teamId)
+      const backendFavs = await authApi.getFavoriteTeams();
+      console.log(`[FavoritesContext] Loaded ${backendFavs.length} favorites from backend`);
+      setBackendFavorites(backendFavs);
+      
+      // Sync local state with backend
+      const backendIds = backendFavs.map(f => f.id);
+      setFavoriteTeams(backendIds);
+      await AsyncStorage.setItem(FAVORITE_TEAMS_KEY, JSON.stringify(backendIds));
+    } catch (error) {
+      console.log("[FavoritesContext] Could not sync with backend, using local data");
+    }
+  };
+
+  const toggleFavoriteTeam = async (teamId: number, teamInfo?: { name: string; logo: string; country: string; msnId?: string }) => {
+    try {
+      const isFav = favoriteTeams.includes(teamId);
+      
+      // Update local state first for immediate feedback
+      const newFavorites = isFav
         ? favoriteTeams.filter((id) => id !== teamId)
         : [...favoriteTeams, teamId];
 
@@ -80,6 +104,28 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({
         FAVORITE_TEAMS_KEY,
         JSON.stringify(newFavorites)
       );
+
+      // Sync with backend
+      try {
+        if (isFav) {
+          await authApi.removeFavoriteTeam(teamId);
+          console.log(`[FavoritesContext] Removed team ${teamId} from backend`);
+        } else {
+          const team: FavoriteTeam = {
+            id: teamId,
+            name: teamInfo?.name || `Team ${teamId}`,
+            logo: teamInfo?.logo || '',
+            country: teamInfo?.country || 'Unknown',
+            msnId: teamInfo?.msnId,
+          };
+          await authApi.addFavoriteTeam(team);
+          console.log(`[FavoritesContext] Added team ${teamId} to backend with msnId: ${teamInfo?.msnId}`);
+        }
+        // Refresh backend favorites after successful sync
+        await refreshFromBackend();
+      } catch (backendError) {
+        console.log(`[FavoritesContext] Backend sync failed, local change saved:`, backendError);
+      }
     } catch (error) {
       console.error("Error toggling favorite team:", error);
     }
@@ -173,6 +219,7 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({
         favoriteTeams,
         favoriteLeagues,
         favoriteMatches,
+        backendFavorites,
         toggleFavoriteTeam,
         toggleFavoriteLeague,
         toggleFavoriteMatch,
@@ -181,6 +228,7 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({
         isFavoriteMatch,
         getFavoriteMatches,
         clearExpiredFavoriteMatches,
+        refreshFromBackend,
       }}>
       {children}
     </FavoritesContext.Provider>

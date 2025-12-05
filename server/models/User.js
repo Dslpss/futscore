@@ -48,6 +48,10 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true,
       },
+      msnId: {
+        type: String,
+        default: null,
+      },
     },
   ],
   createdAt: {

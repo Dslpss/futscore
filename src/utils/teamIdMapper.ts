@@ -28,21 +28,21 @@ const KNOWN_TEAM_MSN_IDS: Record<number, string> = {
   1775: "SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1968",
   1968: "SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1968",
 
-  // Athletico Paranaense
-  1776: "SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1977",
-  1977: "SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1977",
-
-  // Atlético Mineiro
-  1764: "SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1949",
+  // Athletico Paranaense (Note: Not in 2025 Serie A based on API - may need update)
+  1776: "SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1949",
   1949: "SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1949",
 
-  // Fluminense
+  // Atlético Mineiro MG (CORRECTED: API shows 1977)
+  1764: "SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1977",
+  1977: "SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1977",
+
+  // Fluminense (football-data.org uses 1765)
+  1765: "SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1961",
   1772: "SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1961",
   1961: "SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1961",
 
-  // Botafogo (multiple IDs from different sources)
-  1765: "SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1958",
-  1770: "SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1958", // Botafogo FR
+  // Botafogo (football-data.org uses 1770)
+  1770: "SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1958",
   1958: "SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1958",
 
   // Vasco
@@ -85,7 +85,8 @@ const KNOWN_TEAM_MSN_IDS: Record<number, string> = {
   // Sport Recife
   1959: "SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_1959",
 
-  // Mirassol
+  // Mirassol (football-data.org uses 4364, MSN uses 21982)
+  4364: "SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_21982",
   21982: "SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_21982",
 
   // Cuiabá

@@ -100,25 +100,9 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({
   const loadAllTeams = async () => {
     setLoading(true);
     try {
-      // 1. Load teams from football-data.org
-      const footballDataCodes = ["BSA", "CL", "PD"];
-      let allTeams: TeamWithCountry[] = [];
-
-      for (const code of footballDataCodes) {
-        const leagueTeams = await api.getTeamsByLeague(code);
-        const leagueInfo = await api.getLeagues();
-        const league = leagueInfo.find((l) => l.id === code);
-
-        const teamsWithCountry = leagueTeams.map((team) => ({
-          ...team,
-          country: league?.country || "Unknown",
-        }));
-
-        allTeams = [...allTeams, ...teamsWithCountry];
-      }
-
-      // 2. Load teams from MSN Sports API (extract from matches)
+      // Load teams ONLY from MSN Sports API (so msnId is always available)
       const { msnSportsApi } = await import("../services/msnSportsApi");
+      let allTeams: TeamWithCountry[] = [];
 
       const msnLeagues = [
         {
@@ -126,6 +110,18 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({
           sport: "Soccer",
           name: "BSA",
           country: "Brazil",
+        },
+        {
+          id: "Soccer_InternationalClubsUEFAChampionsLeague",
+          sport: "Soccer",
+          name: "CL",
+          country: "Europe",
+        },
+        {
+          id: "Soccer_SpainLaLiga",
+          sport: "Soccer",
+          name: "PD",
+          country: "Spain",
         },
         {
           id: "Soccer_EnglandPremierLeague",
@@ -260,8 +256,7 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({
       } else if (leagueCode === "favorites") {
         setTeams(favoriteTeams);
       } else {
-        // Check if it's a football-data league or MSN league
-        const footballDataLeagues = ["CL", "PD"]; // Only Champions and La Liga from football-data
+        // All leagues now use MSN Sports API only
         const msnLeagueMap: Record<
           string,
           { id: string; sport: string; country: string }
@@ -270,6 +265,16 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({
             id: "Soccer_BrazilBrasileiroSerieA",
             sport: "Soccer",
             country: "Brazil",
+          },
+          CL: {
+            id: "Soccer_InternationalClubsUEFAChampionsLeague",
+            sport: "Soccer",
+            country: "Europe",
+          },
+          PD: {
+            id: "Soccer_SpainLaLiga",
+            sport: "Soccer",
+            country: "Spain",
           },
           PL: {
             id: "Soccer_EnglandPremierLeague",
@@ -300,19 +305,7 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({
           NBA: { id: "Basketball_NBA", sport: "Basketball", country: "USA" },
         };
 
-        if (footballDataLeagues.includes(leagueCode)) {
-          // Load from football-data.org
-          const leagueTeams = await api.getTeamsByLeague(leagueCode);
-          const leagueInfo = await api.getLeagues();
-          const league = leagueInfo.find((l) => l.id === leagueCode);
-
-          const teamsWithCountry = leagueTeams.map((team) => ({
-            ...team,
-            country: league?.country || "Unknown",
-          }));
-
-          setTeams(teamsWithCountry);
-        } else if (msnLeagueMap[leagueCode]) {
+        if (msnLeagueMap[leagueCode]) {
           // Load from MSN Sports
           const { msnSportsApi } = await import("../services/msnSportsApi");
           const msnLeague = msnLeagueMap[leagueCode];

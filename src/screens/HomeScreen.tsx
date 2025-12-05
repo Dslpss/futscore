@@ -39,12 +39,14 @@ import {
 } from "lucide-react-native";
 import axios from "axios";
 import { api } from "../services/api";
+import { authApi, FavoriteTeam } from "../services/authApi";
 import { CONFIG } from "../constants/config";
 import { Match } from "../types";
 import {
   getNextFavoriteMatch,
   getNextMatchesForFavorites,
 } from "../utils/matchHelpers";
+import { inferMsnTeamId } from "../utils/teamIdMapper";
 
 const { width } = Dimensions.get("window");
 
@@ -62,7 +64,7 @@ export const HomeScreen = ({ navigation }: any) => {
     loading: contextLoading,
     refreshMatches: contextRefresh,
   } = useMatches();
-  const { favoriteTeams } = useFavorites();
+  const { favoriteTeams, backendFavorites } = useFavorites();
   const { user, signOut } = useAuth();
   const [selectedLeague, setSelectedLeague] = useState<string>("ALL");
   const [warnings, setWarnings] = useState<Warning[]>([]);
@@ -80,6 +82,12 @@ export const HomeScreen = ({ navigation }: any) => {
 
   // League logos cache
   const [leagueLogos, setLeagueLogos] = useState<Record<string, string>>({});
+
+  // Next matches for favorites (API fetched)
+  const [favoriteNextMatches, setFavoriteNextMatches] = useState<
+    Array<{ teamId: number; match: Match }>
+  >([]);
+  const [loadingFavorites, setLoadingFavorites] = useState(false);
 
   // Ref for league selector ScrollView to maintain position
   const leagueSelectorRef = useRef<ScrollView>(null);
@@ -196,7 +204,117 @@ export const HomeScreen = ({ navigation }: any) => {
     checkUpdate();
     fetchMatchCalendar();
     fetchLeagueLogos();
+    // backendFavorites is loaded automatically by FavoritesContext
   }, []);
+
+  useEffect(() => {
+    // Use backend favorites if available (from context, updates automatically)
+    if (backendFavorites.length > 0) {
+      console.log(`[HomeScreen] Using ${backendFavorites.length} favorites from context:`, backendFavorites.map(f => f.name));
+      fetchNextMatchesForFavorites(backendFavorites);
+    } else if (favoriteTeams.length > 0) {
+      // Fall back to local context (just IDs, no msnId)
+      const localFavs = favoriteTeams.map(id => ({ id, name: '', logo: '', country: '' }));
+      fetchNextMatchesForFavorites(localFavs);
+    } else {
+      setFavoriteNextMatches([]);
+    }
+  }, [backendFavorites, favoriteTeams, todaysMatches, liveMatches]);
+
+  const fetchNextMatchesForFavorites = async (favorites: Array<{ id: number; name?: string; msnId?: string }>) => {
+    if (favorites.length === 0) {
+      setFavoriteNextMatches([]);
+      return;
+    }
+
+    setLoadingFavorites(true);
+    try {
+      const results: Array<{ teamId: number; match: Match }> = [];
+      const { msnSportsApi } = await import("../services/msnSportsApi");
+      const { transformMsnGameToMatch } = await import(
+        "../utils/msnTransformer"
+      );
+
+      // 1. Check if we already have the match in today's list or live list
+      const availableMatches = [...liveMatches, ...todaysMatches];
+
+      // Process each favorite team
+      await Promise.all(
+        favorites.map(async (fav) => {
+          const teamId = fav.id;
+          console.log(`[HomeScreen] Processing favorite team: ${teamId} (${fav.name || 'unknown'})`);
+          
+          // Check local first
+          const localMatch = availableMatches.find(
+            (m) => m.teams.home.id === teamId || m.teams.away.id === teamId
+          );
+
+          if (localMatch) {
+            // Check if it's upcoming or live
+            const status = localMatch.fixture.status.short;
+            const isFinished = ["FT", "AET", "PEN"].includes(status);
+            
+            if (!isFinished) {
+              console.log(`[HomeScreen] Found local match for team ${teamId}`);
+              results.push({ teamId, match: localMatch });
+              return;
+            }
+          }
+
+          // If not found or finished locally, fetch from API
+          try {
+            // Use stored msnId first, then try to infer from mapper
+            const msnId = fav.msnId || inferMsnTeamId(teamId);
+            console.log(`[HomeScreen] Team ${teamId} MSN ID: ${msnId || 'NOT FOUND'} (stored: ${!!fav.msnId})`);
+            
+            if (msnId) {
+              const msnGames = await msnSportsApi.getTeamLiveSchedule(msnId, 5);
+              console.log(`[HomeScreen] Team ${teamId} MSN games fetched: ${msnGames?.length || 0}`);
+              
+              if (msnGames && msnGames.length > 0) {
+                // Find next upcoming game
+                const upcomingGame = msnGames.find(
+                   (game: any) => game.gameState?.gameStatus === "PreGame"
+                );
+
+                if (upcomingGame) {
+                   const match = transformMsnGameToMatch(upcomingGame);
+                   console.log(`[HomeScreen] Team ${teamId} next match: ${match.teams.home.name} vs ${match.teams.away.name}`);
+                   results.push({ teamId, match });
+                } else {
+                   console.log(`[HomeScreen] Team ${teamId} no upcoming PreGame found`);
+                }
+              }
+            } else {
+               // Fallback to football-data.org (limited)
+               console.log(`[HomeScreen] Team ${teamId} using football-data.org fallback`);
+               const fallbackData = await api.getTeamUpcomingMatches(teamId, 1);
+               if (fallbackData && fallbackData.length > 0) {
+                 const match = fallbackData[0];
+                 console.log(`[HomeScreen] Team ${teamId} fallback match found`);
+                 results.push({ teamId, match });
+               } else {
+                 console.log(`[HomeScreen] Team ${teamId} no fallback match found`);
+               }
+            }
+          } catch (err) {
+            console.log(`[HomeScreen] Error fetching next match for team ${teamId}`, err);
+          }
+        })
+      );
+
+      // Sort by date soonest first
+      results.sort((a, b) => 
+        new Date(a.match.fixture.date).getTime() - new Date(b.match.fixture.date).getTime()
+      );
+
+      setFavoriteNextMatches(results);
+    } catch (error) {
+      console.error("Error fetching favorite next matches", error);
+    } finally {
+      setLoadingFavorites(false);
+    }
+  };
 
   // Fetch league logos from API - same method as LeaguesExplorer
   const fetchLeagueLogos = async () => {
@@ -500,12 +618,7 @@ export const HomeScreen = ({ navigation }: any) => {
 
       {/* Next Match Widget */}
       <NextMatchWidget
-        matches={(() => {
-          const sourceMatches = isToday(selectedDate)
-            ? [...liveMatches, ...todaysMatches]
-            : customMatches;
-          return getNextMatchesForFavorites(sourceMatches, favoriteTeams);
-        })()}
+        matches={favoriteNextMatches}
         onPressMatch={(match) => {
           console.log("Next match clicked:", match);
         }}
