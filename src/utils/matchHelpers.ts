@@ -1,4 +1,4 @@
-import { Match } from '../types';
+import { Match } from "../types";
 
 /**
  * Encontra o próximo jogo agendado dos times favoritos
@@ -29,7 +29,9 @@ export const getNextFavoriteMatch = (
       favoriteTeamIds.includes(match.teams.away.id);
 
     // Apenas jogos agendados (não ao vivo ou finalizados)
-    const isScheduled = ['NS', 'TBD', 'TIMED'].includes(match.fixture.status.short);
+    const isScheduled = ["NS", "TBD", "TIMED"].includes(
+      match.fixture.status.short
+    );
 
     return isFuture && isFavorite && isScheduled;
   });
@@ -71,29 +73,34 @@ export function getNextMatchesForFavorites(
     const upcomingMatches = allMatches
       .filter((match) => {
         const matchDate = new Date(match.fixture.date);
-        const isUpcoming = matchDate > now && 
-          (match.fixture.status.short === 'NS' || match.fixture.status.short === 'TBD');
-        const isTeamInvolved = 
-          match.teams.home.id === teamId || 
-          match.teams.away.id === teamId;
-        
+        const isUpcoming =
+          matchDate > now &&
+          (match.fixture.status.short === "NS" ||
+            match.fixture.status.short === "TBD");
+        const isTeamInvolved =
+          match.teams.home.id === teamId || match.teams.away.id === teamId;
+
         return isUpcoming && isTeamInvolved;
       })
-      .sort((a, b) => 
-        new Date(a.fixture.date).getTime() - new Date(b.fixture.date).getTime()
+      .sort(
+        (a, b) =>
+          new Date(a.fixture.date).getTime() -
+          new Date(b.fixture.date).getTime()
       );
 
     if (upcomingMatches.length > 0) {
       results.push({
         teamId,
-        match: upcomingMatches[0]
+        match: upcomingMatches[0],
       });
     }
   });
 
   // Sort by date (soonest first)
-  return results.sort((a, b) => 
-    new Date(a.match.fixture.date).getTime() - new Date(b.match.fixture.date).getTime()
+  return results.sort(
+    (a, b) =>
+      new Date(a.match.fixture.date).getTime() -
+      new Date(b.match.fixture.date).getTime()
   );
 }
 
@@ -120,7 +127,10 @@ export const getLiveFavoriteMatches = (
       favoriteTeamIds.includes(match.teams.home.id) ||
       favoriteTeamIds.includes(match.teams.away.id);
 
-    const isLive = ['1H', '2H', 'HT'].includes(match.fixture.status.short);
+    const status = match.fixture.status.short;
+    const isLive =
+      ["1H", "2H", "HT", "Q1", "Q2", "Q3", "Q4"].includes(status) ||
+      status.startsWith("OT");
 
     return isFavorite && isLive;
   });

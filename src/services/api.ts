@@ -1,15 +1,15 @@
-import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { CONFIG } from '../constants/config';
-import { League, Match, Team, Player } from '../types';
-import { Country } from '../types/country';
+import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { CONFIG } from "../constants/config";
+import { League, Match, Team, Player } from "../types";
+import { Country } from "../types/country";
 
 // Backend API client (proxies to football-data.org)
 const apiClient = axios.create({
   baseURL: `${CONFIG.BACKEND_URL}/api/football`,
 });
 
-const CACHE_PREFIX = 'futscore_cache_';
+const CACHE_PREFIX = "futscore_cache_";
 
 const getCachedData = async <T>(key: string): Promise<T | null> => {
   try {
@@ -24,7 +24,7 @@ const getCachedData = async <T>(key: string): Promise<T | null> => {
       }
     }
   } catch (e) {
-    console.error('Error reading cache', e);
+    console.error("Error reading cache", e);
   }
   return null;
 };
@@ -38,96 +38,113 @@ const setCachedData = async (key: string, data: any, duration: number) => {
     };
     await AsyncStorage.setItem(CACHE_PREFIX + key, JSON.stringify(cacheEntry));
   } catch (e) {
-    console.error('Error saving cache', e);
+    console.error("Error saving cache", e);
   }
 };
 
 export const api = {
   getLeagues: async (): Promise<League[]> => {
-    const cacheKey = 'leagues';
+    const cacheKey = "leagues";
     const cached = await getCachedData<League[]>(cacheKey);
     if (cached) return cached;
 
     // For football-data.org, we'll hardcode the leagues we support
     const leaguesData: League[] = [
       {
-        id: 'BSA' as any,
-        name: 'Campeonato Brasileiro Série A',
-        logo: 'https://crests.football-data.org/764.png',
-        country: 'Brazil'
+        id: "BSA" as any,
+        name: "Campeonato Brasileiro Série A",
+        logo: "https://crests.football-data.org/764.png",
+        country: "Brazil",
       },
       {
-        id: 'CL' as any,
-        name: 'UEFA Champions League',
-        logo: 'https://crests.football-data.org/CL.png',
-        country: 'Europe'
+        id: "CL" as any,
+        name: "UEFA Champions League",
+        logo: "https://crests.football-data.org/CL.png",
+        country: "Europe",
       },
       {
-        id: 'PD' as any,
-        name: 'La Liga',
-        logo: 'https://crests.football-data.org/PD.png',
-        country: 'Spain'
-      }
+        id: "PD" as any,
+        name: "La Liga",
+        logo: "https://crests.football-data.org/PD.png",
+        country: "Spain",
+      },
     ];
-      
+
     await setCachedData(cacheKey, leaguesData, CONFIG.CACHE_DURATION.LEAGUES);
     return leaguesData;
   },
 
   getFixtures: async (leagueCode: string, date?: string): Promise<Match[]> => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split("T")[0];
     const queryDate = date || today;
-    
+
     const cacheKey = `fixtures_${leagueCode}_${queryDate}`;
-    
+
     const cached = await getCachedData<Match[]>(cacheKey);
     if (cached) return cached;
 
     try {
-      const response = await apiClient.get(`/competitions/${leagueCode}/matches`, {
-        params: {
-          dateFrom: queryDate,
-          dateTo: queryDate,
-        },
-      });
-      
-      console.log(`[API] Fetched ${response.data.matches?.length || 0} matches for ${leagueCode} on ${queryDate}`);
-      
+      const response = await apiClient.get(
+        `/competitions/${leagueCode}/matches`,
+        {
+          params: {
+            dateFrom: queryDate,
+            dateTo: queryDate,
+          },
+        }
+      );
+
+      console.log(
+        `[API] Fetched ${
+          response.data.matches?.length || 0
+        } matches for ${leagueCode} on ${queryDate}`
+      );
+
       if (!response.data.matches || response.data.matches.length === 0) {
         return [];
       }
-      
+
       // Transform football-data.org format to our format
       const matches: Match[] = response.data.matches.map((match: any) => ({
         fixture: {
           id: match.id,
           date: match.utcDate,
           status: {
-            long: match.status === 'FINISHED' ? 'Partida Encerrada' : 
-                   match.status === 'IN_PLAY' ? 'Em Andamento' :
-                   match.status === 'PAUSED' ? 'Intervalo' : 'Não Iniciado',
-            short: match.status === 'FINISHED' ? 'FT' :
-                   match.status === 'IN_PLAY' ? '1H' :
-                   match.status === 'PAUSED' ? 'HT' : 'NS',
+            long:
+              match.status === "FINISHED"
+                ? "Partida Encerrada"
+                : match.status === "IN_PLAY"
+                ? "Em Andamento"
+                : match.status === "PAUSED"
+                ? "Intervalo"
+                : "Não Iniciado",
+            short:
+              match.status === "FINISHED"
+                ? "FT"
+                : match.status === "IN_PLAY"
+                ? "1H"
+                : match.status === "PAUSED"
+                ? "HT"
+                : "NS",
             elapsed: match.minute || null,
-          }
+          },
         },
         league: {
           id: match.competition.code as any,
           name: match.competition.name,
-          logo: match.competition.emblem || '',
+          logo: match.competition.emblem || "",
           country: match.area.name,
         },
         teams: {
           home: {
             id: match.homeTeam.id,
             name: match.homeTeam.name,
-            logo: match.homeTeam.crest || '',
+            logo: match.homeTeam.crest || "",
           },
           away: {
             id: match.awayTeam.id,
             name: match.awayTeam.name,
-            logo: match.awayTeam.crest || '',
+            logo: match.awayTeam.crest || "",
           },
         },
         goals: {
@@ -135,55 +152,66 @@ export const api = {
           away: match.score.fullTime.away,
         },
       }));
-      
+
       console.log(`[API] Transformed ${matches.length} matches for cache`);
-      
-      const cacheDuration = queryDate === today ? CONFIG.CACHE_DURATION.TODAY_FIXTURES : CONFIG.CACHE_DURATION.FIXTURES;
+
+      const cacheDuration =
+        queryDate === today
+          ? CONFIG.CACHE_DURATION.TODAY_FIXTURES
+          : CONFIG.CACHE_DURATION.FIXTURES;
       await setCachedData(cacheKey, matches, cacheDuration);
       return matches;
     } catch (error) {
-      console.error('[API] Error fetching fixtures:', error);
+      console.error("[API] Error fetching fixtures:", error);
       return [];
     }
   },
 
   getLiveMatches: async (leagueCodes: string[]): Promise<Match[]> => {
-     const cacheKey = `live_${leagueCodes.join('_')}`;
-     const cached = await getCachedData<Match[]>(cacheKey);
-     if (cached) return cached;
+    const cacheKey = `live_${leagueCodes.join("_")}`;
+    const cached = await getCachedData<Match[]>(cacheKey);
+    if (cached) return cached;
 
-     try {
-        let allMatches: Match[] = [];
-        
-        // football-data.org doesn't have a single "live" endpoint
-        // We need to fetch today's matches and filter by status
-        for (const code of leagueCodes) {
-          const matches = await api.getFixtures(code);
-          const liveMatches = matches.filter((m: Match) => 
-            m.fixture.status.short === '1H' || 
-            m.fixture.status.short === '2H' || 
-            m.fixture.status.short === 'HT'
+    try {
+      let allMatches: Match[] = [];
+
+      // football-data.org doesn't have a single "live" endpoint
+      // We need to fetch today's matches and filter by status
+      for (const code of leagueCodes) {
+        const matches = await api.getFixtures(code);
+        const liveMatches = matches.filter((m: Match) => {
+          const status = m.fixture.status.short;
+          return (
+            status === "1H" ||
+            status === "2H" ||
+            status === "HT" ||
+            status === "Q1" ||
+            status === "Q2" ||
+            status === "Q3" ||
+            status === "Q4" ||
+            status.startsWith("OT")
           );
-          allMatches = [...allMatches, ...liveMatches];
-        }
-        
-        await setCachedData(cacheKey, allMatches, CONFIG.CACHE_DURATION.LIVE);
-        return allMatches;
-     } catch (error) {
-         console.error('Error fetching live matches', error);
-         return [];
-     }
+        });
+        allMatches = [...allMatches, ...liveMatches];
+      }
+
+      await setCachedData(cacheKey, allMatches, CONFIG.CACHE_DURATION.LIVE);
+      return allMatches;
+    } catch (error) {
+      console.error("Error fetching live matches", error);
+      return [];
+    }
   },
 
   // Keeping these for the Explore feature, but they won't work with football-data.org
   // Would need a different approach or remove the feature
   getCountries: async (): Promise<Country[]> => {
-    console.warn('getCountries not available with football-data.org');
+    console.warn("getCountries not available with football-data.org");
     return [];
   },
 
   getLeaguesByCountry: async (countryName: string): Promise<League[]> => {
-    console.warn('getLeaguesByCountry not available with football-data.org');
+    console.warn("getLeaguesByCountry not available with football-data.org");
     return [];
   },
   getMatchDetails: async (matchId: number): Promise<Match | null> => {
@@ -200,43 +228,58 @@ export const api = {
       }
 
       const matchData = response.data;
-      
+
       // Transform football-data.org format to our format
       const match: Match = {
         fixture: {
           id: matchData.id,
           date: matchData.utcDate,
           status: {
-            long: matchData.status === 'FINISHED' ? 'Partida Encerrada' : 
-                   matchData.status === 'IN_PLAY' ? 'Em Andamento' :
-                   matchData.status === 'PAUSED' ? 'Intervalo' : 'Não Iniciado',
-            short: matchData.status === 'FINISHED' ? 'FT' :
-                   matchData.status === 'IN_PLAY' ? '1H' :
-                   matchData.status === 'PAUSED' ? 'HT' : 'NS',
+            long:
+              matchData.status === "FINISHED"
+                ? "Partida Encerrada"
+                : matchData.status === "IN_PLAY"
+                ? "Em Andamento"
+                : matchData.status === "PAUSED"
+                ? "Intervalo"
+                : "Não Iniciado",
+            short:
+              matchData.status === "FINISHED"
+                ? "FT"
+                : matchData.status === "IN_PLAY"
+                ? "1H"
+                : matchData.status === "PAUSED"
+                ? "HT"
+                : "NS",
             elapsed: matchData.minute || null,
           },
-          venue: matchData.venue ? {
-            name: matchData.venue.name || matchData.venue || 'Estádio não informado',
-            city: matchData.venue.city || '',
-          } : undefined,
+          venue: matchData.venue
+            ? {
+                name:
+                  matchData.venue.name ||
+                  matchData.venue ||
+                  "Estádio não informado",
+                city: matchData.venue.city || "",
+              }
+            : undefined,
           referee: matchData.referees?.[0]?.name,
         },
         league: {
           id: matchData.competition.code as any,
           name: matchData.competition.name,
-          logo: matchData.competition.emblem || '',
+          logo: matchData.competition.emblem || "",
           country: matchData.area.name,
         },
         teams: {
           home: {
             id: matchData.homeTeam.id,
             name: matchData.homeTeam.name,
-            logo: matchData.homeTeam.crest || '',
+            logo: matchData.homeTeam.crest || "",
           },
           away: {
             id: matchData.awayTeam.id,
             name: matchData.awayTeam.name,
-            logo: matchData.awayTeam.crest || '',
+            logo: matchData.awayTeam.crest || "",
           },
         },
         goals: {
@@ -255,45 +298,49 @@ export const api = {
         },
         // Statistics might not be available for all matches
         statistics: matchData.statistics || [],
-        lineups: matchData.lineups ? matchData.lineups.map((lineup: any) => ({
-          team: {
-            id: lineup.team?.id || 0,
-            name: lineup.team?.name || '',
-            logo: lineup.team?.crest || '',
-            colors: lineup.team?.colors,
-          },
-          coach: lineup.coach ? {
-            id: lineup.coach.id || 0,
-            name: lineup.coach.name || 'Não informado',
-            photo: lineup.coach.photo || null,
-          } : {
-            id: 0,
-            name: 'Não informado',
-            photo: null,
-          },
-          formation: lineup.formation || '',
-          startXI: (lineup.startXI || []).map((p: any) => ({
-            id: p.player?.id || p.id || 0,
-            name: p.player?.name || p.name || 'Desconhecido',
-            number: p.player?.shirtNumber || p.shirtNumber || 0,
-            pos: p.player?.position || p.position || '',
-            grid: p.player?.grid || null,
-          })),
-          substitutes: (lineup.substitutes || []).map((p: any) => ({
-            id: p.player?.id || p.id || 0,
-            name: p.player?.name || p.name || 'Desconhecido',
-            number: p.player?.shirtNumber || p.shirtNumber || 0,
-            pos: p.player?.position || p.position || '',
-            grid: p.player?.grid || null,
-          })),
-        })) : [],
+        lineups: matchData.lineups
+          ? matchData.lineups.map((lineup: any) => ({
+              team: {
+                id: lineup.team?.id || 0,
+                name: lineup.team?.name || "",
+                logo: lineup.team?.crest || "",
+                colors: lineup.team?.colors,
+              },
+              coach: lineup.coach
+                ? {
+                    id: lineup.coach.id || 0,
+                    name: lineup.coach.name || "Não informado",
+                    photo: lineup.coach.photo || null,
+                  }
+                : {
+                    id: 0,
+                    name: "Não informado",
+                    photo: null,
+                  },
+              formation: lineup.formation || "",
+              startXI: (lineup.startXI || []).map((p: any) => ({
+                id: p.player?.id || p.id || 0,
+                name: p.player?.name || p.name || "Desconhecido",
+                number: p.player?.shirtNumber || p.shirtNumber || 0,
+                pos: p.player?.position || p.position || "",
+                grid: p.player?.grid || null,
+              })),
+              substitutes: (lineup.substitutes || []).map((p: any) => ({
+                id: p.player?.id || p.id || 0,
+                name: p.player?.name || p.name || "Desconhecido",
+                number: p.player?.shirtNumber || p.shirtNumber || 0,
+                pos: p.player?.position || p.position || "",
+                grid: p.player?.grid || null,
+              })),
+            }))
+          : [],
       };
 
       // Cache for a short time (e.g., 5 minutes)
       await setCachedData(cacheKey, match, 5 * 60 * 1000);
       return match;
     } catch (error) {
-      console.error('[API] Error fetching match details:', error);
+      console.error("[API] Error fetching match details:", error);
       return null;
     }
   },
@@ -306,7 +353,7 @@ export const api = {
 
     try {
       const response = await apiClient.get(`/competitions/${leagueCode}/teams`);
-      
+
       if (!response.data.teams || response.data.teams.length === 0) {
         return [];
       }
@@ -314,36 +361,39 @@ export const api = {
       const teams: Team[] = response.data.teams.map((team: any) => ({
         id: team.id,
         name: team.name,
-        logo: team.crest || '',
+        logo: team.crest || "",
       }));
 
       // Cache for 7 days
       await setCachedData(cacheKey, teams, 7 * 24 * 60 * 60 * 1000);
       return teams;
     } catch (error) {
-      console.error('[API] Error fetching teams:', error);
+      console.error("[API] Error fetching teams:", error);
       return [];
     }
   },
 
   // Search teams across multiple leagues
-  searchTeams: async (query: string, leagueCodes?: string[]): Promise<Array<Team & { country: string }>> => {
+  searchTeams: async (
+    query: string,
+    leagueCodes?: string[]
+  ): Promise<Array<Team & { country: string }>> => {
     if (!query || query.length < 2) {
       return [];
     }
 
     try {
-      const leagues = leagueCodes || ['BSA', 'CL', 'PD'];
+      const leagues = leagueCodes || ["BSA", "CL", "PD"];
       let allTeams: Array<Team & { country: string }> = [];
 
       for (const code of leagues) {
         const teams = await api.getTeamsByLeague(code);
         const leagueInfo = await api.getLeagues();
-        const league = leagueInfo.find(l => l.id === code);
-        
-        const teamsWithCountry = teams.map(team => ({
+        const league = leagueInfo.find((l) => l.id === code);
+
+        const teamsWithCountry = teams.map((team) => ({
           ...team,
-          country: league?.country || 'Unknown',
+          country: league?.country || "Unknown",
         }));
 
         allTeams = [...allTeams, ...teamsWithCountry];
@@ -351,7 +401,7 @@ export const api = {
 
       // Filter teams by search query
       const searchLower = query.toLowerCase();
-      const filtered = allTeams.filter(team => 
+      const filtered = allTeams.filter((team) =>
         team.name.toLowerCase().includes(searchLower)
       );
 
@@ -365,7 +415,7 @@ export const api = {
 
       return uniqueTeams;
     } catch (error) {
-      console.error('[API] Error searching teams:', error);
+      console.error("[API] Error searching teams:", error);
       return [];
     }
   },
@@ -377,7 +427,7 @@ export const api = {
 
     try {
       const response = await apiClient.get(`/teams/${teamId}`);
-      
+
       if (!response.data || !response.data.squad) {
         return [];
       }
@@ -387,13 +437,13 @@ export const api = {
         name: player.name,
         number: player.shirtNumber,
         pos: player.position,
-        grid: null
+        grid: null,
       }));
 
       await setCachedData(cacheKey, squad, 24 * 60 * 60 * 1000);
       return squad;
     } catch (error) {
-      console.error('[API] Error fetching squad:', error);
+      console.error("[API] Error fetching squad:", error);
       return [];
     }
   },
@@ -403,7 +453,10 @@ export const api = {
    * @param teamId - Team ID
    * @param limit - Number of matches to return (default: 5)
    */
-  getTeamMatches: async (teamId: number, limit: number = 5): Promise<Match[]> => {
+  getTeamMatches: async (
+    teamId: number,
+    limit: number = 5
+  ): Promise<Match[]> => {
     const cacheKey = `team_matches_${teamId}_${limit}`;
     const cached = await getCachedData<Match[]>(cacheKey);
     if (cached) return cached;
@@ -412,7 +465,7 @@ export const api = {
       // football-data.org endpoint for team matches
       const response = await apiClient.get(`/teams/${teamId}/matches`, {
         params: {
-          status: 'FINISHED',
+          status: "FINISHED",
           limit: limit * 2, // Request more to ensure we get enough after filtering
         },
       });
@@ -424,40 +477,40 @@ export const api = {
 
       // Transform and filter
       const matches: Match[] = response.data.matches
-        .filter((match: any) => match.status === 'FINISHED')
+        .filter((match: any) => match.status === "FINISHED")
         .slice(0, limit)
         .map((match: any) => ({
           fixture: {
             id: match.id,
             date: match.utcDate,
             status: {
-              long: 'Partida Encerrada',
-              short: 'FT',
+              long: "Partida Encerrada",
+              short: "FT",
               elapsed: null,
             },
             venue: match.venue
               ? {
-                  name: match.venue.name || 'Estádio não informado',
-                  city: match.venue.city || '',
+                  name: match.venue.name || "Estádio não informado",
+                  city: match.venue.city || "",
                 }
               : undefined,
           },
           league: {
             id: match.competition.code as any,
             name: match.competition.name,
-            logo: match.competition.emblem || '',
-            country: match.area?.name || '',
+            logo: match.competition.emblem || "",
+            country: match.area?.name || "",
           },
           teams: {
             home: {
               id: match.homeTeam.id,
               name: match.homeTeam.name,
-              logo: match.homeTeam.crest || '',
+              logo: match.homeTeam.crest || "",
             },
             away: {
               id: match.awayTeam.id,
               name: match.awayTeam.name,
-              logo: match.awayTeam.crest || '',
+              logo: match.awayTeam.crest || "",
             },
           },
           goals: {
@@ -476,13 +529,18 @@ export const api = {
           },
         }));
 
-      console.log(`[API] Fetched ${matches.length} recent matches for team ${teamId}`);
+      console.log(
+        `[API] Fetched ${matches.length} recent matches for team ${teamId}`
+      );
 
       // Cache for 1 hour
       await setCachedData(cacheKey, matches, 60 * 60 * 1000);
       return matches;
     } catch (error) {
-      console.error(`[API] Error fetching team matches for team ${teamId}:`, error);
+      console.error(
+        `[API] Error fetching team matches for team ${teamId}:`,
+        error
+      );
       return [];
     }
   },

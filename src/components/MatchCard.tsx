@@ -29,20 +29,54 @@ import { MatchStatsModal } from "./MatchStatsModal";
 
 const { width } = Dimensions.get("window");
 
+/**
+ * Get localized label for live period based on status code
+ * Supports soccer (1H, 2H) and basketball (Q1-Q4, OT)
+ */
+const getLivePeriodLabel = (statusShort: string): string => {
+  switch (statusShort) {
+    case "1H":
+      return "1º TEMPO";
+    case "2H":
+      return "2º TEMPO";
+    case "Q1":
+      return "1º QUARTO";
+    case "Q2":
+      return "2º QUARTO";
+    case "Q3":
+      return "3º QUARTO";
+    case "Q4":
+      return "4º QUARTO";
+    default:
+      if (statusShort.startsWith("OT")) {
+        const otNum = statusShort.replace("OT", "");
+        return otNum ? `PRORROG. ${otNum}` : "PRORROGAÇÃO";
+      }
+      return statusShort;
+  }
+};
+
 interface MatchCardProps {
   match: Match;
 }
 
 export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
-  const isHalfTime = match.fixture.status.short === "HT";
+  const statusShort = match.fixture.status.short;
+  const isHalfTime = statusShort === "HT";
+
+  // Check if game is live (soccer: 1H, 2H, HT | basketball: Q1, Q2, Q3, Q4, OT)
   const isLive =
-    match.fixture.status.short === "1H" ||
-    match.fixture.status.short === "2H" ||
-    match.fixture.status.short === "HT";
-  const isFinished = ["FT", "AET", "PEN"].includes(match.fixture.status.short);
-  const isScheduled = ["NS", "TBD", "TIMED"].includes(
-    match.fixture.status.short
-  );
+    statusShort === "1H" ||
+    statusShort === "2H" ||
+    statusShort === "HT" ||
+    statusShort === "Q1" ||
+    statusShort === "Q2" ||
+    statusShort === "Q3" ||
+    statusShort === "Q4" ||
+    statusShort.startsWith("OT");
+
+  const isFinished = ["FT", "AET", "PEN"].includes(statusShort);
+  const isScheduled = ["NS", "TBD", "TIMED"].includes(statusShort);
   const {
     isFavoriteTeam,
     toggleFavoriteTeam,
@@ -130,11 +164,10 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
                 <View style={styles.liveBadge}>
                   <View style={styles.liveDot} />
                   <Text style={styles.liveText}>
-                    AO VIVO •{" "}
-                    {match.fixture.status.short === "1H"
-                      ? "1º TEMPO"
-                      : "2º TEMPO"}
-                    {match.fixture.status.elapsed
+                    AO VIVO • {getLivePeriodLabel(statusShort)}
+                    {match.fixture.status.elapsed !== undefined &&
+                    !statusShort.startsWith("Q") &&
+                    !statusShort.startsWith("OT")
                       ? ` ${match.fixture.status.elapsed}'`
                       : ""}
                   </Text>
@@ -446,7 +479,21 @@ const getStatusLabel = (status: string): string => {
       return "W.O.";
     case "LIVE":
       return "Ao Vivo";
+    // NBA Basketball quarters
+    case "Q1":
+      return "1º Quarto";
+    case "Q2":
+      return "2º Quarto";
+    case "Q3":
+      return "3º Quarto";
+    case "Q4":
+      return "4º Quarto";
     default:
+      // Handle overtime (OT, OT2, OT3, etc.)
+      if (status.startsWith("OT")) {
+        const otNum = status.replace("OT", "");
+        return otNum ? `Prorrogação ${otNum}` : "Prorrogação";
+      }
       return status;
   }
 };

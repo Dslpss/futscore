@@ -12,6 +12,7 @@ import { TeamSelectionScreen } from "./src/screens/TeamSelectionScreen";
 import { LeaguesExplorer } from "./src/screens/LeaguesExplorer";
 import { StandingsScreen } from "./src/screens/StandingsScreen";
 import { NotificationSettingsScreen } from "./src/screens/NotificationSettingsScreen";
+import { CalendarScreen } from "./src/screens/CalendarScreen";
 import { StatusBar } from "expo-status-bar";
 import { View, ActivityIndicator } from "react-native";
 import { forceCheckMatches } from "./src/services/backgroundTask";
@@ -77,6 +78,7 @@ function AppNavigation() {
               name="NotificationSettings"
               component={NotificationSettingsScreen}
             />
+            <Stack.Screen name="Calendar" component={CalendarScreen} />
           </Stack.Navigator>
         </MatchProvider>
       </FavoritesProvider>

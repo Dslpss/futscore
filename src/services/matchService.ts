@@ -267,10 +267,15 @@ export const matchService = {
         return matchDate === todayLocal;
       });
 
-      // Filter for live matches
-      const liveMatches = filteredFixtures.filter((m) =>
-        ["1H", "2H", "HT", "ET", "P", "BT"].includes(m.fixture.status.short)
-      );
+      // Filter for live matches (soccer: 1H, 2H, HT | basketball: Q1-Q4, OT)
+      const liveMatches = filteredFixtures.filter((m) => {
+        const status = m.fixture.status.short;
+        return (
+          ["1H", "2H", "HT", "ET", "P", "BT", "Q1", "Q2", "Q3", "Q4"].includes(
+            status
+          ) || status.startsWith("OT")
+        );
+      });
 
       // Carregar partidas favoritas
       const favoriteMatches = await loadFavoriteMatches();

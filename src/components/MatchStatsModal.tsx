@@ -416,7 +416,12 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                             match.fixture.status.short === "LIVE" ||
                             match.fixture.status.short === "1H" ||
                             match.fixture.status.short === "2H" ||
-                            match.fixture.status.short === "HT"
+                            match.fixture.status.short === "HT" ||
+                            match.fixture.status.short === "Q1" ||
+                            match.fixture.status.short === "Q2" ||
+                            match.fixture.status.short === "Q3" ||
+                            match.fixture.status.short === "Q4" ||
+                            match.fixture.status.short.startsWith("OT")
                               ? styles.statusDotLive
                               : styles.statusDotFinished,
                           ]}

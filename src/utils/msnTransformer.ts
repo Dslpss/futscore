@@ -11,6 +11,21 @@ export function transformMsnGameToMatch(game: any, leagueInfo?: any): Match {
     (p: any) => p.homeAwayStatus === "Away"
   );
 
+  // Detect sport type (basketball vs soccer)
+  const sport = game.sport?.toLowerCase() || "";
+  const sportWithLeague =
+    game.sportWithLeague?.toLowerCase() ||
+    homeParticipant?.team?.sportWithLeague?.toLowerCase() ||
+    "";
+  const seasonId = game.seasonId?.toLowerCase() || "";
+
+  const isBasketball =
+    sport === "basketball" ||
+    sportWithLeague.includes("basketball") ||
+    sportWithLeague.includes("nba") ||
+    seasonId.includes("basketball") ||
+    seasonId.includes("nba");
+
   // Determine match status
   let statusShort = "NS"; // Not Started
   let statusLong = "Não Iniciado";
@@ -22,8 +37,9 @@ export function transformMsnGameToMatch(game: any, leagueInfo?: any): Match {
 
   // Buscar minutos do gameClock (formato: { minutes: "52", seconds: "41" })
   const gameClockMinutes = game.gameState?.gameClock?.minutes;
+  const gameClockSeconds = game.gameState?.gameClock?.seconds;
 
-  // Buscar período do currentPlayingPeriod (formato: { playingPeriodType: "Half", number: "2" })
+  // Buscar período do currentPlayingPeriod (formato: { playingPeriodType: "Half"|"Quarter", number: "2" })
   const currentPeriod = game.currentPlayingPeriod?.number;
   const periodType =
     game.currentPlayingPeriod?.playingPeriodType?.toLowerCase();
@@ -32,37 +48,84 @@ export function transformMsnGameToMatch(game: any, leagueInfo?: any): Match {
     statusShort = "FT";
     statusLong = "Partida Encerrada";
   } else if (gameStatus === "InProgress" || gameStatus === "InProgressBreak") {
-    // Parse minutos jogados
-    if (gameClockMinutes) {
-      elapsed = parseInt(gameClockMinutes) || 0;
-    }
+    if (isBasketball) {
+      // ==================== BASKETBALL (NBA) ====================
+      // NBA has 4 quarters of 12 minutes each, with halftime after Q2
+      // gameClock in NBA is countdown (12:00 → 0:00 per quarter)
 
-    // Verificar se está no intervalo
-    if (
-      gameStatus === "InProgressBreak" ||
-      periodType === "break" ||
-      detailedStatus.includes("halftime") ||
-      detailedStatus.includes("half time") ||
-      detailedStatus.includes("half-time") ||
-      detailedStatus.includes("break") ||
-      detailedStatus.includes("intervalo")
-    ) {
-      statusShort = "HT";
-      statusLong = "Intervalo";
-    } else if (
-      currentPeriod === "2" ||
-      currentPeriod === 2 ||
-      detailedStatus.includes("second half") ||
-      detailedStatus.includes("2nd half") ||
-      detailedStatus.includes("segundo tempo") ||
-      // Se o minuto é maior que 45, está no segundo tempo
-      (elapsed && elapsed > 45)
-    ) {
-      statusShort = "2H";
-      statusLong = "Segundo Tempo";
+      const quarter = parseInt(currentPeriod) || 1;
+
+      // Check for halftime (between Q2 and Q3)
+      if (
+        gameStatus === "InProgressBreak" ||
+        periodType === "break" ||
+        detailedStatus.includes("halftime") ||
+        detailedStatus.includes("half time") ||
+        detailedStatus.includes("half-time")
+      ) {
+        if (quarter <= 2) {
+          statusShort = "HT";
+          statusLong = "Intervalo";
+        } else {
+          // Break between Q3 and Q4
+          statusShort = `Q${quarter}`;
+          statusLong = `Intervalo ${quarter}º Quarto`;
+        }
+      } else if (quarter >= 5) {
+        // Overtime
+        const otPeriod = quarter - 4;
+        statusShort = `OT${otPeriod > 1 ? otPeriod : ""}`;
+        statusLong = `Prorrogação${otPeriod > 1 ? ` ${otPeriod}` : ""}`;
+        // For overtime, show remaining time
+        if (gameClockMinutes !== undefined) {
+          elapsed = parseInt(gameClockMinutes) || 0;
+        }
+      } else {
+        // Regular quarter (Q1, Q2, Q3, Q4)
+        statusShort = `Q${quarter}`;
+        statusLong = `${quarter}º Quarto`;
+        // For NBA, elapsed can show the countdown time remaining in quarter
+        if (gameClockMinutes !== undefined) {
+          elapsed = parseInt(gameClockMinutes) || 0;
+        }
+      }
     } else {
-      statusShort = "1H";
-      statusLong = "Primeiro Tempo";
+      // ==================== SOCCER (FOOTBALL) ====================
+      // Soccer has 2 halves of 45 minutes each
+      // gameClock is total elapsed time (0 → 90+)
+
+      // Parse minutos jogados
+      if (gameClockMinutes) {
+        elapsed = parseInt(gameClockMinutes) || 0;
+      }
+
+      // Verificar se está no intervalo
+      if (
+        gameStatus === "InProgressBreak" ||
+        periodType === "break" ||
+        detailedStatus.includes("halftime") ||
+        detailedStatus.includes("half time") ||
+        detailedStatus.includes("half-time") ||
+        detailedStatus.includes("break") ||
+        detailedStatus.includes("intervalo")
+      ) {
+        statusShort = "HT";
+        statusLong = "Intervalo";
+      } else if (
+        currentPeriod === "2" ||
+        currentPeriod === 2 ||
+        detailedStatus.includes("second half") ||
+        detailedStatus.includes("2nd half") ||
+        detailedStatus.includes("segundo tempo") ||
+        // Se o minuto é maior que 45, está no segundo tempo
+        (elapsed && elapsed > 45)
+      ) {
+        statusShort = "2H";
+        statusLong = "Segundo Tempo";
+      } else {
+        statusShort = "1H";
+        statusLong = "Primeiro Tempo";
+      }
     }
   } else if (gameStatus === "PreGame" || gameStatus === "Pre") {
     statusShort = "NS";

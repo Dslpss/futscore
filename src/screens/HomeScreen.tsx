@@ -77,8 +77,6 @@ export const HomeScreen = ({ navigation }: any) => {
   const [daysWithMatches, setDaysWithMatches] = useState<Set<string>>(
     new Set()
   );
-  const [showCalendarModal, setShowCalendarModal] = useState(false);
-  const [calendarMonth, setCalendarMonth] = useState(new Date());
 
   // League logos cache
   const [leagueLogos, setLeagueLogos] = useState<Record<string, string>>({});
@@ -362,6 +360,17 @@ export const HomeScreen = ({ navigation }: any) => {
         <View style={styles.headerButtonsRow}>
           <TouchableOpacity
             style={styles.notificationButton}
+            onPress={() => navigation.navigate("Calendar")}
+            activeOpacity={0.8}>
+            <LinearGradient
+              colors={["#2a2a2a", "#1a1a1a"]}
+              style={styles.notificationGradient}>
+              <Calendar size={18} color="#22c55e" />
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.notificationButton}
             onPress={() => navigation.navigate("NotificationSettings")}
             activeOpacity={0.8}>
             <LinearGradient
@@ -386,76 +395,106 @@ export const HomeScreen = ({ navigation }: any) => {
 
       {/* Date Selector */}
       <View style={styles.dateSelectorWrapper}>
-        <View style={styles.dateSelectorRow}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.dateSelectorContainer}>
-            {dates.map((date, index) => {
-              const isSelected =
-                date.getDate() === selectedDate.getDate() &&
-                date.getMonth() === selectedDate.getMonth();
-              const isDateToday = isToday(date);
-              const dateStr = date.toISOString().split("T")[0];
-              const hasMatches = daysWithMatches.has(dateStr);
+        <View style={styles.dateSelectorOuterContainer}>
+          <LinearGradient
+            colors={[
+              "rgba(34,197,94,0.08)",
+              "rgba(22,163,74,0.03)",
+              "transparent",
+            ]}
+            style={styles.dateSelectorGradientBg}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          />
+          <View style={styles.dateSelectorHeader}>
+            <View style={styles.dateSelectorTitleRow}>
+              <View style={styles.dateSelectorIconWrapper}>
+                <LinearGradient
+                  colors={["#22c55e", "#16a34a"]}
+                  style={StyleSheet.absoluteFillObject}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                />
+                <Calendar size={14} color="#fff" />
+              </View>
+              <Text style={styles.dateSelectorTitle}>Selecionar Data</Text>
+            </View>
+            <Text style={styles.dateSelectorMonth}>
+              {selectedDate
+                .toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
+                .replace(/^\w/, (c) => c.toUpperCase())}
+            </Text>
+          </View>
+          <View style={styles.dateSelectorRow}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.dateSelectorContainer}>
+              {dates.map((date, index) => {
+                const isSelected =
+                  date.getDate() === selectedDate.getDate() &&
+                  date.getMonth() === selectedDate.getMonth();
+                const isDateToday = isToday(date);
+                const dateStr = date.toISOString().split("T")[0];
+                const hasMatches = daysWithMatches.has(dateStr);
 
-              return (
-                <TouchableOpacity
-                  key={index}
-                  style={[
-                    styles.dateButton,
-                    isSelected && styles.dateButtonActive,
-                  ]}
-                  onPress={() => setSelectedDate(date)}
-                  activeOpacity={0.7}>
-                  {isSelected && (
-                    <LinearGradient
-                      colors={["#22c55e", "#16a34a"]}
-                      style={StyleSheet.absoluteFillObject}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                    />
-                  )}
-                  <Text
+                return (
+                  <TouchableOpacity
+                    key={index}
                     style={[
-                      styles.dateDayText,
-                      isSelected && styles.dateTextActive,
-                    ]}>
-                    {isDateToday
-                      ? "HOJE"
-                      : date
-                          .toLocaleDateString("pt-BR", { weekday: "short" })
-                          .toUpperCase()
-                          .replace(".", "")}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.dateNumberText,
-                      isSelected && styles.dateTextActive,
-                    ]}>
-                    {date.getDate()}
-                  </Text>
-                  {hasMatches && !isSelected && (
-                    <View style={styles.matchIndicatorDot} />
-                  )}
-                  {hasMatches && isSelected && (
-                    <View style={styles.matchIndicatorDotActive} />
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-
-          {/* Calendar Button */}
-          <TouchableOpacity
-            style={styles.calendarButton}
-            onPress={() => {
-              setCalendarMonth(selectedDate);
-              setShowCalendarModal(true);
-            }}
-            activeOpacity={0.7}>
-            <Calendar size={20} color="#22c55e" />
-          </TouchableOpacity>
+                      styles.dateButton,
+                      isSelected && styles.dateButtonActive,
+                      isDateToday && !isSelected && styles.dateButtonToday,
+                    ]}
+                    onPress={() => setSelectedDate(date)}
+                    activeOpacity={0.7}>
+                    {isSelected && (
+                      <LinearGradient
+                        colors={["#22c55e", "#16a34a"]}
+                        style={StyleSheet.absoluteFillObject}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                      />
+                    )}
+                    {isSelected && <View style={styles.dateButtonGlow} />}
+                    <Text
+                      style={[
+                        styles.dateDayText,
+                        isSelected && styles.dateTextActive,
+                        isDateToday && !isSelected && styles.dateDayTextToday,
+                      ]}>
+                      {isDateToday
+                        ? "HOJE"
+                        : date
+                            .toLocaleDateString("pt-BR", { weekday: "short" })
+                            .toUpperCase()
+                            .replace(".", "")}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.dateNumberText,
+                        isSelected && styles.dateTextActive,
+                        isDateToday &&
+                          !isSelected &&
+                          styles.dateNumberTextToday,
+                      ]}>
+                      {date.getDate()}
+                    </Text>
+                    {hasMatches && !isSelected && (
+                      <View style={styles.matchIndicatorDot}>
+                        <View style={styles.matchIndicatorDotInner} />
+                      </View>
+                    )}
+                    {hasMatches && isSelected && (
+                      <View style={styles.matchIndicatorDotActive}>
+                        <View style={styles.matchIndicatorDotActiveInner} />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
         </View>
       </View>
 
@@ -1076,159 +1115,6 @@ export const HomeScreen = ({ navigation }: any) => {
           </View>
         </TouchableOpacity>
       </Modal>
-
-      {/* Calendar Modal */}
-      <Modal
-        visible={showCalendarModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowCalendarModal(false)}>
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowCalendarModal(false)}>
-          <View
-            style={styles.calendarModalContent}
-            onStartShouldSetResponder={() => true}>
-            <LinearGradient
-              colors={["#18181b", "#09090b"]}
-              style={styles.calendarModalGradient}>
-              {/* Header */}
-              <View style={styles.calendarHeader}>
-                <TouchableOpacity
-                  onPress={() => {
-                    const newMonth = new Date(calendarMonth);
-                    newMonth.setMonth(newMonth.getMonth() - 1);
-                    setCalendarMonth(newMonth);
-                  }}
-                  style={styles.calendarNavButton}>
-                  <ChevronLeft size={24} color="#22c55e" />
-                </TouchableOpacity>
-
-                <Text style={styles.calendarTitle}>
-                  {calendarMonth
-                    .toLocaleDateString("pt-BR", {
-                      month: "long",
-                      year: "numeric",
-                    })
-                    .replace(/^\w/, (c) => c.toUpperCase())}
-                </Text>
-
-                <TouchableOpacity
-                  onPress={() => {
-                    const newMonth = new Date(calendarMonth);
-                    newMonth.setMonth(newMonth.getMonth() + 1);
-                    setCalendarMonth(newMonth);
-                  }}
-                  style={styles.calendarNavButton}>
-                  <ChevronRight size={24} color="#22c55e" />
-                </TouchableOpacity>
-              </View>
-
-              {/* Week Days Header */}
-              <View style={styles.calendarWeekHeader}>
-                {["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"].map(
-                  (day) => (
-                    <Text key={day} style={styles.calendarWeekDay}>
-                      {day}
-                    </Text>
-                  )
-                )}
-              </View>
-
-              {/* Calendar Grid */}
-              <View style={styles.calendarGrid}>
-                {(() => {
-                  const year = calendarMonth.getFullYear();
-                  const month = calendarMonth.getMonth();
-                  const firstDay = new Date(year, month, 1).getDay();
-                  const daysInMonth = new Date(year, month + 1, 0).getDate();
-                  const today = new Date();
-
-                  // Helper function to format date as YYYY-MM-DD in local timezone
-                  const formatLocalDate = (d: Date) => {
-                    const y = d.getFullYear();
-                    const m = String(d.getMonth() + 1).padStart(2, "0");
-                    const day = String(d.getDate()).padStart(2, "0");
-                    return `${y}-${m}-${day}`;
-                  };
-
-                  const days = [];
-
-                  // Empty cells for days before first day of month
-                  for (let i = 0; i < firstDay; i++) {
-                    days.push(
-                      <View
-                        key={`empty-${i}`}
-                        style={styles.calendarDayEmpty}
-                      />
-                    );
-                  }
-
-                  // Days of the month
-                  for (let day = 1; day <= daysInMonth; day++) {
-                    const date = new Date(year, month, day);
-                    const dateStr = formatLocalDate(date);
-                    const hasMatches = daysWithMatches.has(dateStr);
-                    const isSelected =
-                      selectedDate.getDate() === day &&
-                      selectedDate.getMonth() === month &&
-                      selectedDate.getFullYear() === year;
-                    const isToday =
-                      today.getDate() === day &&
-                      today.getMonth() === month &&
-                      today.getFullYear() === year;
-
-                    days.push(
-                      <TouchableOpacity
-                        key={day}
-                        style={[
-                          styles.calendarDay,
-                          isSelected && styles.calendarDaySelected,
-                          isToday && !isSelected && styles.calendarDayToday,
-                        ]}
-                        onPress={() => {
-                          setSelectedDate(date);
-                          setShowCalendarModal(false);
-                        }}
-                        activeOpacity={0.7}>
-                        <Text
-                          style={[
-                            styles.calendarDayText,
-                            isSelected && styles.calendarDayTextSelected,
-                            isToday &&
-                              !isSelected &&
-                              styles.calendarDayTextToday,
-                          ]}>
-                          {day}
-                        </Text>
-                        {hasMatches && (
-                          <View
-                            style={[
-                              styles.calendarMatchDot,
-                              isSelected && styles.calendarMatchDotSelected,
-                            ]}
-                          />
-                        )}
-                      </TouchableOpacity>
-                    );
-                  }
-
-                  return days;
-                })()}
-              </View>
-
-              {/* Close Button */}
-              <TouchableOpacity
-                style={styles.calendarCloseButton}
-                onPress={() => setShowCalendarModal(false)}
-                activeOpacity={0.7}>
-                <Text style={styles.calendarCloseButtonText}>Fechar</Text>
-              </TouchableOpacity>
-            </LinearGradient>
-          </View>
-        </TouchableOpacity>
-      </Modal>
     </View>
   );
 };
@@ -1519,70 +1405,152 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     marginHorizontal: -4,
   },
+  dateSelectorOuterContainer: {
+    backgroundColor: "rgba(24,24,27,0.8)",
+    borderRadius: 24,
+    padding: 16,
+    marginHorizontal: 4,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    overflow: "hidden",
+    shadowColor: "#22c55e",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  dateSelectorGradientBg: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  dateSelectorHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+    paddingHorizontal: 4,
+  },
+  dateSelectorTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  dateSelectorIconWrapper: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 10,
+    overflow: "hidden",
+  },
+  dateSelectorTitle: {
+    color: "#e4e4e7",
+    fontSize: 15,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
+  dateSelectorMonth: {
+    color: "#22c55e",
+    fontSize: 13,
+    fontWeight: "600",
+    textTransform: "capitalize",
+  },
   dateSelectorRow: {
     flexDirection: "row",
     alignItems: "center",
   },
   dateSelectorContainer: {
-    paddingHorizontal: 4,
+    paddingHorizontal: 0,
     flexGrow: 1,
   },
-  calendarButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: "#18181b",
-    justifyContent: "center",
-    alignItems: "center",
-    marginLeft: 8,
-    marginRight: 4,
-    borderWidth: 1,
-    borderColor: "rgba(34, 197, 94, 0.3)",
-  },
   dateButton: {
-    width: 56,
-    height: 64,
-    borderRadius: 16,
-    backgroundColor: "#18181b",
+    width: 54,
+    height: 72,
+    borderRadius: 18,
+    backgroundColor: "rgba(39,39,42,0.6)",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 8,
+    marginRight: 10,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.05)",
+    borderColor: "rgba(255,255,255,0.06)",
     overflow: "hidden",
   },
   dateButtonActive: {
     backgroundColor: "#22c55e",
-    borderColor: "transparent",
+    borderColor: "rgba(34,197,94,0.4)",
+    shadowColor: "#22c55e",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  dateButtonToday: {
+    borderColor: "rgba(34,197,94,0.4)",
+    borderWidth: 1.5,
+  },
+  dateButtonGlow: {
+    position: "absolute",
+    top: -20,
+    left: -20,
+    right: -20,
+    bottom: -20,
+    backgroundColor: "rgba(34,197,94,0.15)",
+    borderRadius: 100,
   },
   dateDayText: {
     color: "#71717a",
     fontSize: 10,
     fontWeight: "700",
-    marginBottom: 4,
+    marginBottom: 6,
+    letterSpacing: 0.5,
+  },
+  dateDayTextToday: {
+    color: "#22c55e",
   },
   dateNumberText: {
-    color: "#e4e4e7",
-    fontSize: 18,
+    color: "#a1a1aa",
+    fontSize: 20,
     fontWeight: "800",
+  },
+  dateNumberTextToday: {
+    color: "#22c55e",
   },
   dateTextActive: {
     color: "#fff",
   },
   matchIndicatorDot: {
     position: "absolute",
-    bottom: 6,
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
+    bottom: 8,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "rgba(34,197,94,0.3)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  matchIndicatorDotInner: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
     backgroundColor: "#22c55e",
   },
   matchIndicatorDotActive: {
     position: "absolute",
-    bottom: 6,
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
+    bottom: 8,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "rgba(255,255,255,0.4)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  matchIndicatorDotActiveInner: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
     backgroundColor: "#fff",
   },
 
@@ -1747,105 +1715,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "500",
     marginTop: 2,
-  },
-  // Calendar Modal Styles
-  calendarModalContent: {
-    backgroundColor: "#18181b",
-    borderRadius: 24,
-    width: "90%",
-    maxWidth: 360,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
-  },
-  calendarModalGradient: {
-    padding: 20,
-  },
-  calendarHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 20,
-  },
-  calendarNavButton: {
-    padding: 8,
-    borderRadius: 10,
-    backgroundColor: "rgba(255,255,255,0.1)",
-  },
-  calendarTitle: {
-    color: "#ffffff",
-    fontSize: 18,
-    fontWeight: "700",
-    textTransform: "capitalize",
-  },
-  calendarWeekHeader: {
-    flexDirection: "row",
-    marginBottom: 12,
-  },
-  calendarWeekDay: {
-    flex: 1,
-    textAlign: "center",
-    color: "#71717a",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  calendarGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-  },
-  calendarDayEmpty: {
-    width: "14.28%",
-    aspectRatio: 1,
-  },
-  calendarDay: {
-    width: "14.28%",
-    aspectRatio: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  calendarDaySelected: {
-    backgroundColor: "#22c55e",
-    borderRadius: 12,
-  },
-  calendarDayToday: {
-    borderWidth: 1,
-    borderColor: "#22c55e",
-    borderRadius: 12,
-  },
-  calendarDayText: {
-    color: "#ffffff",
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  calendarDayTextSelected: {
-    color: "#000000",
-    fontWeight: "700",
-  },
-  calendarDayTextToday: {
-    color: "#22c55e",
-  },
-  calendarMatchDot: {
-    position: "absolute",
-    bottom: 4,
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: "#22c55e",
-  },
-  calendarMatchDotSelected: {
-    backgroundColor: "#000000",
-  },
-  calendarCloseButton: {
-    marginTop: 16,
-    paddingVertical: 12,
-    backgroundColor: "rgba(255,255,255,0.1)",
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  calendarCloseButtonText: {
-    color: "#ffffff",
-    fontSize: 14,
-    fontWeight: "600",
   },
   // League Grouping Styles - Premium Design
   leagueGroup: {
