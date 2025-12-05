@@ -132,6 +132,37 @@ app.get("/debug/force-check", async (req, res) => {
   }
 });
 
+// Endpoint para verificar se usuário tem push token (debug)
+app.get("/debug/check-user", async (req, res) => {
+  try {
+    const { email } = req.query;
+
+    if (!email) {
+      return res.status(400).json({
+        error: "Forneça o email via query param",
+        example: "/debug/check-user?email=seu@email.com",
+      });
+    }
+
+    const User = require("./models/User");
+    const user = await User.findOne({ email }).select("email pushToken notificationSettings createdAt");
+
+    if (!user) {
+      return res.status(404).json({ error: "Usuário não encontrado" });
+    }
+
+    res.json({
+      email: user.email,
+      hasPushToken: !!user.pushToken,
+      pushTokenPreview: user.pushToken ? user.pushToken.substring(0, 40) + "..." : null,
+      notificationSettings: user.notificationSettings,
+      createdAt: user.createdAt,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Endpoint para enviar notificação de teste (debug)
 app.get("/debug/test-push", async (req, res) => {
   try {
