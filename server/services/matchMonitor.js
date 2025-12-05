@@ -241,7 +241,10 @@ async function fetchMatchTimeline(matchId) {
     });
 
     if (!response.ok) {
-      console.log(`[Monitor] Timeline ${matchId}: HTTP ${response.status}`);
+      // 404 é esperado para jogos que já terminaram - não precisa logar como erro
+      if (response.status !== 404) {
+        console.log(`[Monitor] Timeline ${matchId}: HTTP ${response.status}`);
+      }
       return null;
     }
 

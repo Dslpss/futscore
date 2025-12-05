@@ -74,10 +74,10 @@ export async function registerForPushNotificationsAsync(): Promise<
   // Obter o Expo Push Token
   try {
     console.log("[Push] Tentando obter Expo Push Token...");
-    console.log("[Push] ProjectId: c060407a-d600-45dd-88b2-f4dcd4ee3eed");
+    console.log("[Push] ProjectId: f4992830-2819-4f76-aa40-95358ba22784");
 
     const tokenData = await Notifications.getExpoPushTokenAsync({
-      projectId: "c060407a-d600-45dd-88b2-f4dcd4ee3eed", // Seu projectId do app.json
+      projectId: "f4992830-2819-4f76-aa40-95358ba22784", // Seu projectId do app.json
     });
 
     console.log("[Push] ✅ Expo Push Token obtido com sucesso!");
