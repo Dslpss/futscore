@@ -1,4 +1,5 @@
 import * as Notifications from "expo-notifications";
+import * as Device from "expo-device";
 import { Platform, Vibration } from "react-native";
 
 // Padrão de vibração para notificações (em ms)
@@ -57,28 +58,51 @@ export async function schedulePushNotification(title: string, body: string) {
 export async function registerForPushNotificationsAsync(): Promise<
   string | null
 > {
+  // Verificar se é dispositivo físico (emuladores não suportam push)
+  if (!Device.isDevice) {
+    console.log(
+      "[Push] ⚠️ Push notifications só funcionam em dispositivos físicos"
+    );
+    return null;
+  }
+
   // Configura o canal de notificação para Android (heads-up)
   await setupNotificationChannel();
 
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
+  console.log("[Push] Status atual de permissão:", existingStatus);
+
   if (existingStatus !== "granted") {
+    console.log("[Push] Solicitando permissão...");
     const { status } = await Notifications.requestPermissionsAsync();
     finalStatus = status;
+    console.log("[Push] Nova permissão:", status);
   }
+
   if (finalStatus !== "granted") {
-    console.log("Failed to get push token for push notification!");
+    console.log("[Push] ❌ Permissão de notificação negada!");
     return null;
   }
+
+  console.log("[Push] ✅ Permissão concedida!");
 
   // Obter o Expo Push Token
   try {
     console.log("[Push] Tentando obter Expo Push Token...");
-    console.log("[Push] ProjectId: f4992830-2819-4f76-aa40-95358ba22784");
+
+    // Usar Constants para pegar projectId dinamicamente
+    const projectId = "f4992830-2819-4f76-aa40-95358ba22784";
+    console.log("[Push] ProjectId:", projectId);
 
     const tokenData = await Notifications.getExpoPushTokenAsync({
-      projectId: "f4992830-2819-4f76-aa40-95358ba22784", // Seu projectId do app.json
+      projectId: projectId,
     });
+
+    if (!tokenData || !tokenData.data) {
+      console.error("[Push] ❌ Token retornado é inválido:", tokenData);
+      return null;
+    }
 
     console.log("[Push] ✅ Expo Push Token obtido com sucesso!");
     console.log("[Push] Token completo:", tokenData.data);

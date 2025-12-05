@@ -123,8 +123,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       await AsyncStorage.setItem("@FutScore:user", JSON.stringify(newUser));
       await AsyncStorage.setItem("@FutScore:token", newToken);
 
-      // Registrar push token após login - passar o token diretamente
-      registerPushToken(newToken);
+      // Registrar push token após login - aguardar conclusão
+      await registerPushToken(newToken);
     } catch (error) {
       console.error("Error signing in", error);
     }
