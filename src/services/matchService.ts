@@ -16,6 +16,7 @@ const LAST_KNOWN_STATUS_KEY = "futscore_last_known_status";
 const NOTIFIED_MATCHES_KEY = "futscore_notified_started";
 const NOTIFIED_HALFTIME_KEY = "futscore_notified_halftime";
 const NOTIFIED_FINISHED_KEY = "futscore_notified_finished";
+const NOTIFIED_GOALS_KEY = "futscore_notified_goals"; // Cache de gols já notificados
 const CACHE_CLEANUP_KEY = "futscore_last_cleanup";
 const FAVORITE_MATCHES_KEY = "futscore_favorite_matches";
 
@@ -306,10 +307,18 @@ async function checkScoreChanges(
     const lastKnownScores: Record<number, { home: number; away: number }> =
       lastKnownJson ? JSON.parse(lastKnownJson) : {};
 
+    // Load notified goals cache (para evitar duplicatas)
+    const notifiedGoalsJson = await AsyncStorage.getItem(NOTIFIED_GOALS_KEY);
+    const notifiedGoals: string[] = notifiedGoalsJson
+      ? JSON.parse(notifiedGoalsJson)
+      : [];
+
     const newScores: Record<number, { home: number; away: number }> = {
       ...lastKnownScores,
     };
-    let hasChanges = false;
+    const updatedNotifiedGoals = [...notifiedGoals];
+    let hasScoreChanges = false;
+    let hasGoalChanges = false;
 
     for (const match of currentMatches) {
       const matchId = match.fixture.id;
@@ -322,8 +331,11 @@ async function checkScoreChanges(
         const homeChanged = currentHome > previous.home;
         const awayChanged = currentAway > previous.away;
 
-        // Notify for ANY goal in any match
-        if (homeChanged || awayChanged) {
+        // Criar identificador único para o gol: matchId_home_away
+        const goalKey = `${matchId}_${currentHome}_${currentAway}`;
+
+        // Só notifica se o gol ainda não foi notificado
+        if ((homeChanged || awayChanged) && !notifiedGoals.includes(goalKey)) {
           const scorerTeam = homeChanged
             ? match.teams.home.name
             : match.teams.away.name;
@@ -337,7 +349,16 @@ async function checkScoreChanges(
 
           // Usar a nova função de notificação de gol
           await notifyGoal(match, scorerTeam, isFavoriteMatch);
+
+          // Marcar gol como notificado
+          updatedNotifiedGoals.push(goalKey);
+          hasGoalChanges = true;
+          
+          console.log(`[MatchService] Goal notified: ${goalKey}`);
         }
+      } else {
+        // Primeira vez vendo este jogo - apenas salvar o placar atual SEM notificar
+        console.log(`[MatchService] First time seeing match ${matchId}, saving score without notification`);
       }
 
       // Update known score
@@ -347,14 +368,24 @@ async function checkScoreChanges(
         previous.away !== currentAway
       ) {
         newScores[matchId] = { home: currentHome, away: currentAway };
-        hasChanges = true;
+        hasScoreChanges = true;
       }
     }
 
-    if (hasChanges) {
+    // Salvar placares atualizados
+    if (hasScoreChanges) {
       await AsyncStorage.setItem(
         LAST_KNOWN_SCORES_KEY,
         JSON.stringify(newScores)
+      );
+    }
+
+    // Salvar cache de gols notificados (manter últimos 500)
+    if (hasGoalChanges) {
+      const trimmedGoals = updatedNotifiedGoals.slice(-500);
+      await AsyncStorage.setItem(
+        NOTIFIED_GOALS_KEY,
+        JSON.stringify(trimmedGoals)
       );
     }
   } catch (error) {
