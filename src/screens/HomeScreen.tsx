@@ -851,9 +851,15 @@ export const HomeScreen = ({ navigation }: any) => {
   const scheduledMatches = filteredMatches.filter((m) =>
     ["NS", "TBD", "TIMED"].includes(m.fixture.status.short)
   );
-  const live = filteredMatches.filter((m) =>
-    ["1H", "2H", "HT"].includes(m.fixture.status.short)
-  );
+  const live = filteredMatches.filter((m) => {
+    const status = m.fixture.status.short;
+    // Include soccer statuses: 1H, 2H, HT, ET (Extra Time), BT (Break Time), P (Penalties)
+    // Include basketball statuses: Q1, Q2, Q3, Q4, and OT (Overtime)
+    return (
+      ["1H", "2H", "HT", "ET", "BT", "P", "Q1", "Q2", "Q3", "Q4"].includes(status) ||
+      status.startsWith("OT")
+    );
+  });
 
   // Map league IDs to sportWithLeague format for logo lookup
   const leagueIdToSportWithLeague: Record<string, string> = {

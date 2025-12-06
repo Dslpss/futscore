@@ -392,7 +392,8 @@ export function CalendarScreen({ navigation }: any) {
   };
 
   const getStatusColor = (status: string) => {
-    if (["1H", "2H", "HT", "ET", "BT", "P"].includes(status)) {
+    // Include soccer: 1H, 2H, HT, ET, BT, P and basketball: Q1, Q2, Q3, Q4, OT
+    if (["1H", "2H", "HT", "ET", "BT", "P", "Q1", "Q2", "Q3", "Q4"].includes(status) || status.startsWith("OT")) {
       return "#22c55e"; // Verde para ao vivo
     }
     if (["FT", "AET", "PEN"].includes(status)) {

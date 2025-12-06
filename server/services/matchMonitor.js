@@ -96,6 +96,8 @@ async function fetchLiveMatches() {
       name: "Liga Portugal",
       sport: "Soccer",
     },
+    // Basketball
+    { id: "Basketball_NBA", name: "NBA", sport: "Basketball" },
   ];
 
   const allMatches = [];

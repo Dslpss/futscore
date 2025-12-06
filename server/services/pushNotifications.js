@@ -75,6 +75,31 @@ async function sendPushToAll(title, body, data = {}, filter = {}) {
       return;
     }
 
+    // Helper: Extract numeric ID from MSN format strings
+    // MSN IDs look like: "Basketball_NBA_Lakers_1610612747" or "Soccer_Player_12345"
+    // We want to extract: 1610612747 or 12345
+    const extractNumericId = (id) => {
+      if (typeof id === 'number') return id;
+      if (typeof id !== 'string') return null;
+      
+      // Try to get the last numeric part of the ID
+      const parts = id.split('_');
+      for (let i = parts.length - 1; i >= 0; i--) {
+        const num = parseInt(parts[i]);
+        if (!isNaN(num)) return num;
+      }
+      
+      // Fallback: try to parse the whole string
+      const parsed = parseInt(id);
+      return isNaN(parsed) ? null : parsed;
+    };
+
+    // Extract numeric IDs from the match data
+    const homeTeamNumericId = extractNumericId(data.homeTeamId);
+    const awayTeamNumericId = extractNumericId(data.awayTeamId);
+
+    console.log(`[Push] Match IDs - Home: ${data.homeTeamId} -> ${homeTeamNumericId}, Away: ${data.awayTeamId} -> ${awayTeamNumericId}`);
+
     // Filtrar usuários baseado nas configurações
     const messages = [];
 
@@ -90,16 +115,41 @@ async function sendPushToAll(title, body, data = {}, filter = {}) {
 
       // Verificar se quer apenas favoritos
       if (settings.favoritesOnly && !settings.allMatches) {
-        const isFavoriteMatch = user.favoriteTeams.some(
-          (team) => team.id === data.homeTeamId || team.id === data.awayTeamId
-        );
+        // Compare using both the original ID and the extracted numeric ID
+        const isFavoriteMatch = user.favoriteTeams.some((team) => {
+          const teamId = team.id;
+          const teamMsnId = team.msnId;
+          
+          // Check if this is a favorite team by:
+          // 1. Direct numeric ID match
+          // 2. MSN ID match (string comparison)
+          // 3. Numeric ID extracted from MSN ID match
+          return (
+            teamId === homeTeamNumericId || 
+            teamId === awayTeamNumericId ||
+            teamMsnId === data.homeTeamId || 
+            teamMsnId === data.awayTeamId ||
+            teamId === data.homeTeamId ||
+            teamId === data.awayTeamId
+          );
+        });
+        
         if (!isFavoriteMatch) continue;
       }
 
       // Adicionar emoji de favorito se for time do usuário
-      const isFavorite = user.favoriteTeams.some(
-        (team) => team.id === data.homeTeamId || team.id === data.awayTeamId
-      );
+      const isFavorite = user.favoriteTeams.some((team) => {
+        const teamId = team.id;
+        const teamMsnId = team.msnId;
+        return (
+          teamId === homeTeamNumericId || 
+          teamId === awayTeamNumericId ||
+          teamMsnId === data.homeTeamId || 
+          teamMsnId === data.awayTeamId ||
+          teamId === data.homeTeamId ||
+          teamId === data.awayTeamId
+        );
+      });
       const finalTitle = isFavorite ? `⭐ ${title}` : title;
 
       messages.push({
