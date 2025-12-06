@@ -126,6 +126,74 @@ router.delete("/favorites/:teamId", authMiddleware, async (req, res) => {
   }
 });
 
+// ============ FAVORITE MATCHES (Bell Icon 🔔) ============
+
+// Get user's favorite match IDs
+router.get("/favorite-matches", authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select("favoriteMatchIds");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.json({ favoriteMatchIds: user.favoriteMatchIds || [] });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Add a match to favorites (bell icon)
+router.post("/favorite-matches/:matchId", authMiddleware, async (req, res) => {
+  try {
+    const { matchId } = req.params;
+    const user = await User.findById(req.userId);
+    
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Initialize array if not exists
+    if (!user.favoriteMatchIds) {
+      user.favoriteMatchIds = [];
+    }
+
+    // Check if already exists
+    if (user.favoriteMatchIds.includes(matchId)) {
+      return res.json({ favoriteMatchIds: user.favoriteMatchIds });
+    }
+
+    user.favoriteMatchIds.push(matchId);
+    await user.save();
+
+    console.log(`[FavoriteMatches] Added match ${matchId} for user ${user.email}`);
+    res.json({ favoriteMatchIds: user.favoriteMatchIds });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Remove a match from favorites (bell icon)
+router.delete("/favorite-matches/:matchId", authMiddleware, async (req, res) => {
+  try {
+    const { matchId } = req.params;
+    const user = await User.findById(req.userId);
+    
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    user.favoriteMatchIds = (user.favoriteMatchIds || []).filter(id => id !== matchId);
+    await user.save();
+
+    console.log(`[FavoriteMatches] Removed match ${matchId} for user ${user.email}`);
+    res.json({ favoriteMatchIds: user.favoriteMatchIds });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 // ============ PUSH NOTIFICATIONS ============
 
 // Registrar Push Token do dispositivo

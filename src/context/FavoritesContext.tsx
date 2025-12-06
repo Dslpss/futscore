@@ -154,6 +154,9 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({
       );
 
       let newFavorites: FavoriteMatch[];
+      // Use fixtureId or msnGameId for backend sync
+      const matchIdForBackend = match.msnGameId || String(match.fixtureId);
+      
       if (exists) {
         newFavorites = favoriteMatches.filter(
           (m) => m.fixtureId !== match.fixtureId
@@ -161,11 +164,27 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({
         console.log(
           `[Favorites] Removed match ${match.homeTeam} vs ${match.awayTeam} from favorites`
         );
+        
+        // Sync with backend - remove match
+        try {
+          await authApi.removeFavoriteMatch(matchIdForBackend);
+          console.log(`[Favorites] Synced removal to backend: ${matchIdForBackend}`);
+        } catch (backendError) {
+          console.log(`[Favorites] Backend sync failed (remove):`, backendError);
+        }
       } else {
         newFavorites = [...favoriteMatches, match];
         console.log(
           `[Favorites] Added match ${match.homeTeam} vs ${match.awayTeam} to favorites`
         );
+        
+        // Sync with backend - add match
+        try {
+          await authApi.addFavoriteMatch(matchIdForBackend);
+          console.log(`[Favorites] Synced addition to backend: ${matchIdForBackend}`);
+        } catch (backendError) {
+          console.log(`[Favorites] Backend sync failed (add):`, backendError);
+        }
       }
 
       setFavoriteMatches(newFavorites);

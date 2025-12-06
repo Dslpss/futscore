@@ -208,4 +208,41 @@ export const authApi = {
       };
     }
   },
+
+  // ============ FAVORITE MATCHES (Bell Icon 🔔) ============
+
+  // Get favorite match IDs from backend
+  getFavoriteMatchIds: async (): Promise<string[]> => {
+    try {
+      const response = await authClient.get("/user/favorite-matches");
+      return response.data.favoriteMatchIds || [];
+    } catch (error: any) {
+      console.error("Error fetching favorite matches:", error);
+      return [];
+    }
+  },
+
+  // Add a match to favorites (bell icon)
+  addFavoriteMatch: async (matchId: string): Promise<string[]> => {
+    try {
+      const response = await authClient.post(`/user/favorite-matches/${matchId}`);
+      console.log(`[Auth] Match ${matchId} added to favorites`);
+      return response.data.favoriteMatchIds || [];
+    } catch (error: any) {
+      console.error("Error adding favorite match:", error);
+      throw error;
+    }
+  },
+
+  // Remove a match from favorites (bell icon)
+  removeFavoriteMatch: async (matchId: string): Promise<string[]> => {
+    try {
+      const response = await authClient.delete(`/user/favorite-matches/${matchId}`);
+      console.log(`[Auth] Match ${matchId} removed from favorites`);
+      return response.data.favoriteMatchIds || [];
+    } catch (error: any) {
+      console.error("Error removing favorite match:", error);
+      throw error;
+    }
+  },
 };

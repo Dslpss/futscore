@@ -67,7 +67,7 @@ async function sendPushToAll(title, body, data = {}, filter = {}) {
     }
 
     const users = await User.find(query).select(
-      "pushToken notificationSettings favoriteTeams"
+      "pushToken notificationSettings favoriteTeams favoriteMatchIds"
     );
 
     if (users.length === 0) {
@@ -115,15 +115,18 @@ async function sendPushToAll(title, body, data = {}, filter = {}) {
 
       // Verificar se quer apenas favoritos
       if (settings.favoritesOnly && !settings.allMatches) {
-        // Compare using both the original ID and the extracted numeric ID
-        const isFavoriteMatch = user.favoriteTeams.some((team) => {
+        // 1. Verificar se a partida está na lista de favoriteMatchIds (sino 🔔)
+        const matchIdStr = String(data.matchId);
+        const msnGameIdStr = data.msnGameId ? String(data.msnGameId) : null;
+        const isMarkedMatch = (user.favoriteMatchIds || []).some(id => 
+          id === matchIdStr || (msnGameIdStr && id === msnGameIdStr)
+        );
+        
+        // 2. Verificar se é time favorito (estrela ⭐)
+        const isFavoriteTeamMatch = user.favoriteTeams.some((team) => {
           const teamId = team.id;
           const teamMsnId = team.msnId;
           
-          // Check if this is a favorite team by:
-          // 1. Direct numeric ID match
-          // 2. MSN ID match (string comparison)
-          // 3. Numeric ID extracted from MSN ID match
           return (
             teamId === homeTeamNumericId || 
             teamId === awayTeamNumericId ||
@@ -134,7 +137,12 @@ async function sendPushToAll(title, body, data = {}, filter = {}) {
           );
         });
         
-        if (!isFavoriteMatch) continue;
+        // Permitir se for partida marcada OU time favorito
+        if (!isMarkedMatch && !isFavoriteTeamMatch) continue;
+        
+        if (isMarkedMatch) {
+          console.log(`[Push] Match ${matchIdStr} is in user's favoriteMatchIds (bell icon)`);
+        }
       }
 
       // Adicionar emoji de favorito se for time do usuário

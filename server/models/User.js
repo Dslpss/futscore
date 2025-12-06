@@ -64,6 +64,10 @@ const userSchema = new mongoose.Schema({
       },
     },
   ],
+  // IDs de partidas marcadas para receber notificações (sino 🔔)
+  favoriteMatchIds: [{
+    type: String, // Armazena fixtureId ou msnGameId como string
+  }],
   createdAt: {
     type: Date,
     default: Date.now,
