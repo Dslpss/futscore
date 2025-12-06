@@ -10,6 +10,9 @@ export const CONFIG = {
       it: 'web',
     },
   },
+  ESPN: {
+    FAN_API_URL: 'https://fan.api.espn.com/apis/v2',
+  },
   CACHE_DURATION: {
     LEAGUES: 7 * 24 * 60 * 60 * 1000, // 7 days
     FIXTURES: 24 * 60 * 60 * 1000, // 24 hours

@@ -26,6 +26,8 @@ import { UpcomingMatchesSlider } from "../components/UpcomingMatchesSlider";
 import { LinearGradient } from "expo-linear-gradient";
 import { WarningCard } from "../components/WarningCard";
 import { UpdateModal } from "../components/UpdateModal";
+import { EspnLiveCard } from "../components/EspnLiveCard";
+import { OndeAssistirCard } from "../components/OndeAssistirCard";
 import {
   Bell,
   User,
@@ -635,6 +637,12 @@ export const HomeScreen = ({ navigation }: any) => {
           console.log("Upcoming match clicked:", match);
         }}
       />
+
+      {/* ESPN Live Games Card */}
+      <EspnLiveCard />
+
+      {/* Onde Assistir - Brazilian TV Channels */}
+      <OndeAssistirCard />
 
       {/* Action Buttons - Favorites, Standings, and Leagues Explorer */}
       <View style={styles.actionButtonsContainer}>
