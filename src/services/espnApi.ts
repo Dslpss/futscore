@@ -1,6 +1,7 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CONFIG } from '../constants/config';
+import { EspnLiveEvent, EspnScoreboardResponse } from '../types';
 
 const ESPN_CACHE_PREFIX = 'espn_cache_';
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
@@ -187,5 +188,120 @@ export const espnApi = {
     } catch (e) {
       console.error('[ESPN API] Error clearing cache', e);
     }
+  },
+
+  /**
+   * Get scoreboard data with live updates, scorers, and goalies
+   * Returns events with last play text, scoring summary, and goalie stats
+   */
+  getScoreboardData: async (leagueSlug: string): Promise<EspnLiveEvent[]> => {
+    const cacheKey = `scoreboard_${leagueSlug}`;
+    const SCOREBOARD_CACHE_DURATION = 30 * 1000; // 30 seconds for real-time updates
+    
+    try {
+      // Check cache with short duration for live data
+      const cached = await AsyncStorage.getItem(ESPN_CACHE_PREFIX + cacheKey);
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        if (Date.now() - timestamp < SCOREBOARD_CACHE_DURATION) {
+          console.log('[ESPN API] Returning cached scoreboard data');
+          return data as EspnLiveEvent[];
+        }
+      }
+    } catch (e) {
+      console.error('[ESPN CACHE] Error reading scoreboard cache', e);
+    }
+
+    try {
+      console.log(`[ESPN API] Fetching scoreboard for ${leagueSlug}...`);
+
+      const response = await axios.get<EspnScoreboardResponse>(
+        `${CONFIG.ESPN.SCOREBOARD_API_URL}/apis/personalized/v2/scoreboard/header`,
+        {
+          params: {
+            league: leagueSlug,
+            sport: 'soccer',
+            lang: 'pt',
+            region: 'br',
+            contentorigin: 'deportes',
+            tz: 'America/Sao_Paulo',
+          },
+          timeout: 15000,
+        }
+      );
+
+      // Extract events from the response
+      const events: EspnLiveEvent[] = [];
+      const sports = response.data.sports || [];
+      
+      for (const sport of sports) {
+        for (const league of sport.leagues || []) {
+          for (const event of league.events || []) {
+            events.push({
+              id: event.id,
+              name: event.name,
+              shortName: event.shortName,
+              date: event.date,
+              status: event.status,
+              summary: event.summary,
+              period: event.period,
+              clock: event.clock,
+              location: event.location,
+              link: event.link,
+              situation: event.situation,
+              competitors: event.competitors?.map((c: any) => ({
+                id: c.id,
+                displayName: c.displayName,
+                abbreviation: c.abbreviation,
+                homeAway: c.homeAway,
+                winner: c.winner,
+                form: c.form,
+                score: c.score,
+                logo: c.logo,
+                logoDark: c.logoDark,
+                color: c.color,
+                record: c.record,
+                scoringSummary: c.scoringSummary,
+                goalieSummary: c.goalieSummary,
+              })) || [],
+            });
+          }
+        }
+      }
+
+      console.log(`[ESPN API] Found ${events.length} events with live data`);
+
+      // Cache the results
+      try {
+        const cacheEntry = { data: events, timestamp: Date.now() };
+        await AsyncStorage.setItem(ESPN_CACHE_PREFIX + cacheKey, JSON.stringify(cacheEntry));
+      } catch (e) {
+        console.error('[ESPN CACHE] Error saving scoreboard cache', e);
+      }
+
+      return events;
+    } catch (error) {
+      console.error('[ESPN API] Error fetching scoreboard:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Get all live events from multiple leagues
+   */
+  getAllLiveEvents: async (): Promise<EspnLiveEvent[]> => {
+    const leagues = ['eng.1', 'esp.1', 'ita.1', 'ger.1', 'fra.1', 'bra.1'];
+    const allEvents: EspnLiveEvent[] = [];
+
+    for (const league of leagues) {
+      try {
+        const events = await espnApi.getScoreboardData(league);
+        allEvents.push(...events.filter(e => e.status === 'in'));
+      } catch (error) {
+        console.error(`[ESPN API] Error fetching ${league}:`, error);
+      }
+    }
+
+    return allEvents;
   },
 };

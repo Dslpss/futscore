@@ -251,3 +251,81 @@ export interface GameDetails {
     };
   };
 }
+
+// ESPN Live Event Types
+export interface EspnLastPlay {
+  sequence: number;
+  text: string;
+  clock: {
+    value: number;
+    displayValue: string;
+  };
+}
+
+export interface EspnAthlete {
+  id: string;
+  displayName: string;
+  shortName: string;
+  jersey: string;
+  position: string;
+}
+
+export interface EspnScoringSummary {
+  displayValue: string; // e.g., "2 G"
+  athlete: EspnAthlete;
+}
+
+export interface EspnGoalieSummary {
+  displayValue: string; // e.g., "0 GS, 5 D"
+  athlete: EspnAthlete;
+}
+
+export interface EspnLiveCompetitor {
+  id: string;
+  displayName: string;
+  abbreviation: string;
+  homeAway: 'home' | 'away';
+  winner: boolean;
+  form: string; // e.g., "EVDDD"
+  score: string;
+  logo: string;
+  logoDark: string;
+  color: string;
+  record: string;
+  scoringSummary?: EspnScoringSummary[];
+  goalieSummary?: EspnGoalieSummary[];
+}
+
+export interface EspnLiveEvent {
+  id: string;
+  name: string;
+  shortName: string;
+  date: string;
+  status: 'pre' | 'in' | 'post';
+  summary: string;
+  period: number;
+  clock: string;
+  location: string;
+  link: string;
+  situation?: {
+    lastPlay: EspnLastPlay;
+  };
+  competitors: EspnLiveCompetitor[];
+}
+
+export interface EspnScoreboardLeague {
+  id: string;
+  name: string;
+  abbreviation: string;
+  slug: string;
+  events: EspnLiveEvent[];
+}
+
+export interface EspnScoreboardResponse {
+  sports: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    leagues: EspnScoreboardLeague[];
+  }>;
+}

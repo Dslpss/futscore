@@ -14,6 +14,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Tv, Play, RefreshCw, X, Calendar, MapPin, Clock } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { espnApi, EspnEvent } from '../services/espnApi';
+import { EspnLiveEvent } from '../types';
+import { LiveMatchInfo } from './LiveMatchInfo';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -289,6 +291,33 @@ interface EspnEventModalProps {
 }
 
 const EspnEventModal: React.FC<EspnEventModalProps> = ({ event, visible, onClose }) => {
+  const [liveEventData, setLiveEventData] = useState<EspnLiveEvent | null>(null);
+  const [loadingLiveData, setLoadingLiveData] = useState(false);
+
+  useEffect(() => {
+    if (visible && event && (event.status === 'in' || event.status === 'post')) {
+      loadLiveData();
+    } else {
+      setLiveEventData(null);
+    }
+  }, [visible, event]);
+
+  const loadLiveData = async () => {
+    if (!event?.league?.slug) return;
+    setLoadingLiveData(true);
+    try {
+      const events = await espnApi.getScoreboardData(event.league.slug);
+      const matchingEvent = events.find(e => e.id === event.id);
+      if (matchingEvent) {
+        setLiveEventData(matchingEvent);
+      }
+    } catch (error) {
+      console.error('[EspnEventModal] Error loading live data:', error);
+    } finally {
+      setLoadingLiveData(false);
+    }
+  };
+
   if (!event) return null;
 
   const homeTeam = event.competitors?.find((c) => c.homeAway === 'home');
@@ -320,7 +349,7 @@ const EspnEventModal: React.FC<EspnEventModalProps> = ({ event, visible, onClose
             colors={['#1a1a2e', '#16213e', '#0f0f1a']}
             style={styles.modalContent}
           >
-            {/* Header */}
+            {/* Fixed Header */}
             <View style={styles.modalHeader}>
               <View style={styles.espnBadgeLarge}>
                 <Text style={styles.espnTextLarge}>ESPN</Text>
@@ -330,122 +359,139 @@ const EspnEventModal: React.FC<EspnEventModalProps> = ({ event, visible, onClose
               </TouchableOpacity>
             </View>
 
-            {/* Status Badge */}
-            <View style={styles.modalStatusRow}>
-              {isLive ? (
-                <View style={styles.liveBadge}>
-                  <View style={styles.liveDot} />
-                  <Text style={styles.liveText}>AO VIVO</Text>
-                </View>
-              ) : isFinished ? (
-                <View style={styles.finishedBadge}>
-                  <Text style={styles.finishedText}>ENCERRADO</Text>
-                </View>
-              ) : (
-                <View style={styles.scheduledBadge}>
-                  <Clock size={14} color="#a1a1aa" />
-                  <Text style={styles.scheduledText}>AGENDADO</Text>
-                </View>
-              )}
-            </View>
-
-            {/* Teams Section */}
-            <View style={styles.modalTeamsContainer}>
-              {/* Home Team */}
-              <View style={styles.modalTeamCol}>
-                {homeTeam?.logo ? (
-                  <Image source={{ uri: homeTeam.logo }} style={styles.modalTeamLogo} />
+            {/* Scrollable Content */}
+            <ScrollView 
+              style={styles.modalScrollView}
+              showsVerticalScrollIndicator={false}
+              bounces={false}
+            >
+              {/* Status Badge */}
+              <View style={styles.modalStatusRow}>
+                {isLive ? (
+                  <View style={styles.liveBadge}>
+                    <View style={styles.liveDot} />
+                    <Text style={styles.liveText}>AO VIVO</Text>
+                  </View>
+                ) : isFinished ? (
+                  <View style={styles.finishedBadge}>
+                    <Text style={styles.finishedText}>ENCERRADO</Text>
+                  </View>
                 ) : (
-                  <View style={[styles.modalTeamLogoPlaceholder, { backgroundColor: homeTeam?.color ? `#${homeTeam.color}` : '#333' }]}>
-                    <Text style={styles.modalTeamLogoText}>{homeTeam?.abbreviation?.[0] || 'H'}</Text>
+                  <View style={styles.scheduledBadge}>
+                    <Clock size={14} color="#a1a1aa" />
+                    <Text style={styles.scheduledText}>AGENDADO</Text>
                   </View>
                 )}
-                <Text style={styles.modalTeamName} numberOfLines={2}>
-                  {homeTeam?.displayName || 'Home'}
-                </Text>
-                <Text style={styles.modalHomeLabel}>CASA</Text>
               </View>
 
-              {/* Score */}
-              <View style={styles.modalScoreContainer}>
-                {(isLive || isFinished) ? (
-                  <>
-                    <Text style={[styles.modalScore, homeTeam?.winner && styles.modalScoreWinner]}>
-                      {homeTeam?.score || '0'}
-                    </Text>
-                    <Text style={styles.modalScoreSeparator}>-</Text>
-                    <Text style={[styles.modalScore, awayTeam?.winner && styles.modalScoreWinner]}>
-                      {awayTeam?.score || '0'}
-                    </Text>
-                  </>
-                ) : (
-                  <Text style={styles.modalVsText}>VS</Text>
-                )}
+              {/* Teams Section */}
+              <View style={styles.modalTeamsContainer}>
+                {/* Home Team */}
+                <View style={styles.modalTeamCol}>
+                  {homeTeam?.logo ? (
+                    <Image source={{ uri: homeTeam.logo }} style={styles.modalTeamLogo} />
+                  ) : (
+                    <View style={[styles.modalTeamLogoPlaceholder, { backgroundColor: homeTeam?.color ? `#${homeTeam.color}` : '#333' }]}>
+                      <Text style={styles.modalTeamLogoText}>{homeTeam?.abbreviation?.[0] || 'H'}</Text>
+                    </View>
+                  )}
+                  <Text style={styles.modalTeamName} numberOfLines={2}>
+                    {homeTeam?.displayName || 'Home'}
+                  </Text>
+                  <Text style={styles.modalHomeLabel}>CASA</Text>
+                </View>
+
+                {/* Score */}
+                <View style={styles.modalScoreContainer}>
+                  {(isLive || isFinished) ? (
+                    <>
+                      <Text style={[styles.modalScore, homeTeam?.winner && styles.modalScoreWinner]}>
+                        {homeTeam?.score || '0'}
+                      </Text>
+                      <Text style={styles.modalScoreSeparator}>-</Text>
+                      <Text style={[styles.modalScore, awayTeam?.winner && styles.modalScoreWinner]}>
+                        {awayTeam?.score || '0'}
+                      </Text>
+                    </>
+                  ) : (
+                    <Text style={styles.modalVsText}>VS</Text>
+                  )}
+                </View>
+
+                {/* Away Team */}
+                <View style={styles.modalTeamCol}>
+                  {awayTeam?.logo ? (
+                    <Image source={{ uri: awayTeam.logo }} style={styles.modalTeamLogo} />
+                  ) : (
+                    <View style={[styles.modalTeamLogoPlaceholder, { backgroundColor: awayTeam?.color ? `#${awayTeam.color}` : '#333' }]}>
+                      <Text style={styles.modalTeamLogoText}>{awayTeam?.abbreviation?.[0] || 'A'}</Text>
+                    </View>
+                  )}
+                  <Text style={styles.modalTeamName} numberOfLines={2}>
+                    {awayTeam?.displayName || 'Away'}
+                  </Text>
+                  <Text style={styles.modalAwayLabel}>FORA</Text>
+                </View>
               </View>
 
-              {/* Away Team */}
-              <View style={styles.modalTeamCol}>
-                {awayTeam?.logo ? (
-                  <Image source={{ uri: awayTeam.logo }} style={styles.modalTeamLogo} />
-                ) : (
-                  <View style={[styles.modalTeamLogoPlaceholder, { backgroundColor: awayTeam?.color ? `#${awayTeam.color}` : '#333' }]}>
-                    <Text style={styles.modalTeamLogoText}>{awayTeam?.abbreviation?.[0] || 'A'}</Text>
+              {/* Details */}
+              <View style={styles.modalDetailsContainer}>
+                {/* League */}
+                {event.league && (
+                  <View style={styles.modalDetailRow}>
+                    <Text style={styles.modalDetailIcon}>🏆</Text>
+                    <View style={styles.modalDetailContent}>
+                      <Text style={styles.modalDetailLabel}>Competição</Text>
+                      <Text style={styles.modalDetailValue}>{event.league.name}</Text>
+                    </View>
                   </View>
                 )}
-                <Text style={styles.modalTeamName} numberOfLines={2}>
-                  {awayTeam?.displayName || 'Away'}
-                </Text>
-                <Text style={styles.modalAwayLabel}>FORA</Text>
-              </View>
-            </View>
 
-            {/* Details */}
-            <View style={styles.modalDetailsContainer}>
-              {/* League */}
-              {event.league && (
+                {/* Date */}
                 <View style={styles.modalDetailRow}>
-                  <Text style={styles.modalDetailIcon}>🏆</Text>
+                  <Calendar size={18} color="#22c55e" />
                   <View style={styles.modalDetailContent}>
-                    <Text style={styles.modalDetailLabel}>Competição</Text>
-                    <Text style={styles.modalDetailValue}>{event.league.name}</Text>
+                    <Text style={styles.modalDetailLabel}>Data e Horário</Text>
+                    <Text style={styles.modalDetailValue}>{formatFullDate()}</Text>
                   </View>
                 </View>
-              )}
 
-              {/* Date */}
-              <View style={styles.modalDetailRow}>
-                <Calendar size={18} color="#22c55e" />
-                <View style={styles.modalDetailContent}>
-                  <Text style={styles.modalDetailLabel}>Data e Horário</Text>
-                  <Text style={styles.modalDetailValue}>{formatFullDate()}</Text>
-                </View>
-              </View>
-
-              {/* Broadcast */}
-              <View style={styles.modalDetailRow}>
-                <Tv size={18} color="#dc2626" />
-                <View style={styles.modalDetailContent}>
-                  <Text style={styles.modalDetailLabel}>Onde Assistir</Text>
-                  <Text style={styles.modalDetailValue}>{broadcastList}</Text>
-                </View>
-              </View>
-
-              {/* Sport */}
-              {event.sport && (
+                {/* Broadcast */}
                 <View style={styles.modalDetailRow}>
-                  <Text style={styles.modalDetailIcon}>⚽</Text>
+                  <Tv size={18} color="#dc2626" />
                   <View style={styles.modalDetailContent}>
-                    <Text style={styles.modalDetailLabel}>Esporte</Text>
-                    <Text style={styles.modalDetailValue}>{event.sport.name}</Text>
+                    <Text style={styles.modalDetailLabel}>Onde Assistir</Text>
+                    <Text style={styles.modalDetailValue}>{broadcastList}</Text>
                   </View>
                 </View>
-              )}
-            </View>
 
-            {/* Close Button */}
-            <TouchableOpacity style={styles.modalCloseButton} onPress={onClose}>
-              <Text style={styles.modalCloseButtonText}>Fechar</Text>
-            </TouchableOpacity>
+                {/* Sport */}
+                {event.sport && (
+                  <View style={styles.modalDetailRow}>
+                    <Text style={styles.modalDetailIcon}>⚽</Text>
+                    <View style={styles.modalDetailContent}>
+                      <Text style={styles.modalDetailLabel}>Esporte</Text>
+                      <Text style={styles.modalDetailValue}>{event.sport.name}</Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+
+              {/* Live Match Info Section */}
+              {loadingLiveData ? (
+                <View style={styles.liveDataLoading}>
+                  <ActivityIndicator size="small" color="#22c55e" />
+                  <Text style={styles.liveDataLoadingText}>Carregando detalhes...</Text>
+                </View>
+              ) : liveEventData && (isLive || isFinished) ? (
+                <LiveMatchInfo event={liveEventData} />
+              ) : null}
+
+              {/* Close Button */}
+              <TouchableOpacity style={styles.modalCloseButton} onPress={onClose}>
+                <Text style={styles.modalCloseButtonText}>Fechar</Text>
+              </TouchableOpacity>
+            </ScrollView>
           </LinearGradient>
         </View>
       </BlurView>
@@ -612,14 +658,19 @@ const styles = StyleSheet.create({
   modalContainer: {
     width: SCREEN_WIDTH - 40,
     maxWidth: 400,
+    maxHeight: '85%',
     borderRadius: 24,
     overflow: 'hidden',
   },
   modalContent: {
-    padding: 20,
+    paddingTop: 20,
+    paddingHorizontal: 20,
     borderRadius: 24,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
+  },
+  modalScrollView: {
+    maxHeight: 500,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -817,5 +868,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     textAlign: 'center',
+  },
+  liveDataLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    gap: 8,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  liveDataLoadingText: {
+    color: '#71717a',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });

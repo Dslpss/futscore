@@ -12,6 +12,7 @@ export const CONFIG = {
   },
   ESPN: {
     FAN_API_URL: 'https://fan.api.espn.com/apis/v2',
+    SCOREBOARD_API_URL: 'https://site.api.espn.com',
   },
   CACHE_DURATION: {
     LEAGUES: 7 * 24 * 60 * 60 * 1000, // 7 days
