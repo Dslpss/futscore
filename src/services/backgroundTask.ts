@@ -14,7 +14,8 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
-    priority: Notifications.AndroidNotificationPriority.HIGH,
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 
@@ -80,25 +81,8 @@ export async function registerBackgroundFetchAsync() {
 
     console.log("[BackgroundFetch] Task registered with 15min interval!");
     isBackgroundTaskRegistered = true;
-
-    // Verificar status
-    const status = await BackgroundFetch.getStatusAsync();
-    console.log(`[BackgroundFetch] Status: ${getStatusText(status)}`);
   } catch (err) {
     console.log("[BackgroundFetch] Task registration failed:", err);
-  }
-}
-
-function getStatusText(status: BackgroundFetch.BackgroundFetchStatus): string {
-  switch (status) {
-    case BackgroundFetch.BackgroundFetchStatus.Available:
-      return "Available ✓";
-    case BackgroundFetch.BackgroundFetchStatus.Denied:
-      return "Denied - User disabled background refresh";
-    case BackgroundFetch.BackgroundFetchStatus.Restricted:
-      return "Restricted - System limited background activity";
-    default:
-      return "Unknown";
   }
 }
 
