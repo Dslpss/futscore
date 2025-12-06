@@ -18,6 +18,16 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  // Status do usuário: active, suspended, blocked
+  status: {
+    type: String,
+    enum: ["active", "suspended", "blocked"],
+    default: "active",
+  },
+  statusUpdatedAt: {
+    type: Date,
+    default: null,
+  },
   // Expo Push Token para notificações em segundo plano
   pushToken: {
     type: String,

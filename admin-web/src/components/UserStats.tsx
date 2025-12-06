@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Users, Bell, UserPlus, Star, Shield, TrendingUp } from "lucide-react";
+import { Users, Bell, UserPlus, Star, Shield, TrendingUp, Trash2, Ban, Pause, Play, Crown } from "lucide-react";
 import axios from "axios";
 
 interface UserStatsData {
@@ -16,6 +16,7 @@ interface User {
   name: string;
   email: string;
   isAdmin: boolean;
+  status: "active" | "suspended" | "blocked";
   createdAt: string;
   hasPushToken: boolean;
   favoriteTeamsCount: number;
@@ -26,6 +27,7 @@ export const UserStats = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showUserList, setShowUserList] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
     fetchStats();
@@ -52,12 +54,62 @@ export const UserStats = () => {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
+  const handleDeleteUser = async (userId: string, userName: string) => {
+    if (!confirm(`Tem certeza que deseja DELETAR o usuário "${userName}"? Esta ação não pode ser desfeita.`)) {
+      return;
+    }
+    
+    setActionLoading(userId);
+    try {
+      await axios.delete(`/admin/users/${userId}`);
+      setUsers(users.filter(u => u._id !== userId));
+      fetchStats(); // Refresh stats
+    } catch (error: any) {
+      alert(error.response?.data?.message || "Erro ao deletar usuário");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleChangeStatus = async (userId: string, newStatus: "active" | "suspended" | "blocked") => {
+    setActionLoading(userId);
+    try {
+      await axios.put(`/admin/users/${userId}/status`, { status: newStatus });
+      setUsers(users.map(u => u._id === userId ? { ...u, status: newStatus } : u));
+    } catch (error: any) {
+      alert(error.response?.data?.message || "Erro ao alterar status");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleToggleAdmin = async (userId: string, currentIsAdmin: boolean) => {
+    const action = currentIsAdmin ? "remover privilégios de admin de" : "promover a admin";
+    if (!confirm(`Tem certeza que deseja ${action} este usuário?`)) {
+      return;
+    }
+    
+    setActionLoading(userId);
+    try {
+      await axios.put(`/admin/users/${userId}/admin`, { isAdmin: !currentIsAdmin });
+      setUsers(users.map(u => u._id === userId ? { ...u, isAdmin: !currentIsAdmin } : u));
+      fetchStats(); // Refresh stats
+    } catch (error: any) {
+      alert(error.response?.data?.message || "Erro ao alterar status de admin");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "blocked":
+        return <span className="px-2 py-0.5 text-xs rounded-full bg-red-500/20 text-red-400">Bloqueado</span>;
+      case "suspended":
+        return <span className="px-2 py-0.5 text-xs rounded-full bg-yellow-500/20 text-yellow-400">Suspenso</span>;
+      default:
+        return <span className="px-2 py-0.5 text-xs rounded-full bg-green-500/20 text-green-400">Ativo</span>;
+    }
   };
 
   if (loading) {
@@ -175,7 +227,7 @@ export const UserStats = () => {
       {/* Users List */}
       {showUserList && users.length > 0 && (
         <div className="rounded-xl border border-zinc-800 bg-zinc-900 overflow-hidden">
-          <div className="max-h-80 overflow-y-auto">
+          <div className="max-h-96 overflow-y-auto">
             <table className="w-full">
               <thead className="bg-zinc-800 sticky top-0">
                 <tr>
@@ -183,13 +235,13 @@ export const UserStats = () => {
                     Usuário
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-zinc-400 uppercase">
-                    Data
+                    Status
                   </th>
                   <th className="px-4 py-3 text-center text-xs font-medium text-zinc-400 uppercase">
                     🔔
                   </th>
                   <th className="px-4 py-3 text-center text-xs font-medium text-zinc-400 uppercase">
-                    ⭐
+                    Ações
                   </th>
                 </tr>
               </thead>
@@ -212,8 +264,8 @@ export const UserStats = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-xs text-zinc-400">
-                      {formatDate(user.createdAt)}
+                    <td className="px-4 py-3">
+                      {getStatusBadge(user.status)}
                     </td>
                     <td className="px-4 py-3 text-center">
                       {user.hasPushToken ? (
@@ -226,8 +278,59 @@ export const UserStats = () => {
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-center text-xs text-zinc-400">
-                      {user.favoriteTeamsCount}
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-center gap-1">
+                        {actionLoading === user._id ? (
+                          <div className="h-5 w-5 animate-spin rounded-full border-2 border-green-500 border-t-transparent"></div>
+                        ) : (
+                          <>
+                            {/* Toggle Status */}
+                            {user.status === "active" ? (
+                              <>
+                                <button
+                                  onClick={() => handleChangeStatus(user._id, "suspended")}
+                                  className="p-1.5 rounded-lg bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20 transition-colors"
+                                  title="Suspender">
+                                  <Pause className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleChangeStatus(user._id, "blocked")}
+                                  className="p-1.5 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
+                                  title="Bloquear">
+                                  <Ban className="h-4 w-4" />
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                onClick={() => handleChangeStatus(user._id, "active")}
+                                className="p-1.5 rounded-lg bg-green-500/10 text-green-500 hover:bg-green-500/20 transition-colors"
+                                title="Ativar">
+                                <Play className="h-4 w-4" />
+                              </button>
+                            )}
+                            
+                            {/* Toggle Admin */}
+                            <button
+                              onClick={() => handleToggleAdmin(user._id, user.isAdmin)}
+                              className={`p-1.5 rounded-lg transition-colors ${
+                                user.isAdmin 
+                                  ? "bg-purple-500/20 text-purple-400 hover:bg-purple-500/30" 
+                                  : "bg-zinc-700 text-zinc-400 hover:bg-zinc-600"
+                              }`}
+                              title={user.isAdmin ? "Remover Admin" : "Tornar Admin"}>
+                              <Crown className="h-4 w-4" />
+                            </button>
+                            
+                            {/* Delete */}
+                            <button
+                              onClick={() => handleDeleteUser(user._id, user.name)}
+                              className="p-1.5 rounded-lg bg-zinc-700 text-zinc-400 hover:bg-red-500/20 hover:text-red-500 transition-colors"
+                              title="Deletar">
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

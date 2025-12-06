@@ -67,6 +67,14 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
+    // Check user status
+    if (user.status === 'blocked') {
+      return res.status(403).json({ message: 'Sua conta foi bloqueada. Entre em contato com o suporte.' });
+    }
+    if (user.status === 'suspended') {
+      return res.status(403).json({ message: 'Sua conta está suspensa temporariamente.' });
+    }
+
     // Create token
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: '30d',
