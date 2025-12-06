@@ -95,6 +95,10 @@ export const HomeScreen = ({ navigation }: any) => {
   const leagueSelectorRef = useRef<ScrollView>(null);
   const leagueScrollPosition = useRef<number>(0);
 
+  // Memoize ESPN and OndeAssistir cards to prevent remounting on re-renders
+  const memoizedEspnCard = useMemo(() => <EspnLiveCard />, []);
+  const memoizedOndeAssistirCard = useMemo(() => <OndeAssistirCard />, []);
+
   const isToday = (date: Date) => {
     const today = new Date();
     return (
@@ -638,11 +642,11 @@ export const HomeScreen = ({ navigation }: any) => {
         }}
       />
 
-      {/* ESPN Live Games Card */}
-      <EspnLiveCard />
+      {/* ESPN Live Games Card - Memoized */}
+      {memoizedEspnCard}
 
-      {/* Onde Assistir - Brazilian TV Channels */}
-      <OndeAssistirCard />
+      {/* Onde Assistir - Brazilian TV Channels - Memoized */}
+      {memoizedOndeAssistirCard}
 
       {/* Action Buttons - Favorites, Standings, and Leagues Explorer */}
       <View style={styles.actionButtonsContainer}>

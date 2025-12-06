@@ -22,22 +22,30 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 // Error Boundary to prevent crashes
 interface ErrorBoundaryState {
   hasError: boolean;
+  error?: string;
 }
 
 class ErrorBoundaryWrapper extends Component<{ children: ReactNode }, ErrorBoundaryState> {
-  state = { hasError: false };
+  state: ErrorBoundaryState = { hasError: false };
 
-  static getDerivedStateFromError(_: Error): ErrorBoundaryState {
-    return { hasError: true };
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error: error.message };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('[EspnLiveCard] Error caught by boundary:', error, errorInfo);
+    console.error('[EspnLiveCard] Error caught by boundary:', error.message, errorInfo);
   }
 
   render() {
     if (this.state.hasError) {
-      return null; // Hide component on error
+      // Show error for debugging - remove in production
+      return (
+        <View style={{ padding: 16, backgroundColor: '#1a1a2e', margin: 8, borderRadius: 12 }}>
+          <Text style={{ color: '#dc2626', fontSize: 12 }}>
+            ESPN Error: {this.state.error}
+          </Text>
+        </View>
+      );
     }
     return this.props.children;
   }
@@ -162,12 +170,12 @@ const EspnLiveCardContent: React.FC = () => {
   );
 };
 
-// Export wrapped component
-export const EspnLiveCard: React.FC = () => (
+// Export wrapped component with memo to prevent re-renders
+export const EspnLiveCard: React.FC = React.memo(() => (
   <ErrorBoundaryWrapper>
     <EspnLiveCardContent />
   </ErrorBoundaryWrapper>
-);
+));
 
 interface EspnEventCardProps {
   event: EspnEvent;
