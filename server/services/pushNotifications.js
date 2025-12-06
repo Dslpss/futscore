@@ -168,17 +168,31 @@ async function sendPushToAll(title, body, data = {}, filter = {}) {
       return;
     }
 
-    // Enviar em chunks (Expo tem limite de 100 por request)
-    const chunks = expo.chunkPushNotifications(messages);
-
-    for (const chunk of chunks) {
+    // Enviar notificações uma de cada vez para evitar erro PUSH_TOO_MANY_EXPERIENCE_IDS
+    // Isso acontece quando tokens de projetos Expo diferentes estão no mesmo request
+    console.log(`[Push] Enviando ${messages.length} notificações individualmente...`);
+    
+    let successCount = 0;
+    let errorCount = 0;
+    
+    for (const message of messages) {
       try {
-        const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
-        console.log(`[Push] Enviado para ${chunk.length} usuários: ${title}`);
+        const ticketChunk = await expo.sendPushNotificationsAsync([message]);
+        
+        // Verificar se houve erro específico no ticket
+        if (ticketChunk[0]?.status === 'error') {
+          console.error(`[Push] ❌ Erro para token ${message.to?.substring(0, 30)}...: ${ticketChunk[0].message}`);
+          errorCount++;
+        } else {
+          successCount++;
+        }
       } catch (error) {
-        console.error("[Push] Erro no chunk:", error);
+        console.error(`[Push] ❌ Erro ao enviar para ${message.to?.substring(0, 30)}...:`, error.message);
+        errorCount++;
       }
     }
+    
+    console.log(`[Push] ✅ Enviado ${successCount}/${messages.length} notificações: ${title}`);
   } catch (error) {
     console.error("[Push] Erro ao enviar para todos:", error);
   }
