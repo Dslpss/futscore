@@ -38,6 +38,7 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
+  Tv,
 } from "lucide-react-native";
 import axios from "axios";
 import { api } from "../services/api";
@@ -726,6 +727,28 @@ export const HomeScreen = ({ navigation }: any) => {
               <View style={styles.actionButtonTextContainer}>
                 <Text style={styles.actionButtonText}>Ligas</Text>
                 <Text style={styles.actionButtonSubtext}>Explorar</Text>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate("LiveTv")}
+            activeOpacity={0.85}>
+            <LinearGradient
+              colors={["#be123c", "#881337"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.actionButtonGradient}>
+              <View style={styles.actionButtonIconWrapper}>
+                <LinearGradient
+                  colors={["#f43f5e", "#e11d48"]}
+                  style={styles.actionIconGradient}>
+                  <Tv size={18} color="#fff" />
+                </LinearGradient>
+              </View>
+              <View style={styles.actionButtonTextContainer}>
+                <Text style={styles.actionButtonText}>TV Ao Vivo</Text>
+                <Text style={styles.actionButtonSubtext}>Canais</Text>
               </View>
             </LinearGradient>
           </TouchableOpacity>
