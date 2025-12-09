@@ -64,6 +64,7 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({
     { code: "all", name: "Todas" },
     { code: "favorites", name: "Favoritos" },
     { code: "BSA", name: "Brasileirão" },
+    { code: "CDB", name: "Copa do Brasil" },
     { code: "CL", name: "Champions" },
     { code: "EL", name: "Europa League" },
     { code: "PD", name: "La Liga" },
@@ -265,6 +266,11 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({
         > = {
           BSA: {
             id: "Soccer_BrazilBrasileiroSerieA",
+            sport: "Soccer",
+            country: "Brazil",
+          },
+          CDB: {
+            id: "Soccer_BrazilCopaDoBrasil",
             sport: "Soccer",
             country: "Brazil",
           },

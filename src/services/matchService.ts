@@ -162,6 +162,12 @@ export const matchService = {
           name: "Brasileirão",
         },
         {
+          msn: "Soccer_BrazilCopaDoBrasil",
+          fd: null,
+          sport: "Soccer",
+          name: "Copa do Brasil",
+        },
+        {
           msn: "Soccer_InternationalClubsUEFAChampionsLeague",
           fd: "CL",
           sport: "Soccer",

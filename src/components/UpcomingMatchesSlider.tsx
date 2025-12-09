@@ -149,7 +149,8 @@ export const UpcomingMatchesSlider: React.FC<UpcomingMatchesSliderProps> = ({
   };
 
   if (upcomingMatches.length === 0) {
-    return null;
+    // Return empty container with same height to prevent layout shift
+    return <View style={styles.emptyContainer} />;
   }
 
   return (
@@ -523,5 +524,9 @@ const styles = StyleSheet.create({
   paginationDotActive: {
     width: 20,
     backgroundColor: "#eab308",
+  },
+  emptyContainer: {
+    height: 20, // Minimal height when no matches - maintains marginBottom space
+    marginBottom: 20,
   },
 });

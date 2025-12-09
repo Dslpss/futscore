@@ -148,12 +148,29 @@ const LEAGUE_MAPPINGS: Record<string, string[]> = {
     "Monaco",
     "Lille",
   ],
+  // Copa do Brasil
+  Soccer_BrazilCopaDoBrasil: [
+    "Flamengo",
+    "Palmeiras",
+    "Corinthians",
+    "São Paulo",
+    "Santos",
+    "Grêmio",
+    "Internacional",
+    "Cruzeiro",
+    "Atlético Mineiro",
+    "Fluminense",
+    "Vasco",
+    "Botafogo",
+  ],
   // Champions League
   Soccer_InternationalClubsUEFAChampionsLeague: [],
   // Europa League
   Soccer_UEFAEuropaLeague: [],
   // Liga Portugal
   Soccer_PortugalPrimeiraLiga: ["Benfica", "Porto", "Sporting CP", "Braga"],
+  // NBA
+  Basketball_NBA: [],
 };
 
 const ALL_LEAGUES = Object.keys(LEAGUE_MAPPINGS);
@@ -186,6 +203,29 @@ export function CalendarScreen({ navigation }: any) {
   const [allDatesWithMatches, setAllDatesWithMatches] = useState<Set<string>>(
     new Set()
   );
+
+  // League logos cache - same method as LeaguesExplorer
+  const [leagueLogos, setLeagueLogos] = useState<Record<string, string>>({});
+
+  // Load league logos - exact same method as LeaguesExplorer
+  const loadLeagueLogos = useCallback(async () => {
+    try {
+      const leagues = await msnSportsApi.getPersonalizationStrip();
+      const logos: Record<string, string> = {};
+      
+      leagues.forEach((league: any) => {
+        if (league.sportWithLeague && league.image?.id) {
+          // Use getLeagueImageUrl - same as LeaguesExplorer
+          const imageUrl = msnSportsApi.getLeagueImageUrl(league.image.id);
+          logos[league.sportWithLeague] = imageUrl;
+        }
+      });
+      
+      setLeagueLogos(logos);
+    } catch (error) {
+      console.error("[Calendar] Error loading league logos:", error);
+    }
+  }, []);
 
   // Carregar calendário de todas as ligas
   const loadCalendarData = useCallback(async () => {
@@ -301,7 +341,49 @@ export function CalendarScreen({ navigation }: any) {
           );
         });
 
-        setMatchesForDate(filteredMatches);
+        // Map league logos using leagueLogos from API (PROVEN METHOD)
+        // This mirrors logic used in HomeScreen/LeaguesExplorer
+        const matchesWithLogos = filteredMatches.map(match => {
+          let logo = match.league.logo || "";
+          
+          // If already has logo from transformer, use it, but fallback to leagueLogos cache
+          // if it's empty or we can find a better match in our cache
+          
+          const leagueName = match.league.name?.toLowerCase() || "";
+          
+          for (const [sportWithLeague, logoUrl] of Object.entries(leagueLogos)) {
+            const keyLower = sportWithLeague.toLowerCase();
+            
+            // Robust matching logic for common leagues
+            if (
+              (leagueName.includes("copa do brasil") && keyLower.includes("copadobrasil")) ||
+              (leagueName.includes("brasileir") && keyLower.includes("brasileiroseriea")) ||
+              (leagueName.includes("premier") && keyLower.includes("premierleague")) ||
+              (leagueName.includes("champions") && keyLower.includes("championsleague")) ||
+              (leagueName.includes("europa") && keyLower.includes("europaleague")) ||
+              (leagueName.includes("la liga") && keyLower.includes("laliga")) ||
+              (leagueName.includes("bundesliga") && keyLower.includes("bundesliga")) ||
+              (leagueName.includes("serie a") && keyLower.includes("seriea")) ||
+              (leagueName.includes("ligue 1") && keyLower.includes("ligue1")) ||
+              (leagueName.includes("portugal") && keyLower.includes("portugal")) ||
+              (leagueName.includes("nba") && keyLower.includes("nba")) ||
+              (leagueName === sportWithLeague.toLowerCase())
+            ) {
+              logo = logoUrl;
+              break;
+            }
+          }
+
+          if (logo) {
+             return {
+               ...match,
+               league: { ...match.league, logo },
+             };
+          }
+          return match;
+        });
+
+        setMatchesForDate(matchesWithLogos);
       } catch (error) {
         console.error("[Calendar] Error loading matches for date:", error);
         setMatchesForDate([]);
@@ -309,11 +391,12 @@ export function CalendarScreen({ navigation }: any) {
         setLoadingMatches(false);
       }
     },
-    [favoriteTeams]
+    [favoriteTeams, leagueLogos]
   );
 
   useEffect(() => {
     loadCalendarData();
+    loadLeagueLogos(); // Load league logos on mount - same as LeaguesExplorer
   }, []);
 
   useEffect(() => {

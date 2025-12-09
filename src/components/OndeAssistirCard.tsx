@@ -60,22 +60,13 @@ const OndeAssistirCardContent: React.FC = () => {
   const hasLoadedRef = useRef(false);
   const isMountedRef = useRef(true);
 
-  const loadGames = useCallback(async (isRefresh = false) => {
+  const loadGames = useCallback(async () => {
     if (isLoadingRef.current) {
       console.log('[OndeAssistirCard] Already loading, skipping...');
       return;
     }
     
     isLoadingRef.current = true;
-    
-    if (isMountedRef.current) {
-      // Only show full loading on first load
-      if (!hasLoadedRef.current) {
-        setLoading(true);
-      } else if (isRefresh) {
-        setRefreshing(true);
-      }
-    }
     
     try {
       const data = await olharDigitalApi.getTodayGames();
@@ -87,10 +78,8 @@ const OndeAssistirCardContent: React.FC = () => {
         g && Array.isArray(g.channels) && g.channels.length > 0
       );
       
-      // Only update if we got data
-      if (gamesWithChannels.length > 0) {
-        setGames(gamesWithChannels.slice(0, 15));
-      }
+      // Always update data
+      setGames(gamesWithChannels.slice(0, 15));
       hasLoadedRef.current = true;
     } catch (e) {
       console.error('[OndeAssistirCard] Error loading games:', e);
@@ -98,7 +87,6 @@ const OndeAssistirCardContent: React.FC = () => {
     } finally {
       if (isMountedRef.current) {
         setLoading(false);
-        setRefreshing(false);
       }
       isLoadingRef.current = false;
     }
@@ -107,35 +95,72 @@ const OndeAssistirCardContent: React.FC = () => {
   useEffect(() => {
     isMountedRef.current = true;
     
+    // Initial load
     const timer = setTimeout(() => {
-      if (!hasLoadedRef.current && isMountedRef.current) {
-        loadGames(false);
+      if (isMountedRef.current) {
+        loadGames();
       }
     }, 1000);
+    
+    // Auto-refresh every 5 minutes silently
+    const refreshInterval = setInterval(() => {
+      if (isMountedRef.current) {
+        loadGames();
+      }
+    }, 300000);
     
     return () => {
       isMountedRef.current = false;
       clearTimeout(timer);
+      clearInterval(refreshInterval);
     };
   }, [loadGames]);
 
-  // Only show loading on first load
+  // Show minimal placeholder only on first load when there's no data
   if (loading && games.length === 0) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="small" color="#22c55e" />
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <View style={styles.badge}>
+              <Tv size={12} color="#fff" />
+            </View>
+            <Text style={styles.headerTitle}>Onde Assistir</Text>
+          </View>
+        </View>
+        <View style={styles.scrollWrapper}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#22c55e" />
+          </View>
+        </View>
       </View>
     );
   }
 
-  // Hide if no data at all
-  if (games.length === 0) {
-    return null;
+  // Show empty state only when we've loaded and there's no data
+  if (!loading && games.length === 0) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <View style={styles.badge}>
+              <Tv size={12} color="#fff" />
+            </View>
+            <Text style={styles.headerTitle}>Onde Assistir</Text>
+          </View>
+        </View>
+        <View style={styles.scrollWrapper}>
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>Nenhum jogo com transmissão hoje</Text>
+          </View>
+        </View>
+      </View>
+    );
   }
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {/* Header - removed refresh button */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={styles.badge}>
@@ -143,25 +168,24 @@ const OndeAssistirCardContent: React.FC = () => {
           </View>
           <Text style={styles.headerTitle}>Onde Assistir</Text>
         </View>
-        <TouchableOpacity onPress={() => loadGames(true)} style={styles.refreshButton}>
-          <RefreshCw size={14} color="#71717a" />
-        </TouchableOpacity>
       </View>
 
       {/* Horizontal Scroll */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {games.map((game, index) => (
-          <GameCard 
-            key={game.id || `game-${index}`} 
-            game={game} 
-            onPress={() => setSelectedGame(game)}
-          />
-        ))}
-      </ScrollView>
+      <View style={styles.scrollWrapper}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {games.map((game, index) => (
+            <GameCard 
+              key={game.id || `game-${index}`} 
+              game={game} 
+              onPress={() => setSelectedGame(game)}
+            />
+          ))}
+        </ScrollView>
+      </View>
 
       {/* Game Details Modal */}
       <GameModal 
@@ -373,11 +397,25 @@ const GameModal: React.FC<GameModalProps> = ({ game, visible, onClose }) => {
 const styles = StyleSheet.create({
   container: {
     marginBottom: 16,
+    minHeight: 200, // Fixed minimum height to prevent layout shift
   },
   loadingContainer: {
-    height: 80,
+    height: 180,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  emptyContainer: {
+    height: 180,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    marginHorizontal: 16,
+    borderRadius: 16,
+  },
+  emptyText: {
+    color: '#52525b',
+    fontSize: 12,
+    fontWeight: '600',
   },
   header: {
     flexDirection: 'row',
@@ -405,6 +443,20 @@ const styles = StyleSheet.create({
     padding: 8,
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 8,
+  },
+  scrollWrapper: {
+    height: 180,
+    position: 'relative',
+  },
+  refreshOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.3)',
   },
   scrollContent: {
     paddingHorizontal: 16,

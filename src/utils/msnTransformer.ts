@@ -174,6 +174,9 @@ export function transformMsnGameToMatch(game: any, leagueInfo?: any): Match {
       const seasonId = game.seasonId || "";
       const leagueId = game.leagueId || game.league?.id || "";
       const sportWithLeague = game.sportWithLeague || "";
+      
+      // Get league info from _leagueInfo (attached by getScheduleByDate) or game.league
+      const leagueInfo = game._leagueInfo || game.league || null;
 
       // Try to find league in MSN_LEAGUE_MAP by different keys
       let mappedLeague =
@@ -205,10 +208,15 @@ export function transformMsnGameToMatch(game: any, leagueInfo?: any): Match {
       }
 
       if (mappedLeague) {
+        // Prefer logo from API (leagueInfo) if available, fallback to mapped logo
+        const apiLogo = leagueInfo?.image?.id
+          ? `https://www.bing.com/th?id=${encodeURIComponent(leagueInfo.image.id)}&w=100&h=100`
+          : null;
+        
         return {
           id: mappedLeague.id,
           name: mappedLeague.name,
-          logo: mappedLeague.logo,
+          logo: apiLogo || mappedLeague.logo,
           country: mappedLeague.country,
         };
       }
@@ -222,7 +230,7 @@ export function transformMsnGameToMatch(game: any, leagueInfo?: any): Match {
           leagueInfo?.name ||
           "Unknown League",
         logo: leagueInfo?.image?.id
-          ? `https://www.bing.com/th?id=${leagueInfo.image.id}&w=100&h=100`
+          ? `https://www.bing.com/th?id=${encodeURIComponent(leagueInfo.image.id)}&w=100&h=100`
           : "",
         country: leagueInfo?.country || "International",
       };
@@ -287,7 +295,16 @@ export function transformMsnGameToMatch(game: any, leagueInfo?: any): Match {
     // Format can be: { channelNames: ["ESPN", "TNT"] } or { name: "ESPN" }
     channels: extractChannels(game.channels),
     // Add round/week information
-    round: game.week || game.detailSeasonPhase || undefined,
+    round: (() => {
+        const type = game.gameType;
+        if (!type) return game.week || game.detailSeasonPhase;
+        
+        const phase = type.detailSeasonPhase || type.simpleSeasonPhase || game.week;
+        if (type.subPhaseNumber && type.totalSubPhases) {
+             return `${phase} ${type.subPhaseNumber}/${type.totalSubPhases}`;
+        }
+        return phase;
+    })(),
   };
 
   return match;
@@ -414,6 +431,14 @@ export const MSN_LEAGUE_MAP: Record<
     name: "Brasileirão",
     logo: "https://www.bing.com/th?id=OIP.m9vS1mQHE7rW0J8GqFWEJgHaHa&w=100&h=100",
     imageId: "OIP.m9vS1mQHE7rW0J8GqFWEJgHaHa",
+    country: "Brasil",
+  },
+  Soccer_BrazilCopaDoBrasil: {
+    id: "CDB",
+    sport: "Soccer",
+    name: "Copa do Brasil",
+    logo: "https://www.bing.com/th?id=OSB.eU2p2A%7C8WHaLXvGHBFf8dg--.png&w=100&h=100",
+    imageId: "OSB.eU2p2A|8WHaLXvGHBFf8dg--",
     country: "Brasil",
   },
   Basketball_NBA: {

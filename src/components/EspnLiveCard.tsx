@@ -63,7 +63,7 @@ const EspnLiveCardContent: React.FC = () => {
   const hasLoadedRef = useRef(false);
   const isMountedRef = useRef(true);
 
-  const loadEvents = useCallback(async (isRefresh = false) => {
+  const loadEvents = useCallback(async () => {
     if (isLoadingRef.current) {
       console.log('[EspnLiveCard] Already loading, skipping...');
       return;
@@ -71,25 +71,14 @@ const EspnLiveCardContent: React.FC = () => {
     
     isLoadingRef.current = true;
     
-    if (isMountedRef.current) {
-      // Only show full loading on first load
-      if (!hasLoadedRef.current) {
-        setLoading(true);
-      } else if (isRefresh) {
-        setRefreshing(true);
-      }
-    }
-    
     try {
       const data = await espnApi.getEspnLiveGames();
       
       if (!isMountedRef.current) return;
       
       const newEvents = (data || []).slice(0, 10);
-      // Only update if we got data
-      if (newEvents.length > 0) {
-        setEvents(newEvents);
-      }
+      // Always update, even if empty - this ensures data freshness
+      setEvents(newEvents);
       hasLoadedRef.current = true;
     } catch (e) {
       console.error('[EspnLiveCard] Error loading events:', e);
@@ -97,7 +86,6 @@ const EspnLiveCardContent: React.FC = () => {
     } finally {
       if (isMountedRef.current) {
         setLoading(false);
-        setRefreshing(false);
       }
       isLoadingRef.current = false;
     }
@@ -106,35 +94,72 @@ const EspnLiveCardContent: React.FC = () => {
   useEffect(() => {
     isMountedRef.current = true;
     
+    // Initial load
     const timer = setTimeout(() => {
-      if (!hasLoadedRef.current && isMountedRef.current) {
-        loadEvents(false);
+      if (isMountedRef.current) {
+        loadEvents();
       }
     }, 500);
+    
+    // Auto-refresh every 2 minutes silently
+    const refreshInterval = setInterval(() => {
+      if (isMountedRef.current) {
+        loadEvents();
+      }
+    }, 120000);
     
     return () => {
       isMountedRef.current = false;
       clearTimeout(timer);
+      clearInterval(refreshInterval);
     };
   }, [loadEvents]);
 
-  // Only show loading on first load
+  // Show minimal placeholder only on first load when there's no data
   if (loading && events.length === 0) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="small" color="#dc2626" />
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <View style={styles.espnBadge}>
+              <Text style={styles.espnText}>ESPN</Text>
+            </View>
+            <Text style={styles.headerTitle}>Na ESPN</Text>
+          </View>
+        </View>
+        <View style={styles.scrollWrapper}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#dc2626" />
+          </View>
+        </View>
       </View>
     );
   }
 
-  // Hide if no data at all
-  if (events.length === 0) {
-    return null;
+  // Show empty state only when we've loaded and there's no data
+  if (!loading && events.length === 0) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <View style={styles.espnBadge}>
+              <Text style={styles.espnText}>ESPN</Text>
+            </View>
+            <Text style={styles.headerTitle}>Na ESPN</Text>
+          </View>
+        </View>
+        <View style={styles.scrollWrapper}>
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>Nenhum jogo na ESPN agora</Text>
+          </View>
+        </View>
+      </View>
+    );
   }
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {/* Header - removed refresh button */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={styles.espnBadge}>
@@ -142,25 +167,24 @@ const EspnLiveCardContent: React.FC = () => {
           </View>
           <Text style={styles.headerTitle}>Na ESPN</Text>
         </View>
-        <TouchableOpacity onPress={() => loadEvents(true)} style={styles.refreshButton}>
-          <RefreshCw size={14} color="#71717a" />
-        </TouchableOpacity>
       </View>
 
       {/* Horizontal Scroll */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {events.map((event) => (
-          <EspnEventCard 
-            key={event.id} 
-            event={event} 
-            onPress={() => setSelectedEvent(event)}
-          />
-        ))}
-      </ScrollView>
+      <View style={styles.scrollWrapper}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {events.map((event) => (
+            <EspnEventCard 
+              key={event.id} 
+              event={event} 
+              onPress={() => setSelectedEvent(event)}
+            />
+          ))}
+        </ScrollView>
+      </View>
 
       {/* Event Details Modal */}
       <EspnEventModal 
@@ -502,11 +526,25 @@ const EspnEventModal: React.FC<EspnEventModalProps> = ({ event, visible, onClose
 const styles = StyleSheet.create({
   container: {
     marginBottom: 16,
+    minHeight: 180, // Fixed minimum height to prevent layout shift
   },
   loadingContainer: {
-    height: 80,
+    height: 160,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  emptyContainer: {
+    height: 160,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    marginHorizontal: 16,
+    borderRadius: 16,
+  },
+  emptyText: {
+    color: '#52525b',
+    fontSize: 12,
+    fontWeight: '600',
   },
   header: {
     flexDirection: 'row',
@@ -541,6 +579,20 @@ const styles = StyleSheet.create({
     padding: 8,
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 8,
+  },
+  scrollWrapper: {
+    height: 160,
+    position: 'relative',
+  },
+  refreshOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.3)',
   },
   scrollContent: {
     paddingHorizontal: 16,

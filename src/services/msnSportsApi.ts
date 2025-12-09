@@ -222,7 +222,7 @@ export const msnSportsApi = {
    * @param date - Date string in YYYY-MM-DD format
    */
   getScheduleByDate: async (leagueId: string, date: string): Promise<any[]> => {
-    const cacheKey = `schedule_${leagueId}_${date}`;
+    const cacheKey = `schedule_v3_${leagueId}_${date}`;
     const cached = await getCachedData<any[]>(cacheKey);
     if (cached) return cached;
 
@@ -233,7 +233,7 @@ export const msnSportsApi = {
         activityId: generateActivityId(),
         ids: leagueId,
         date: date,
-        withcalendar: "false",
+        withcalendar: "true",
         type: "LeagueSchedule",
         tzoffset: Math.floor(-new Date().getTimezoneOffset() / 60).toString(),
         ocid: "sports-league-schedule",
@@ -250,17 +250,39 @@ export const msnSportsApi = {
         return [];
       }
 
-      const schedules = response.data.value[0].schedules || [];
+      const data = response.data.value[0];
       const allGames: any[] = [];
 
-      schedules.forEach((schedule: any) => {
-        if (schedule.games && Array.isArray(schedule.games)) {
-          allGames.push(...schedule.games);
-        }
-      });
+      // Extract league info from the response (contains league logo)
+      const leagueInfo = data.schedules?.[0]?.league || data.league || null;
+      
+      // 1. Check for top-level games array (common in LeagueSchedule responses)
+      if (data.games && Array.isArray(data.games)) {
+        // Attach league info to each game for logo extraction
+        const gamesWithLeagueInfo = data.games.map((game: any) => ({
+          ...game,
+          _leagueInfo: leagueInfo, // Attach league info for transformer
+        }));
+        allGames.push(...gamesWithLeagueInfo);
+      }
+
+      // 2. Check for nested games in schedules (common in other response types)
+      if (data.schedules && Array.isArray(data.schedules)) {
+        data.schedules.forEach((schedule: any) => {
+          if (schedule.games && Array.isArray(schedule.games)) {
+            // Use schedule-specific league if available
+            const scheduleLeague = schedule.league || leagueInfo;
+            const gamesWithLeagueInfo = schedule.games.map((game: any) => ({
+              ...game,
+              _leagueInfo: scheduleLeague, // Attach league info for transformer
+            }));
+            allGames.push(...gamesWithLeagueInfo);
+          }
+        });
+      }
 
       console.log(
-        `[MSN API] Fetched ${allGames.length} games for ${leagueId} on ${date}`
+        `[MSN API] Fetched ${allGames.length} games for ${leagueId} on ${date}${leagueInfo?.image?.id ? ' (with league logo)' : ''}`
       );
 
       // Cache for 10 minutes (schedule data doesn't change frequently)
@@ -1352,6 +1374,53 @@ export const msnSportsApi = {
     } catch (error) {
       console.error(`[MSN API] Error fetching game details:`, error);
       return null;
+    }
+  },
+
+  /**
+   * Get videos for a specific league (highlights, recaps)
+   * @param leagueId - League ID (e.g., "Soccer_InternationalWCQualCONMEBOL")
+   * @returns Array of video objects
+   */
+  getVideos: async (leagueId: string): Promise<any[]> => {
+    const cacheKey = `videos_${leagueId}`;
+    const cached = await getCachedData<any[]>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const params = {
+        ...CONFIG.MSN_SPORTS.BASE_PARAMS,
+        apikey: CONFIG.MSN_SPORTS.API_KEY,
+        activityId: generateActivityId(),
+        ocid: "sports-league-landing",
+        videoscope: "league",
+        ids: leagueId,
+      };
+
+      console.log(`[MSN API] Fetching videos for ${leagueId}...`);
+
+      const response = await msnApiClient.get("/videos", { params });
+
+      if (
+        !response.data ||
+        !response.data.value ||
+        response.data.value.length === 0
+      ) {
+        console.log(`[MSN API] No videos available for ${leagueId}`);
+        return [];
+      }
+
+      const videosData = response.data.value[0];
+      const videos = videosData.videos || [];
+
+      console.log(`[MSN API] Fetched ${videos.length} videos for ${leagueId}`);
+
+      // Cache for 5 minutes
+      await setCachedData(cacheKey, videos, 5 * 60 * 1000);
+      return videos;
+    } catch (error) {
+      console.error(`[MSN API] Error fetching videos for ${leagueId}:`, error);
+      return [];
     }
   },
 };

@@ -50,6 +50,7 @@ import {
   getNextMatchesForFavorites,
 } from "../utils/matchHelpers";
 import { inferMsnTeamId } from "../utils/teamIdMapper";
+import { MSN_LEAGUE_MAP } from "../utils/msnTransformer";
 
 const { width } = Dimensions.get("window");
 
@@ -112,6 +113,42 @@ export const HomeScreen = ({ navigation }: any) => {
   const loading = isToday(selectedDate) ? contextLoading : loadingCustom;
 
   const refreshMatches = async () => {
+    // Clear calendar cache to force fresh data
+    try {
+      const { msnSportsApi } = await import("../services/msnSportsApi");
+      const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
+      
+      // Clear calendar caches for all leagues
+      const leagueIds = [
+        "Soccer_BrazilBrasileiroSerieA",
+        "Soccer_BrazilCopaDoBrasil",
+        "Soccer_InternationalClubsUEFAChampionsLeague",
+        "Soccer_UEFAEuropaLeague",
+        "Soccer_EnglandPremierLeague",
+        "Soccer_GermanyBundesliga",
+        "Soccer_ItalySerieA",
+        "Soccer_FranceLigue1",
+        "Soccer_SpainLaLiga",
+        "Soccer_PortugalPrimeiraLiga",
+        "Basketball_NBA",
+      ];
+      
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+      
+      // Clear calendar caches
+      for (const leagueId of leagueIds) {
+        await AsyncStorage.removeItem(`msn_sports_cache_calendar_v2_${leagueId}_${todayStr}`);
+      }
+      
+      console.log("[HomeScreen] Cleared calendar caches, refetching...");
+      
+      // Refetch calendar with fresh data
+      await fetchMatchCalendar();
+    } catch (error) {
+      console.error("[HomeScreen] Error clearing calendar cache:", error);
+    }
+
     if (isToday(selectedDate)) {
       await contextRefresh();
     } else {
@@ -128,7 +165,11 @@ export const HomeScreen = ({ navigation }: any) => {
   const fetchMatchesForDate = async (date: Date) => {
     setLoadingCustom(true);
     try {
-      const dateStr = date.toISOString().split("T")[0];
+      // Construct date string using local time to avoid timezone shifts
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      const dateStr = `${year}-${month}-${day}`;
 
       // 1. Fetch from football-data.org (Brasileirão, Champions, La Liga)
       const footballDataIds = ["BSA", "CL", "PD"];
@@ -151,6 +192,7 @@ export const HomeScreen = ({ navigation }: any) => {
 
       const msnLeagueIds = [
         "Soccer_BrazilBrasileiroSerieA", // Brasileirão
+        "Soccer_BrazilCopaDoBrasil", // Copa do Brasil
         "Soccer_InternationalClubsUEFAChampionsLeague", // Champions League
         "Soccer_UEFAEuropaLeague", // Europa League
         "Soccer_EnglandPremierLeague",
@@ -169,20 +211,63 @@ export const HomeScreen = ({ navigation }: any) => {
         try {
           const games = await msnSportsApi.getScheduleByDate(leagueId, dateStr);
 
+          // Special logging for Copa do Brasil
+          if (leagueId === "Soccer_BrazilCopaDoBrasil") {
+            console.log(`[HomeScreen] ⚽ COPA DO BRASIL - Date: ${dateStr}`);
+            console.log(`[HomeScreen] ⚽ COPA DO BRASIL - Games fetched: ${games.length}`);
+            if (games.length > 0) {
+              games.forEach((game: any, idx: number) => {
+                console.log(`[HomeScreen] ⚽ COPA DO BRASIL Game ${idx + 1}:`, {
+                  id: game.id,
+                  home: game.homeTeam?.name?.localizedName || game.homeTeam?.name?.rawName,
+                  away: game.awayTeam?.name?.localizedName || game.awayTeam?.name?.rawName,
+                  status: game.gameState?.gameStatus,
+                  startDate: game.startDate,
+                });
+              });
+            } else {
+              console.log(`[HomeScreen] ⚽ COPA DO BRASIL - NO GAMES RETURNED FROM API for ${dateStr}`);
+            }
+          }
+
           const transformedGames = games.map((game: any) =>
             transformMsnGameToMatch({ ...game, seasonId: leagueId })
           );
+          
+          // Additional logging for Copa do Brasil after transformation
+          if (leagueId === "Soccer_BrazilCopaDoBrasil" && transformedGames.length > 0) {
+            console.log(`[HomeScreen] ⚽ COPA DO BRASIL - Transformed games: ${transformedGames.length}`);
+            transformedGames.forEach((match: any, idx: number) => {
+              console.log(`[HomeScreen] ⚽ COPA DO BRASIL Transformed ${idx + 1}:`, {
+                home: match.teams.home.name,
+                away: match.teams.away.name,
+                leagueName: match.league.name,
+                leagueLogo: match.league.logo ? "HAS LOGO: " + match.league.logo.substring(0, 50) : "NO LOGO",
+                date: match.fixture.date,
+                status: match.fixture.status.short,
+              });
+            });
+          }
+          
           msnMatches = [...msnMatches, ...transformedGames];
         } catch (error) {
           console.error(
             `[HomeScreen] Error fetching MSN Sports for ${leagueId}:`,
             error
           );
+          // Special error logging for Copa do Brasil
+          if (leagueId === "Soccer_BrazilCopaDoBrasil") {
+            console.error(`[HomeScreen] ⚽ COPA DO BRASIL ERROR DETAILS:`, error);
+          }
         }
       }
 
       // 3. Combine all matches (no need to filter by date since getScheduleByDate already does that)
       const allMatches = [...footballDataMatches, ...msnMatches];
+
+      // Log Copa do Brasil matches before deduplication
+      const copaDoBrasilBeforeDedupe = allMatches.filter(m => m.league.name === "Copa do Brasil" || m.league.id?.toString().includes("CopaDoBrasil"));
+      console.log(`[HomeScreen] ⚽ COPA DO BRASIL in allMatches (before dedupe): ${copaDoBrasilBeforeDedupe.length}`);
 
       // Remove duplicates based on team names
       const uniqueMatches = allMatches.filter((match, index, self) => {
@@ -195,7 +280,58 @@ export const HomeScreen = ({ navigation }: any) => {
         );
       });
 
-      setCustomMatches(uniqueMatches);
+      // Log Copa do Brasil matches after deduplication
+      const copaDoBrasilAfterDedupe = uniqueMatches.filter(m => m.league.name === "Copa do Brasil" || m.league.id?.toString().includes("CopaDoBrasil"));
+      console.log(`[HomeScreen] ⚽ COPA DO BRASIL in uniqueMatches (after dedupe): ${copaDoBrasilAfterDedupe.length}`);
+      if (copaDoBrasilAfterDedupe.length > 0) {
+        copaDoBrasilAfterDedupe.forEach((match, idx) => {
+          console.log(`[HomeScreen] ⚽ COPA DO BRASIL Final Match ${idx + 1}:`, {
+            home: match.teams.home.name,
+            away: match.teams.away.name,
+            leagueName: match.league.name,
+      leagueId: match.league.id,
+          });
+        });
+      }
+
+      // Map league logos using MSN_LEAGUE_MAP directly - same as LeaguesExplorer
+      const matchesWithLogos = uniqueMatches.map(match => {
+        // Try to find logo from MSN_LEAGUE_MAP using league name
+        const leagueName = match.league.name?.toLowerCase() || "";
+        let logo = match.league.logo || "";
+        
+        // Search MSN_LEAGUE_MAP for matching league
+        for (const [key, leagueData] of Object.entries(MSN_LEAGUE_MAP)) {
+          if (
+            leagueData.name.toLowerCase() === leagueName ||
+            key.toLowerCase().includes(leagueName.replace(/\s+/g, "")) ||
+            (leagueName.includes("copa do brasil") && key.includes("CopaDoBrasil")) ||
+            (leagueName.includes("brasileir") && key.includes("BrasileiroSerieA")) ||
+            (leagueName.includes("premier") && key.includes("PremierLeague")) ||
+            (leagueName.includes("champions") && key.includes("ChampionsLeague")) ||
+            (leagueName.includes("europa") && key.includes("EuropaLeague")) ||
+            (leagueName.includes("la liga") && key.includes("LaLiga")) ||
+            (leagueName.includes("bundesliga") && key.includes("Bundesliga")) ||
+            (leagueName.includes("serie a") && key.includes("SerieA")) ||
+            (leagueName.includes("ligue 1") && key.includes("Ligue1")) ||
+            (leagueName.includes("portugal") && key.includes("Portugal")) ||
+            (leagueName.includes("nba") && key.includes("NBA"))
+          ) {
+            logo = leagueData.logo;
+            break;
+          }
+        }
+
+        return {
+          ...match,
+          league: {
+            ...match.league,
+            logo: logo,
+          },
+        };
+      });
+
+      setCustomMatches(matchesWithLogos);
       console.log(
         `[HomeScreen] Fetched ${uniqueMatches.length} matches for ${dateStr}`
       );
@@ -364,14 +500,17 @@ export const HomeScreen = ({ navigation }: any) => {
       const { msnSportsApi } = await import("../services/msnSportsApi");
 
       const leagueIds = [
-        "Soccer_BrazilBrasileiroSerieA",
-        "Soccer_InternationalClubsUEFAChampionsLeague",
-        "Soccer_UEFAEuropaLeague",
+        "Soccer_BrazilBrasileiroSerieA", // Brasileirão
+        "Soccer_BrazilCopaDoBrasil", // Copa do Brasil
+        "Soccer_InternationalClubsUEFAChampionsLeague", // Champions League
+        "Soccer_UEFAEuropaLeague", // Europa League
         "Soccer_EnglandPremierLeague",
         "Soccer_GermanyBundesliga",
         "Soccer_ItalySerieA",
         "Soccer_FranceLigue1",
-        "Soccer_SpainLaLiga",
+        "Soccer_SpainLaLiga", // La Liga
+        "Soccer_PortugalPrimeiraLiga",
+        "Basketball_NBA",
       ];
 
       const allDates = new Set<string>();
@@ -433,6 +572,7 @@ export const HomeScreen = ({ navigation }: any) => {
     { code: "ALL", name: "Todos" },
     { code: "FAV", name: "Favoritos" },
     { code: "BSA", name: "Brasileirão" },
+    { code: "CDB", name: "Copa do Brasil" },
     { code: "CL", name: "Champions" },
     { code: "EL", name: "Europa League" },
     { code: "PD", name: "La Liga" },
@@ -643,11 +783,14 @@ export const HomeScreen = ({ navigation }: any) => {
         }}
       />
 
-      {/* ESPN Live Games Card - Memoized */}
-      {memoizedEspnCard}
+      {/* ESPN and OndeAssistir Cards - Fixed height container to prevent layout shifts */}
+      <View style={styles.tvCardsContainer}>
+        {/* ESPN Live Games Card - Memoized */}
+        {memoizedEspnCard}
 
-      {/* Onde Assistir - Brazilian TV Channels - Memoized */}
-      {memoizedOndeAssistirCard}
+        {/* Onde Assistir - Brazilian TV Channels - Memoized */}
+        {memoizedOndeAssistirCard}
+      </View>
 
       {/* Action Buttons - Favorites, Standings, and Leagues Explorer */}
       <View style={styles.actionButtonsContainer}>
@@ -680,14 +823,30 @@ export const HomeScreen = ({ navigation }: any) => {
 
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() =>
+            onPress={() => {
+              const leagueMap: Record<string, string> = {
+                BSA: "Soccer_BrazilBrasileiroSerieA",
+                CDB: "Soccer_BrazilCopaDoBrasil",
+                CL: "Soccer_InternationalClubsUEFAChampionsLeague",
+                EL: "Soccer_UEFAEuropaLeague",
+                PD: "Soccer_SpainLaLiga",
+                PL: "Soccer_EnglandPremierLeague",
+                BL1: "Soccer_GermanyBundesliga",
+                SA: "Soccer_ItalySerieA",
+                FL1: "Soccer_FranceLigue1",
+                PPL: "Soccer_PortugalPrimeiraLiga",
+                NBA: "Basketball_NBA",
+              };
+              
+              const targetLeague = 
+                selectedLeague !== "ALL" && selectedLeague !== "FAV" && selectedLeague !== "FINISHED"
+                  ? leagueMap[selectedLeague] || "Soccer_EnglandPremierLeague"
+                  : "Soccer_EnglandPremierLeague";
+
               navigation.navigate("Standings", {
-                leagueId:
-                  selectedLeague !== "ALL"
-                    ? selectedLeague
-                    : "Soccer_EnglandPremierLeague",
-              })
-            }
+                leagueId: targetLeague,
+              });
+            }}
             activeOpacity={0.85}>
             <LinearGradient
               colors={["#1e3a5f", "#1a1a2e"]}
@@ -749,6 +908,29 @@ export const HomeScreen = ({ navigation }: any) => {
               <View style={styles.actionButtonTextContainer}>
                 <Text style={styles.actionButtonText}>TV Ao Vivo</Text>
                 <Text style={styles.actionButtonSubtext}>Canais</Text>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate("Videos")}
+            activeOpacity={0.85}>
+            <LinearGradient
+              colors={["#4a1e4d", "#1a1a2e"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.actionButtonGradient}>
+              <View style={styles.actionButtonIconWrapper}>
+                <LinearGradient
+                  colors={["#ec4899", "#db2777"]}
+                  style={styles.actionIconGradient}>
+                  <Text style={styles.actionButtonIcon}>🎬</Text>
+                </LinearGradient>
+              </View>
+              <View style={styles.actionButtonTextContainer}>
+                <Text style={styles.actionButtonText}>Vídeos</Text>
+                <Text style={styles.actionButtonSubtext}>Highlights</Text>
               </View>
             </LinearGradient>
           </TouchableOpacity>
@@ -849,6 +1031,7 @@ export const HomeScreen = ({ navigation }: any) => {
         // MSN Sports format mapping
         const msnMapping: Record<string, string> = {
           BSA: "BrazilBrasileiroSerieA", // Brasileirão also in MSN
+          CDB: "BrazilCopaDoBrasil", // Copa do Brasil
           CL: "InternationalClubsUEFAChampionsLeague", // Champions League
           EL: "UEFAEuropaLeague", // Europa League
           PD: "SpainLaLiga", // La Liga
@@ -1297,6 +1480,10 @@ const styles = StyleSheet.create({
     paddingTop:
       Platform.OS === "android" ? (StatusBar.currentHeight || 0) + 20 : 10,
     position: "relative",
+  },
+  tvCardsContainer: {
+    minHeight: 420,
+    overflow: 'hidden',
   },
   headerGradient: {
     position: "absolute",
