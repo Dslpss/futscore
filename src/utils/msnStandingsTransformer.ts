@@ -14,6 +14,20 @@ export interface StandingTeam {
   goalsAgainst: number;
   goalDifference: number;
   points: number;
+  home: {
+    won: number;
+    lost: number;
+    draw: number;
+    goalsFor: number;
+    goalsAgainst: number;
+  };
+  away: {
+    won: number;
+    lost: number;
+    draw: number;
+    goalsFor: number;
+    goalsAgainst: number;
+  };
 }
 
 /**
@@ -60,6 +74,20 @@ export function transformMsnStandings(msnStandingsData: any): StandingTeam[] {
       goalsAgainst: teamData.pointsAgainst || 0,
       goalDifference: teamData.pointsDifference || 0,
       points: teamData.points || 0,
+      home: {
+        won: teamData.winLossHome?.wins || 0,
+        lost: teamData.winLossHome?.losses || 0,
+        draw: teamData.winLossHome?.ties || 0,
+        goalsFor: teamData.pointsForHome || 0, // MSN sometimes isolates this, check data
+        goalsAgainst: teamData.pointsAgainstHome || 0,
+      },
+      away: {
+        won: teamData.winLossAway?.wins || 0,
+        lost: teamData.winLossAway?.losses || 0,
+        draw: teamData.winLossAway?.ties || 0,
+        goalsFor: teamData.pointsForAway || 0,
+        goalsAgainst: teamData.pointsAgainstAway || 0,
+      },
     })
   );
 

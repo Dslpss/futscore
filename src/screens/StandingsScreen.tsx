@@ -76,6 +76,8 @@ export const StandingsScreen: React.FC<StandingsScreenProps> = ({
   const [selectedLeague, setSelectedLeague] = useState(
     route.params?.leagueId || "Soccer_EnglandPremierLeague"
   );
+  const [filter, setFilter] = useState<'ALL' | 'HOME' | 'AWAY'>('ALL');
+
 
   const loadStandings = async () => {
     try {
@@ -169,6 +171,52 @@ export const StandingsScreen: React.FC<StandingsScreenProps> = ({
         </ScrollView>
       </View>
 
+      {/* Filter Tabs */}
+      <View style={styles.filterContainer}>
+        <TouchableOpacity
+          style={[
+            styles.filterButton,
+            filter === "ALL" && styles.filterButtonActive,
+          ]}
+          onPress={() => setFilter("ALL")}>
+          <Text
+            style={[
+              styles.filterText,
+              filter === "ALL" && styles.filterTextActive,
+            ]}>
+            Geral
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.filterButton,
+            filter === "HOME" && styles.filterButtonActive,
+          ]}
+          onPress={() => setFilter("HOME")}>
+          <Text
+            style={[
+              styles.filterText,
+              filter === "HOME" && styles.filterTextActive,
+            ]}>
+            Mandante
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.filterButton,
+            filter === "AWAY" && styles.filterButtonActive,
+          ]}
+          onPress={() => setFilter("AWAY")}>
+          <Text
+            style={[
+              styles.filterText,
+              filter === "AWAY" && styles.filterTextActive,
+            ]}>
+            Visitante
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#22c55e" />
@@ -202,7 +250,39 @@ export const StandingsScreen: React.FC<StandingsScreenProps> = ({
           </View>
 
           {/* Standings */}
-          {standings.map((team, index) => (
+          {standings.map((team, index) => {
+            let displayStats = {
+              played: team.played,
+              won: team.won,
+              draw: team.draw,
+              lost: team.lost,
+              goalDifference: team.goalDifference,
+              points: team.points
+            };
+
+            if (filter === 'HOME' && team.home) {
+                const { won, draw, lost, goalsFor, goalsAgainst } = team.home;
+                displayStats = {
+                    played: won + draw + lost,
+                    won,
+                    draw,
+                    lost,
+                    goalDifference: goalsFor - goalsAgainst,
+                    points: (won * 3) + draw // Simplified points calc
+                };
+            } else if (filter === 'AWAY' && team.away) {
+                 const { won, draw, lost, goalsFor, goalsAgainst } = team.away;
+                displayStats = {
+                    played: won + draw + lost,
+                    won,
+                    draw,
+                    lost,
+                    goalDifference: goalsFor - goalsAgainst,
+                    points: (won * 3) + draw // Simplified points calc
+                };
+            }
+
+            return (
             <View key={team.team.id || index} style={styles.row}>
               <View
                 style={[
@@ -219,24 +299,24 @@ export const StandingsScreen: React.FC<StandingsScreenProps> = ({
                   {team.team.shortName || team.team.name}
                 </Text>
               </View>
-              <Text style={[styles.cell, styles.statCell]}>{team.played}</Text>
-              <Text style={[styles.cell, styles.statCell]}>{team.won}</Text>
-              <Text style={[styles.cell, styles.statCell]}>{team.draw}</Text>
-              <Text style={[styles.cell, styles.statCell]}>{team.lost}</Text>
+              <Text style={[styles.cell, styles.statCell]}>{displayStats.played}</Text>
+              <Text style={[styles.cell, styles.statCell]}>{displayStats.won}</Text>
+              <Text style={[styles.cell, styles.statCell]}>{displayStats.draw}</Text>
+              <Text style={[styles.cell, styles.statCell]}>{displayStats.lost}</Text>
               <Text
                 style={[
                   styles.cell,
                   styles.statCell,
-                  team.goalDifference > 0 && styles.positiveGD,
+                  displayStats.goalDifference > 0 && styles.positiveGD,
                 ]}>
-                {team.goalDifference > 0 ? "+" : ""}
-                {team.goalDifference}
+                {displayStats.goalDifference > 0 ? "+" : ""}
+                {displayStats.goalDifference}
               </Text>
               <Text style={[styles.cell, styles.pointsCell, styles.pointsText]}>
-                {team.points}
+                {displayStats.points}
               </Text>
             </View>
-          ))}
+          )})}
 
           {/* Legend */}
           <View style={styles.legend}>
@@ -296,6 +376,34 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.03)",
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.05)",
+  },
+  filterContainer: {
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
+    backgroundColor: "rgba(255,255,255,0.02)",
+  },
+  filterButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderWidth: 1,
+    borderColor: "transparent",
+  },
+  filterButtonActive: {
+    backgroundColor: "rgba(34, 197, 94, 0.15)",
+    borderColor: "#22c55e",
+  },
+  filterText: {
+    color: "#a1a1aa",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  filterTextActive: {
+    color: "#22c55e",
+    fontWeight: "700",
   },
   leagueSelectorContent: {
     paddingHorizontal: 16,

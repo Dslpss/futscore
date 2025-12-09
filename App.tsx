@@ -13,7 +13,6 @@ import { LeaguesExplorer } from "./src/screens/LeaguesExplorer";
 import { StandingsScreen } from "./src/screens/StandingsScreen";
 import { NotificationSettingsScreen } from "./src/screens/NotificationSettingsScreen";
 import { CalendarScreen } from "./src/screens/CalendarScreen";
-import LiveTvScreen from "./src/screens/LiveTvScreen";
 import { VideosScreen } from "./src/screens/VideosScreen";
 import { StatusBar } from "expo-status-bar";
 import { View, ActivityIndicator } from "react-native";
@@ -81,7 +80,6 @@ function AppNavigation() {
               component={NotificationSettingsScreen}
             />
             <Stack.Screen name="Calendar" component={CalendarScreen} />
-            <Stack.Screen name="LiveTv" component={LiveTvScreen} />
             <Stack.Screen name="Videos" component={VideosScreen} />
           </Stack.Navigator>
         </MatchProvider>

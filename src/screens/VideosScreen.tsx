@@ -5,13 +5,14 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  SafeAreaView,
   StatusBar,
   ActivityIndicator,
   ScrollView,
   RefreshControl,
   Image,
+  Platform,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
 import {
@@ -145,24 +146,40 @@ export const VideosScreen = () => {
     Icon: React.ComponentType<any>
   ) => {
     const isSelected = selectedFilter === filter;
+    
     return (
       <TouchableOpacity
-        style={[styles.filterTab, isSelected && styles.filterTabSelected]}
         onPress={() => setSelectedFilter(filter)}
-        activeOpacity={0.7}
+        activeOpacity={0.8}
+        style={styles.filterTabWrapper}
       >
-        <Icon
-          size={18}
-          color={isSelected ? "#22c55e" : "#888"}
-        />
-        <Text
+        <LinearGradient
+          colors={
+            isSelected 
+              ? ["#22c55e", "#16a34a"] 
+              : ["#1a1a1a", "#1a1a1a"]
+          }
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
           style={[
-            styles.filterTabText,
-            isSelected && styles.filterTabTextSelected,
+            styles.filterTab,
+            isSelected ? styles.filterTabSelected : styles.filterTabUnselected
           ]}
         >
-          {label}
-        </Text>
+          <Icon
+            size={18}
+            color={isSelected ? "#fff" : "#888"}
+            style={isSelected && styles.filterTabIconSelected}
+          />
+          <Text
+            style={[
+              styles.filterTabText,
+              isSelected && styles.filterTabTextSelected,
+            ]}
+          >
+            {label}
+          </Text>
+        </LinearGradient>
       </TouchableOpacity>
     );
   };
@@ -185,15 +202,30 @@ export const VideosScreen = () => {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
-            style={styles.backButton}
+            activeOpacity={0.8}
             onPress={() => navigation.goBack()}
+            style={styles.backButtonWrapper}
           >
-            <LucideArrowLeft color="#fff" size={24} />
+            <LinearGradient
+              colors={["rgba(255,255,255,0.1)", "rgba(255,255,255,0.05)"]}
+              style={styles.backButton}
+            >
+              <LucideArrowLeft color="#fff" size={20} />
+            </LinearGradient>
           </TouchableOpacity>
+          
           <View style={styles.headerTitleContainer}>
-            <LucideVideo color="#22c55e" size={24} />
+            <View style={styles.iconWrapper}>
+              <LinearGradient
+                colors={["#22c55e", "#16a34a"]}
+                style={styles.iconGradient}
+              >
+                <LucideVideo color="#fff" size={14} />
+              </LinearGradient>
+            </View>
             <Text style={styles.headerTitle}>Vídeos</Text>
           </View>
+          
           <View style={styles.headerSpacer} />
         </View>
 
@@ -210,10 +242,16 @@ export const VideosScreen = () => {
         </View>
 
         {/* Filter Tabs */}
-        <View style={styles.filterTabs}>
-          {renderFilterTab("all", "Todos", LucidePlayCircle)}
-          {renderFilterTab("Highlight", "Melhores Momentos", LucideVideo)}
-          {renderFilterTab("Recap", "Resumos", LucideFilm)}
+        <View style={styles.filterTabsContainer}>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterTabsContent}
+          >
+            {renderFilterTab("all", "Todos", LucidePlayCircle)}
+            {renderFilterTab("Highlight", "Melhores Momentos", LucideVideo)}
+            {renderFilterTab("Recap", "Resumos", LucideFilm)}
+          </ScrollView>
         </View>
 
         {/* Video List */}
@@ -266,30 +304,59 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingVertical: 16,
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 5 : 10,
+  },
+  backButtonWrapper: {
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.1)",
+    width: 42,
+    height: 42,
+    borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
   },
   headerTitleContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 12,
+  },
+  iconWrapper: {
+    shadowColor: "#22c55e",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  iconGradient: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: "800",
+    fontSize: 20,
+    fontWeight: "700",
     color: "#fff",
-    letterSpacing: -0.5,
+    letterSpacing: 0.5,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   headerSpacer: {
-    width: 40,
+    width: 42,
   },
   leagueSelector: {
     marginBottom: 12,
@@ -327,34 +394,60 @@ const styles = StyleSheet.create({
   leaguePillTextSelected: {
     color: "#22c55e",
   },
-  filterTabs: {
-    flexDirection: "row",
+  filterTabsContainer: {
+    marginBottom: 20,
+  },
+  filterTabsContent: {
     paddingHorizontal: 16,
-    marginBottom: 16,
-    gap: 10,
+    gap: 12,
+  },
+  filterTabWrapper: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: "#22c55e",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   filterTab: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#1a1a1a",
     paddingVertical: 12,
-    borderRadius: 12,
-    gap: 6,
+    paddingHorizontal: 20,
+    gap: 8,
+    borderRadius: 20,
+  },
+  filterTabUnselected: {
+    borderWidth: 1,
+    borderColor: "#2a2a2a",
+    backgroundColor: "#111",
   },
   filterTabSelected: {
-    backgroundColor: "rgba(34, 197, 94, 0.15)",
     borderWidth: 1,
-    borderColor: "#22c55e",
+    borderColor: "rgba(255,255,255,0.2)",
+  },
+  filterTabIconSelected: {
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   filterTabText: {
     color: "#888",
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "600",
+    letterSpacing: 0.3,
   },
   filterTabTextSelected: {
-    color: "#22c55e",
+    color: "#fff",
+    fontWeight: "700",
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   loadingContainer: {
     flex: 1,
