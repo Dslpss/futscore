@@ -147,6 +147,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
   async function signIn(newToken: string, newUser: User) {
     try {
+      console.log("[Auth] signIn called - setting user and token");
       setUser(newUser);
       setToken(newToken);
 
@@ -154,9 +155,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
       await AsyncStorage.setItem("@FutScore:user", JSON.stringify(newUser));
       await AsyncStorage.setItem("@FutScore:token", newToken);
+      
+      console.log("[Auth] signIn - AsyncStorage saved, waiting for state to settle...");
+      
+      // Pequeno delay para garantir que tudo está salvo antes de registrar push token
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-      // Registrar push token após login - aguardar conclusão
-      await registerPushToken(newToken);
+      // Registrar push token após login/cadastro - usar force=true para garantir
+      console.log("[Auth] signIn - Calling registerPushToken with force=true");
+      await registerPushToken(newToken, true);
     } catch (error) {
       console.error("Error signing in", error);
     }
