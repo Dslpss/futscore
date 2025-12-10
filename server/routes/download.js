@@ -3,7 +3,8 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { authMiddleware, requireAdmin } = require('../middleware/auth');
+const authMiddleware = require('../middleware/auth');
+const User = require('../models/User');
 
 // Directory for APK storage
 const DOWNLOADS_DIR = path.join(__dirname, '../public/downloads');
@@ -32,6 +33,20 @@ function getMetadata() {
 function saveMetadata(metadata) {
   fs.writeFileSync(METADATA_FILE, JSON.stringify(metadata, null, 2));
 }
+
+// Admin check middleware
+const requireAdmin = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.userId);
+    if (!user || !user.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    req.user = user;
+    next();
+  } catch (error) {
+    res.status(500).json({ error: 'Error checking admin status' });
+  }
+};
 
 // Multer config for APK upload
 const storage = multer.diskStorage({
