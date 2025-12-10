@@ -120,6 +120,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       const storedUser = await AsyncStorage.getItem("@FutScore:user");
       const storedToken = await AsyncStorage.getItem("@FutScore:token");
 
+      console.log("[Auth] loadStorageData - storedUser:", storedUser ? "EXISTS" : "NULL");
+      console.log("[Auth] loadStorageData - storedToken:", storedToken ? "EXISTS" : "NULL");
+
       if (storedUser && storedToken) {
         setUser(JSON.parse(storedUser));
         setToken(storedToken);
@@ -129,7 +132,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         ] = `Bearer ${storedToken}`;
 
         // Registrar push token ao carregar dados do usuário
-        registerPushToken();
+        // Passar o token diretamente para garantir que funcione no build nativo
+        console.log("[Auth] loadStorageData - Chamando registerPushToken com token fornecido");
+        registerPushToken(storedToken);
+      } else {
+        console.log("[Auth] loadStorageData - Não há usuário logado, pulando registerPushToken");
       }
     } catch (error) {
       console.error("Error loading auth data", error);

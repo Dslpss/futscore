@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "730890275748",
+    "project_id": "anotacoes-estudos",
+    "storage_bucket": "anotacoes-estudos.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:730890275748:android:6bc3c230c25e69bef60f31",
+        "android_client_info": {
+          "package_name": "com.company.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAqvfTFpri7-quRf8uKf9lKjQElQuBUTu8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:730890275748:android:2e755b13b203b5c5f60f31",
+        "android_client_info": {
+          "package_name": "com.company.appname"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAqvfTFpri7-quRf8uKf9lKjQElQuBUTu8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:730890275748:android:6305cd6b1b2ef753f60f31",
+        "android_client_info": {
+          "package_name": "com.futscore.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAqvfTFpri7-quRf8uKf9lKjQElQuBUTu8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
