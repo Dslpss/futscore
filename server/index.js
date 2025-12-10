@@ -31,6 +31,7 @@ app.use("/auth", authRoutes);
 app.use("/admin", require("./routes/admin"));
 app.use("/user", require("./routes/user"));
 app.use("/api/football", require("./routes/football"));
+app.use("/download", require("./routes/download"));
 
 app.get("/", (req, res) => {
   res.send("FutScore API is running");

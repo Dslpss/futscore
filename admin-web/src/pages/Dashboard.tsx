@@ -2,6 +2,7 @@ import { useAuth } from "../context/AuthContext";
 import { WarningList } from "../components/WarningList";
 import { UpdateManager } from "../components/UpdateManager";
 import { UserStats } from "../components/UserStats";
+import { ApkUploader } from "../components/ApkUploader";
 import { LogOut, LayoutDashboard } from "lucide-react";
 
 export const Dashboard = () => {
@@ -45,9 +46,12 @@ export const Dashboard = () => {
             </h2>
             <WarningList />
           </div>
-          <div>
-            <h2 className="mb-4 text-xl font-bold text-white">Gerenciar App</h2>
-            <UpdateManager />
+          <div className="space-y-6">
+            <div>
+              <h2 className="mb-4 text-xl font-bold text-white">Gerenciar App</h2>
+              <UpdateManager />
+            </div>
+            <ApkUploader />
           </div>
         </div>
       </main>
