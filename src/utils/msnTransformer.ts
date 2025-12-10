@@ -449,6 +449,14 @@ export const MSN_LEAGUE_MAP: Record<
     imageId: "OIP.KKy5O2PYIv3vQjFQjLAj2AHaHa",
     country: "EUA",
   },
+  Soccer_FIFAIntercontinentalCup: {
+    id: "FIC",
+    sport: "Soccer",
+    name: "Copa Intercontinental",
+    logo: "https://a.espncdn.com/i/leaguelogos/soccer/500/22902.png",
+    imageId: "",
+    country: "Internacional",
+  },
 };
 
 /**

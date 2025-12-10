@@ -264,6 +264,103 @@ export const matchService = {
         }
       }
 
+      // SPECIAL: Fetch FIFA Intercontinental Cup from ESPN API (not available in MSN)
+      try {
+        const { espnApi } = await import("./espnApi");
+        const espnEvents = await espnApi.getIntercontinentalCupEvents();
+        
+        if (espnEvents && espnEvents.length > 0) {
+          // Transform ESPN events to Match format
+          const intercontinentalMatches: Match[] = espnEvents.map((event) => {
+            const homeCompetitor = event.competitors?.find((c: any) => c.homeAway === "home");
+            const awayCompetitor = event.competitors?.find((c: any) => c.homeAway === "away");
+            
+            // Map ESPN status to our format
+            let statusShort = "NS";
+            let statusLong = "Não Iniciado";
+            if (event.status === "in") {
+              statusShort = event.period === 1 ? "1H" : "2H";
+              statusLong = event.period === 1 ? "Primeiro Tempo" : "Segundo Tempo";
+            } else if (event.status === "post") {
+              statusShort = "FT";
+              statusLong = "Encerrado";
+            }
+            // Extract scoring summary from ESPN format
+            const scoringSummary: Match["scoringSummary"] = [];
+            if (homeCompetitor?.scoringSummary) {
+              homeCompetitor.scoringSummary.forEach((s: any) => {
+                scoringSummary.push({
+                  player: s.athlete?.shortName || s.athlete?.displayName || "Unknown",
+                  minute: s.displayValue || "",
+                  team: "home",
+                });
+              });
+            }
+            if (awayCompetitor?.scoringSummary) {
+              awayCompetitor.scoringSummary.forEach((s: any) => {
+                scoringSummary.push({
+                  player: s.athlete?.shortName || s.athlete?.displayName || "Unknown",
+                  minute: s.displayValue || "",
+                  team: "away",
+                });
+              });
+            }
+            
+            return {
+              fixture: {
+                id: parseInt(event.id) || Math.floor(Math.random() * 1000000),
+                date: event.date,
+                status: {
+                  short: statusShort,
+                  long: statusLong,
+                  elapsed: event.clock ? parseInt(event.clock) : undefined,
+                },
+                venue: event.location ? { name: event.location, city: "" } : undefined,
+              },
+              league: {
+                id: "FIC",
+                name: "Copa Intercontinental",
+                logo: "https://a.espncdn.com/i/leaguelogos/soccer/500/22902.png",
+                country: "Internacional",
+              },
+              teams: {
+                home: {
+                  id: parseInt(homeCompetitor?.id || "0"),
+                  name: homeCompetitor?.displayName || "Unknown",
+                  logo: homeCompetitor?.logo || "",
+                  form: homeCompetitor?.form,
+                  record: homeCompetitor?.record,
+                },
+                away: {
+                  id: parseInt(awayCompetitor?.id || "0"),
+                  name: awayCompetitor?.displayName || "Unknown",
+                  logo: awayCompetitor?.logo || "",
+                  form: awayCompetitor?.form,
+                  record: awayCompetitor?.record,
+                },
+              },
+              goals: {
+                home: homeCompetitor?.score ? parseInt(homeCompetitor.score) : null,
+                away: awayCompetitor?.score ? parseInt(awayCompetitor.score) : null,
+              },
+              score: {
+                halftime: { home: null, away: null },
+                fulltime: { 
+                  home: homeCompetitor?.score ? parseInt(homeCompetitor.score) : null, 
+                  away: awayCompetitor?.score ? parseInt(awayCompetitor.score) : null,
+                },
+              },
+              scoringSummary: scoringSummary.length > 0 ? scoringSummary : undefined,
+            };
+          });
+          
+          allFixtures = [...allFixtures, ...intercontinentalMatches];
+          console.log(`[MatchService] ✓ Copa Intercontinental: ${intercontinentalMatches.length} matches from ESPN`);
+        }
+      } catch (error) {
+        console.log("[MatchService] ✗ Copa Intercontinental: ESPN fetch failed", error);
+      }
+
       console.log(`[MatchService] Total unique matches: ${allFixtures.length}`);
 
       // Filter for today (local time)

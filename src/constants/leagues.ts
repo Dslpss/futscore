@@ -46,4 +46,10 @@ export const LEAGUES = [
     name: "Copa do Brasil",
     logo: "https://www.bing.com/th?id=OSB.eU2p2A%7C8WHaLXvGHBFf8dg--&w=100&h=100",
   },
+  {
+    id: "Soccer_FIFAIntercontinentalCup",
+    name: "Copa Intercontinental",
+    logo: "https://a.espncdn.com/i/leaguelogos/soccer/500/22902.png",
+  },
 ];
+

@@ -86,8 +86,14 @@ export interface Match {
   };
   league: League;
   teams: {
-    home: Team;
-    away: Team;
+    home: Team & {
+      form?: string; // e.g., "VVDVE"
+      record?: string; // e.g., "4-0-1, 12 pts"
+    };
+    away: Team & {
+      form?: string;
+      record?: string;
+    };
   };
   goals: {
     home: number | null;
@@ -108,6 +114,13 @@ export interface Match {
     draw: number;
     away: number;
   };
+  // Odds from betting providers
+  odds?: {
+    homeWin: number;
+    draw: number;
+    awayWin: number;
+    provider?: string;
+  };
   statistics?: Statistics[];
   lineups?: Lineup[];
   // TV Channels where the match will be broadcast
@@ -117,6 +130,13 @@ export interface Match {
   }[];
   // Match round/week information
   round?: string;
+  // Scoring summary with player names and minutes
+  scoringSummary?: {
+    player: string;
+    minute: string;
+    team: 'home' | 'away';
+    type?: 'goal' | 'penalty' | 'own_goal';
+  }[];
 }
 
 export interface ApiResponse<T> {

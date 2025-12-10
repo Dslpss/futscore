@@ -316,6 +316,91 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
             </View>
           </View>
 
+          {/* Stats Preview Section: Form + Scorers */}
+          {(match.teams.home.form || match.teams.away.form || match.scoringSummary?.length) && (
+            <View style={styles.statsPreview}>
+              {/* Team Forms */}
+              {(match.teams.home.form || match.teams.away.form) && (
+                <View style={styles.formRow}>
+                  <View style={styles.formTeam}>
+                    <Text style={styles.formLabel}>CASA</Text>
+                    {match.teams.home.form && (
+                      <View style={styles.formDots}>
+                        {match.teams.home.form.slice(-5).split("").map((char, i) => (
+                          <View
+                            key={`home-${i}`}
+                            style={[
+                              styles.formDot,
+                              {
+                                backgroundColor:
+                                  char === "V" || char === "W"
+                                    ? "#22c55e"
+                                    : char === "E" || char === "D"
+                                    ? "#eab308"
+                                    : "#ef4444",
+                              },
+                            ]}
+                          />
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                  <View style={styles.formTeam}>
+                    <Text style={styles.formLabel}>FORA</Text>
+                    {match.teams.away.form && (
+                      <View style={styles.formDots}>
+                        {match.teams.away.form.slice(-5).split("").map((char, i) => (
+                          <View
+                            key={`away-${i}`}
+                            style={[
+                              styles.formDot,
+                              {
+                                backgroundColor:
+                                  char === "V" || char === "W"
+                                    ? "#22c55e"
+                                    : char === "E" || char === "D"
+                                    ? "#eab308"
+                                    : "#ef4444",
+                              },
+                            ]}
+                          />
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                </View>
+              )}
+
+              {/* Scorers Summary */}
+              {match.scoringSummary && match.scoringSummary.length > 0 && (
+                <View style={styles.scorersRow}>
+                  {match.scoringSummary.slice(0, 3).map((scorer, index) => (
+                    <View
+                      key={`scorer-${index}`}
+                      style={[
+                        styles.scorerBadge,
+                        scorer.team === "home"
+                          ? styles.scorerBadgeHome
+                          : styles.scorerBadgeAway,
+                      ]}
+                    >
+                      <Text style={styles.scorerIcon}>⚽</Text>
+                      <Text style={styles.scorerName} numberOfLines={1}>
+                        {scorer.player.split(" ").pop()}'
+                      </Text>
+                      <Text style={styles.scorerMinute}>{scorer.minute}</Text>
+                    </View>
+                  ))}
+                  {match.scoringSummary.length > 3 && (
+                    <Text style={styles.moreScorers}>
+                      +{match.scoringSummary.length - 3}
+                    </Text>
+                  )}
+                </View>
+              )}
+            </View>
+          )}
+
           {/* Tap hint */}
           <Text style={styles.tapHint}>Toque para ver detalhes</Text>
 
@@ -979,5 +1064,80 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 14,
     fontWeight: "700",
+  },
+  
+  // Stats Preview Section
+  statsPreview: {
+    marginTop: 16,
+    marginBottom: 8,
+    gap: 10,
+  },
+  formRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+  },
+  formTeam: {
+    alignItems: "center",
+    gap: 4,
+  },
+  formLabel: {
+    fontSize: 8,
+    fontWeight: "700",
+    color: "#71717a",
+    letterSpacing: 0.5,
+  },
+  formDots: {
+    flexDirection: "row",
+    gap: 3,
+  },
+  formDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  scorersRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 6,
+  },
+  scorerBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    gap: 4,
+  },
+  scorerBadgeHome: {
+    backgroundColor: "rgba(34, 197, 94, 0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(34, 197, 94, 0.25)",
+  },
+  scorerBadgeAway: {
+    backgroundColor: "rgba(251, 191, 36, 0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(251, 191, 36, 0.25)",
+  },
+  scorerIcon: {
+    fontSize: 10,
+  },
+  scorerName: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#e4e4e7",
+    maxWidth: 60,
+  },
+  scorerMinute: {
+    fontSize: 9,
+    fontWeight: "500",
+    color: "#71717a",
+  },
+  moreScorers: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#71717a",
+    paddingHorizontal: 6,
   },
 });

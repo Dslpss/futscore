@@ -290,7 +290,7 @@ export const espnApi = {
    * Get all live events from multiple leagues
    */
   getAllLiveEvents: async (): Promise<EspnLiveEvent[]> => {
-    const leagues = ['eng.1', 'esp.1', 'ita.1', 'ger.1', 'fra.1', 'bra.1'];
+    const leagues = ['eng.1', 'esp.1', 'ita.1', 'ger.1', 'fra.1', 'bra.1', 'fifa.intercontinental_cup'];
     const allEvents: EspnLiveEvent[] = [];
 
     for (const league of leagues) {
@@ -303,5 +303,13 @@ export const espnApi = {
     }
 
     return allEvents;
+  },
+
+  /**
+   * Get FIFA Intercontinental Cup events specifically
+   * This competition is only available via ESPN API
+   */
+  getIntercontinentalCupEvents: async (): Promise<EspnLiveEvent[]> => {
+    return espnApi.getScoreboardData('fifa.intercontinental_cup');
   },
 };
