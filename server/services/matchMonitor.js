@@ -58,6 +58,9 @@ function randomDelay(min = 500, max = 2000) {
 const MSN_API_BASE = "https://api.msn.com/sports";
 const MSN_API_KEY = "kO1dI4ptCTTylLkPL1ZTHYP8JhLKb8mRDoA5yotmNJ";
 
+// ESPN API config
+const ESPN_SCOREBOARD_URL = "https://site.api.espn.com/apis/personalized/v2/scoreboard/header";
+
 // Gerar activity ID único
 function generateActivityId() {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
@@ -65,6 +68,105 @@ function generateActivityId() {
     const v = c === "x" ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
+}
+
+/**
+ * Busca jogos da Copa Intercontinental na ESPN
+ */
+async function fetchEspnLiveMatches() {
+  const espnMatches = [];
+  try {
+    const params = new URLSearchParams({
+      sport: 'soccer',
+      league: 'fifa.intercontinental_cup',
+      lang: 'pt',
+      region: 'br',
+      contentorigin: 'deportes',
+      tz: 'America/Sao_Paulo'
+    });
+
+    const response = await fetch(`${ESPN_SCOREBOARD_URL}?${params}`, {
+      headers: {
+        "User-Agent": getRandomUserAgent(),
+        "Accept": "application/json"
+      }
+    });
+
+    if (!response.ok) {
+      console.log(`[Monitor] ESPN: HTTP ${response.status}`);
+      return [];
+    }
+
+    const data = await response.json();
+    
+    // Navegar pela estrutura complexa da ESPN: sports -> leagues -> events
+    const sports = data.sports || [];
+    for (const sport of sports) {
+      const leagues = sport.leagues || [];
+      for (const league of leagues) {
+        const events = league.events || [];
+        
+        for (const event of events) {
+          // Mapear status da ESPN para nosso padrão
+          // ESPN: 'pre', 'in', 'post'
+          let status = 'scheduled';
+          if (event.status === 'in') status = 'inprogress';
+          if (event.status === 'post') status = 'final';
+
+          const isLive = event.status === 'in';
+          const isFinished = event.status === 'post';
+          const isScheduled = event.status === 'pre';
+
+          // Checar se deve incluir
+          if (isLive || isScheduled || isFinished) {
+            
+            // Extrair competidores
+            const homeCompetitor = event.competitors?.find(c => c.homeAway === 'home');
+            const awayCompetitor = event.competitors?.find(c => c.homeAway === 'away');
+
+            const homeName = homeCompetitor?.displayName || homeCompetitor?.name || "Time Casa";
+            const awayName = awayCompetitor?.displayName || awayCompetitor?.name || "Time Fora";
+            
+            // Tentar pegar placar
+            const homeScore = parseInt(homeCompetitor?.score) || 0;
+            const awayScore = parseInt(awayCompetitor?.score) || 0;
+
+            // Detectar intervalo e outros status detalhados
+            const fullStatus = event.fullStatus || {};
+            const isHalfTime = fullStatus.type?.name === 'STATUS_HALFTIME';
+            const detailedStatus = fullStatus.type?.description || event.summary || '';
+
+            espnMatches.push({
+              id: event.id, // ID da ESPN
+              status: status,
+              rawStatus: event.status,
+              homeTeam: homeName,
+              awayTeam: awayName,
+              homeTeamId: homeCompetitor?.id,
+              awayTeamId: awayCompetitor?.id,
+              homeScore: homeScore,
+              awayScore: awayScore,
+              league: league.name || "Intercontinental Cup",
+              startTime: event.date,
+              isLive: isLive,
+              detailedStatus: detailedStatus,
+              isHalfTime: isHalfTime,
+              isFinished: isFinished,
+              source: 'ESPN' // Marcador para saber a origem
+            });
+          }
+        }
+      }
+    }
+    
+    if (espnMatches.length > 0) {
+      console.log(`[Monitor] ESPN: ${espnMatches.length} jogos da ${espnMatches[0].league}`);
+    }
+
+  } catch (error) {
+    console.error(`[Monitor] Erro ao buscar ESPN:`, error.message);
+  }
+  return espnMatches;
 }
 
 /**
@@ -100,8 +202,9 @@ async function fetchLiveMatches() {
     { id: "Basketball_NBA", name: "NBA", sport: "Basketball" },
   ];
 
-  const allMatches = [];
+  let allMatches = [];
 
+  // 1. Buscar jogos da MSN
   for (const league of leagues) {
     try {
       // Delay aleatório entre requisições de cada liga
@@ -144,10 +247,7 @@ async function fetchLiveMatches() {
 
       // DEBUG: Log da estrutura da resposta
       if (!data?.value?.[0]) {
-        console.log(
-          `[Monitor] ${league.name}: Resposta sem value[0]`,
-          JSON.stringify(data).substring(0, 200)
-        );
+        // Silenciar erro se for vazio, comum em ligas sem jogos
         continue;
       }
 
@@ -206,16 +306,21 @@ async function fetchLiveMatches() {
                 game.gameState?.detailedGameStatus
                   ?.toLowerCase()
                   ?.includes("final"),
+              source: 'MSN'
             });
           }
         }
       }
 
-      console.log(`[Monitor] ${league.name}: ${allMatches.length} jogos`);
+      console.log(`[Monitor] ${league.name}: ${allMatches.filter(m => m.league === league.name).length} jogos`);
     } catch (error) {
       console.error(`[Monitor] Erro ao buscar ${league.name}:`, error.message);
     }
   }
+
+  // 2. Buscar jogos da ESPN (Intercontinental) e mesclar
+  const espnMatches = await fetchEspnLiveMatches();
+  allMatches = [...allMatches, ...espnMatches];
 
   return allMatches;
 }
@@ -622,10 +727,12 @@ async function checkAndNotify() {
           notifiedSecondHalf.add(matchId);
         }
 
-        // 4. Buscar e processar eventos da timeline (cartões, pênaltis, VAR, etc)
-        const timelineEvents = await fetchMatchTimeline(matchId);
-        if (timelineEvents) {
-          await processTimelineEvents(match, timelineEvents);
+        // 4. Buscar e processar eventos da timeline (apenas para MSN por enquanto)
+        if (match.source !== 'ESPN') {
+          const timelineEvents = await fetchMatchTimeline(matchId);
+          if (timelineEvents) {
+            await processTimelineEvents(match, timelineEvents);
+          }
         }
       }
 

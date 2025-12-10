@@ -101,12 +101,12 @@ const EspnLiveCardContent: React.FC = () => {
       }
     }, 500);
     
-    // Auto-refresh every 2 minutes silently
+    // Auto-refresh every 30 seconds for live game updates
     const refreshInterval = setInterval(() => {
       if (isMountedRef.current) {
         loadEvents();
       }
-    }, 120000);
+    }, 30000);
     
     return () => {
       isMountedRef.current = false;
