@@ -5,12 +5,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import axios from 'axios';
 import { useNavigation } from '@react-navigation/native';
 import { Eye, EyeOff } from 'lucide-react-native';
+import { PremiumFeaturesModal } from '../components/PremiumFeaturesModal';
 
 export const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPremiumModal, setShowPremiumModal] = useState(true);
   const { signIn } = useAuth();
   const navigation = useNavigation<any>();
 
@@ -143,6 +145,11 @@ export const LoginScreen = () => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <PremiumFeaturesModal 
+        visible={showPremiumModal} 
+        onClose={() => setShowPremiumModal(false)} 
+      />
     </View>
   );
 };

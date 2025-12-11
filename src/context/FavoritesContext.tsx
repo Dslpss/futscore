@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { authApi, FavoriteTeam } from "../services/authApi";
+import { useAuth } from "./AuthContext";
 
 // Interface para jogo favorito
 interface FavoriteMatch {
@@ -45,15 +46,29 @@ const FAVORITE_MATCHES_KEY = "futscore_favorite_matches";
 export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
+  const { token, isAuthenticated } = useAuth();
   const [favoriteTeams, setFavoriteTeams] = useState<number[]>([]);
   const [favoriteLeagues, setFavoriteLeagues] = useState<number[]>([]);
   const [favoriteMatches, setFavoriteMatches] = useState<FavoriteMatch[]>([]);
   const [backendFavorites, setBackendFavorites] = useState<FavoriteTeam[]>([]);
 
+  // Load local favorites on mount
   useEffect(() => {
     loadFavorites();
-    refreshFromBackend();
   }, []);
+
+  // Refresh from backend when user authenticates
+  useEffect(() => {
+    if (isAuthenticated && token) {
+      console.log("[FavoritesContext] User authenticated, waiting for AsyncStorage...");
+      // Wait for AsyncStorage to be updated by signIn function (it saves token after setting state)
+      const timer = setTimeout(() => {
+        console.log("[FavoritesContext] Refreshing from backend...");
+        refreshFromBackend();
+      }, 700);
+      return () => clearTimeout(timer);
+    }
+  }, [isAuthenticated, token]);
 
   // Limpar jogos expirados periodicamente
   useEffect(() => {

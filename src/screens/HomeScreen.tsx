@@ -28,6 +28,8 @@ import { WarningCard } from "../components/WarningCard";
 import { UpdateModal } from "../components/UpdateModal";
 import { EspnLiveCard } from "../components/EspnLiveCard";
 import { OndeAssistirCard } from "../components/OndeAssistirCard";
+import { PremiumFeaturesModal } from "../components/PremiumFeaturesModal";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   Bell,
   User,
@@ -75,6 +77,7 @@ export const HomeScreen = ({ navigation }: any) => {
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<any>(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
 
   // Date Selection State
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -423,11 +426,34 @@ export const HomeScreen = ({ navigation }: any) => {
     }
   };
 
+  // Premium Modal - check if user dismissed it
+  const PREMIUM_MODAL_KEY = "@futscore_hide_premium_modal";
+
+  const checkPremiumModal = async () => {
+    try {
+      const hidden = await AsyncStorage.getItem(PREMIUM_MODAL_KEY);
+      if (!hidden) {
+        setShowPremiumModal(true);
+      }
+    } catch (error) {
+      console.error("Error checking premium modal preference:", error);
+    }
+  };
+
+  const handleDontShowAgainHome = async () => {
+    try {
+      await AsyncStorage.setItem(PREMIUM_MODAL_KEY, "true");
+    } catch (error) {
+      console.error("Error saving premium modal preference:", error);
+    }
+  };
+
   useEffect(() => {
     fetchWarnings();
     checkUpdate();
     fetchMatchCalendar();
     fetchLeagueLogos();
+    checkPremiumModal();
     // backendFavorites is loaded automatically by FavoritesContext
   }, []);
 
@@ -1404,6 +1430,14 @@ export const HomeScreen = ({ navigation }: any) => {
           onClose={() => setShowUpdateModal(false)}
         />
       )}
+
+      {/* Premium Features Modal */}
+      <PremiumFeaturesModal
+        visible={showPremiumModal}
+        onClose={() => setShowPremiumModal(false)}
+        showDontShowAgain={true}
+        onDontShowAgain={handleDontShowAgainHome}
+      />
 
       {/* Profile Modal */}
       <Modal
