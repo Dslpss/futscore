@@ -308,8 +308,96 @@ export const espnApi = {
   /**
    * Get FIFA Intercontinental Cup events specifically
    * This competition is only available via ESPN API
+   * Uses /scoreboard endpoint which returns future games (not /header which only returns past games)
    */
   getIntercontinentalCupEvents: async (): Promise<EspnLiveEvent[]> => {
-    return espnApi.getScoreboardData('fifa.intercontinental_cup');
+    const cacheKey = 'intercontinental_scoreboard';
+    const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+    
+    try {
+      // Check cache
+      const cached = await AsyncStorage.getItem(ESPN_CACHE_PREFIX + cacheKey);
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        if (Date.now() - timestamp < CACHE_DURATION) {
+          console.log('[ESPN API] Returning cached Intercontinental Cup events');
+          return data as EspnLiveEvent[];
+        }
+      }
+    } catch (e) {
+      console.error('[ESPN CACHE] Error reading Intercontinental cache', e);
+    }
+
+    try {
+      console.log('[ESPN API] Fetching Intercontinental Cup from /scoreboard...');
+      
+      // Use the /scoreboard endpoint which returns future games
+      const response = await axios.get(
+        'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.intercontinental_cup/scoreboard',
+        { timeout: 10000 }
+      );
+
+      const events: EspnLiveEvent[] = [];
+      const rawEvents = response.data.events || [];
+      
+      for (const event of rawEvents) {
+        // Get competitors from competitions array
+        const competition = event.competitions?.[0];
+        const homeCompetitor = competition?.competitors?.find((c: any) => c.homeAway === 'home');
+        const awayCompetitor = competition?.competitors?.find((c: any) => c.homeAway === 'away');
+        
+        // Map status: ESPN uses 'pre', 'in', 'post'
+        let status = 'pre';
+        if (event.status?.type?.state === 'in') status = 'in';
+        if (event.status?.type?.state === 'post') status = 'post';
+        
+        events.push({
+          id: event.id,
+          name: event.name,
+          shortName: event.shortName,
+          date: event.date,
+          status: status,
+          summary: event.status?.type?.shortDetail || event.status?.type?.description,
+          period: event.status?.period,
+          clock: event.status?.displayClock,
+          location: competition?.venue?.fullName,
+          competitors: [
+            {
+              id: homeCompetitor?.id || '',
+              displayName: homeCompetitor?.team?.displayName || homeCompetitor?.team?.name || 'TBD',
+              abbreviation: homeCompetitor?.team?.abbreviation || '',
+              homeAway: 'home',
+              score: homeCompetitor?.score,
+              logo: homeCompetitor?.team?.logo || '',
+              winner: homeCompetitor?.winner,
+            },
+            {
+              id: awayCompetitor?.id || '',
+              displayName: awayCompetitor?.team?.displayName || awayCompetitor?.team?.name || 'TBD',  
+              abbreviation: awayCompetitor?.team?.abbreviation || '',
+              homeAway: 'away',
+              score: awayCompetitor?.score,
+              logo: awayCompetitor?.team?.logo || '',
+              winner: awayCompetitor?.winner,
+            },
+          ],
+        });
+      }
+
+      console.log(`[ESPN API] Found ${events.length} Intercontinental Cup events`);
+
+      // Cache the results
+      try {
+        const cacheEntry = { data: events, timestamp: Date.now() };
+        await AsyncStorage.setItem(ESPN_CACHE_PREFIX + cacheKey, JSON.stringify(cacheEntry));
+      } catch (e) {
+        console.error('[ESPN CACHE] Error saving Intercontinental cache', e);
+      }
+
+      return events;
+    } catch (error) {
+      console.error('[ESPN API] Error fetching Intercontinental Cup:', error);
+      return [];
+    }
   },
 };

@@ -26,6 +26,7 @@ import { msnSportsApi } from "../services/msnSportsApi";
 import { transformMsnGameToMatch } from "../utils/msnTransformer";
 import { Match } from "../types";
 import { MatchStatsModal } from "../components/MatchStatsModal";
+import { espnApi } from "../services/espnApi";
 
 // Configurar locale para português
 LocaleConfig.locales["pt-br"] = {
@@ -335,6 +336,70 @@ export function CalendarScreen({ navigation }: any) {
             allMatches.push(...matches);
           }
         });
+
+        // ALSO fetch Copa Intercontinental from ESPN API (not available in MSN)
+        try {
+          const espnEvents = await espnApi.getIntercontinentalCupEvents();
+          if (espnEvents && espnEvents.length > 0) {
+            // Filter by selected date
+            const espnGamesForDate = espnEvents.filter((event: any) => {
+              if (!event.date) return false;
+              const eventDate = new Date(event.date);
+              const year = eventDate.getFullYear();
+              const month = String(eventDate.getMonth() + 1).padStart(2, "0");
+              const day = String(eventDate.getDate()).padStart(2, "0");
+              const eventDateStr = `${year}-${month}-${day}`;
+              return eventDateStr === date;
+            });
+
+            console.log(`[Calendar] ESPN Intercontinental: ${espnGamesForDate.length}/${espnEvents.length} games for ${date}`);
+
+            // Transform ESPN events to Match format
+            const espnMatches: Match[] = espnGamesForDate.map((event: any) => {
+              const homeCompetitor = event.competitors?.find((c: any) => c.homeAway === 'home');
+              const awayCompetitor = event.competitors?.find((c: any) => c.homeAway === 'away');
+
+              let status = "NS";
+              if (event.status === 'in') status = "1H";
+              if (event.status === 'post') status = "FT";
+
+              return {
+                fixture: {
+                  id: parseInt(event.id) || Math.random() * 1000000,
+                  date: event.date,
+                  status: { short: status, long: event.fullStatus?.type?.description || status },
+                  venue: { name: event.venue || "", city: "" },
+                },
+                teams: {
+                  home: {
+                    id: parseInt(homeCompetitor?.id) || 0,
+                    name: homeCompetitor?.displayName || homeCompetitor?.name || "TBD",
+                    logo: homeCompetitor?.logo || "",
+                  },
+                  away: {
+                    id: parseInt(awayCompetitor?.id) || 0,
+                    name: awayCompetitor?.displayName || awayCompetitor?.name || "TBD",
+                    logo: awayCompetitor?.logo || "",
+                  },
+                },
+                goals: {
+                  home: parseInt(homeCompetitor?.score) || null,
+                  away: parseInt(awayCompetitor?.score) || null,
+                },
+                league: {
+                  id: "FIC",
+                  name: "Copa Intercontinental",
+                  logo: "https://a.espncdn.com/i/leaguelogos/soccer/500/22902.png",
+                  country: "Internacional",
+                },
+              };
+            });
+
+            allMatches.push(...espnMatches);
+          }
+        } catch (espnError) {
+          console.log("[Calendar] ESPN Intercontinental fetch failed:", espnError);
+        }
 
         // Filtrar por times favoritos se houver
         let filteredMatches = allMatches;

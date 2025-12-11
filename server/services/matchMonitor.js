@@ -180,6 +180,11 @@ async function fetchLiveMatches() {
       sport: "Soccer",
     },
     {
+      id: "Soccer_BrazilCopaDoBrasil",
+      name: "Copa do Brasil",
+      sport: "Soccer",
+    },
+    {
       id: "Soccer_InternationalClubsUEFAChampionsLeague",
       name: "Champions League",
       sport: "Soccer",
@@ -196,6 +201,11 @@ async function fetchLiveMatches() {
     {
       id: "Soccer_PortugalPrimeiraLiga",
       name: "Liga Portugal",
+      sport: "Soccer",
+    },
+    {
+      id: "Soccer_UEFAEuropaLeague",
+      name: "Europa League",
       sport: "Soccer",
     },
     // Basketball

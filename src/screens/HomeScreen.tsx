@@ -271,11 +271,17 @@ export const HomeScreen = ({ navigation }: any) => {
         const espnEvents = await espnApi.getIntercontinentalCupEvents();
         
         if (espnEvents && espnEvents.length > 0) {
-          // Filter by date
+          // Filter by date using local time (avoid UTC conversion issues)
           const filtered = espnEvents.filter((event) => {
-            const eventDate = new Date(event.date).toISOString().split("T")[0];
-            return eventDate === dateStr;
+            const eventDate = new Date(event.date);
+            const year = eventDate.getFullYear();
+            const month = String(eventDate.getMonth() + 1).padStart(2, "0");
+            const day = String(eventDate.getDate()).padStart(2, "0");
+            const eventDateStr = `${year}-${month}-${day}`;
+            return eventDateStr === dateStr;
           });
+          
+          console.log(`[HomeScreen] ⚽ ESPN Intercontinental: ${filtered.length}/${espnEvents.length} games for ${dateStr}`);
           
           // Transform ESPN events to Match format
           const intercontinentalMatches: Match[] = filtered.map((event) => {
