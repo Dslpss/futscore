@@ -161,31 +161,53 @@ export const HomeScreen = ({ navigation }: any) => {
 
   useEffect(() => {
     if (!isToday(selectedDate)) {
-      fetchMatchesForDate(selectedDate);
+      // Clear schedule cache for the selected date to ensure fresh data with date filtering
+      const clearAndFetch = async () => {
+        const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
+        const year = selectedDate.getFullYear();
+        const month = String(selectedDate.getMonth() + 1).padStart(2, "0");
+        const day = String(selectedDate.getDate()).padStart(2, "0");
+        const dateStr = `${year}-${month}-${day}`;
+        
+        const leagueIds = [
+          "Soccer_BrazilBrasileiroSerieA",
+          "Soccer_BrazilCopaDoBrasil",
+          "Soccer_InternationalClubsUEFAChampionsLeague",
+          "Soccer_UEFAEuropaLeague",
+          "Soccer_EnglandPremierLeague",
+          "Soccer_GermanyBundesliga",
+          "Soccer_ItalySerieA",
+          "Soccer_FranceLigue1",
+          "Soccer_SpainLaLiga",
+          "Soccer_PortugalPrimeiraLiga",
+          "Basketball_NBA",
+        ];
+        
+        // Clear schedule cache for selected date
+        for (const leagueId of leagueIds) {
+          await AsyncStorage.removeItem(`msn_sports_cache_schedule_v3_${leagueId}_${dateStr}`);
+        }
+        console.log(`[HomeScreen] Cleared schedule cache for ${dateStr}`);
+        
+        fetchMatchesForDate(selectedDate);
+      };
+      clearAndFetch();
     }
   }, [selectedDate]);
 
   const fetchMatchesForDate = async (date: Date) => {
     setLoadingCustom(true);
+    console.log(`[HomeScreen] ========== fetchMatchesForDate STARTED ==========`);
     try {
       // Construct date string using local time to avoid timezone shifts
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, "0");
       const day = String(date.getDate()).padStart(2, "0");
       const dateStr = `${year}-${month}-${day}`;
+      console.log(`[HomeScreen] Fetching matches for date: ${dateStr}`);
 
-      // 1. Fetch from football-data.org (Brasileirão, Champions, La Liga)
-      const footballDataIds = ["BSA", "CL", "PD"];
+      // Skip football-data.org for now as it may be slow/blocking
       let footballDataMatches: Match[] = [];
-
-      const footballDataPromises = footballDataIds.map((id) =>
-        api.getFixtures(id, dateStr)
-      );
-      const footballDataResults = await Promise.all(footballDataPromises);
-
-      footballDataResults.forEach((matches) => {
-        footballDataMatches = [...footballDataMatches, ...matches];
-      });
 
       // 2. Fetch from MSN Sports API using getScheduleByDate for specific date
       const { msnSportsApi } = await import("../services/msnSportsApi");
@@ -209,8 +231,10 @@ export const HomeScreen = ({ navigation }: any) => {
 
       let msnMatches: Match[] = [];
 
-      // Use getScheduleByDate for fetching matches on specific dates
-      for (const leagueId of msnLeagueIds) {
+      // Fetch all leagues in parallel for faster loading
+      console.log(`[HomeScreen] Fetching ${msnLeagueIds.length} leagues in parallel for ${dateStr}...`);
+      
+      const leaguePromises = msnLeagueIds.map(async (leagueId) => {
         try {
           const games = await msnSportsApi.getScheduleByDate(leagueId, dateStr);
 
@@ -218,52 +242,28 @@ export const HomeScreen = ({ navigation }: any) => {
           if (leagueId === "Soccer_BrazilCopaDoBrasil") {
             console.log(`[HomeScreen] ⚽ COPA DO BRASIL - Date: ${dateStr}`);
             console.log(`[HomeScreen] ⚽ COPA DO BRASIL - Games fetched: ${games.length}`);
-            if (games.length > 0) {
-              games.forEach((game: any, idx: number) => {
-                console.log(`[HomeScreen] ⚽ COPA DO BRASIL Game ${idx + 1}:`, {
-                  id: game.id,
-                  home: game.homeTeam?.name?.localizedName || game.homeTeam?.name?.rawName,
-                  away: game.awayTeam?.name?.localizedName || game.awayTeam?.name?.rawName,
-                  status: game.gameState?.gameStatus,
-                  startDate: game.startDate,
-                });
-              });
-            } else {
-              console.log(`[HomeScreen] ⚽ COPA DO BRASIL - NO GAMES RETURNED FROM API for ${dateStr}`);
-            }
           }
 
           const transformedGames = games.map((game: any) =>
             transformMsnGameToMatch({ ...game, seasonId: leagueId })
           );
           
-          // Additional logging for Copa do Brasil after transformation
-          if (leagueId === "Soccer_BrazilCopaDoBrasil" && transformedGames.length > 0) {
-            console.log(`[HomeScreen] ⚽ COPA DO BRASIL - Transformed games: ${transformedGames.length}`);
-            transformedGames.forEach((match: any, idx: number) => {
-              console.log(`[HomeScreen] ⚽ COPA DO BRASIL Transformed ${idx + 1}:`, {
-                home: match.teams.home.name,
-                away: match.teams.away.name,
-                leagueName: match.league.name,
-                leagueLogo: match.league.logo ? "HAS LOGO: " + match.league.logo.substring(0, 50) : "NO LOGO",
-                date: match.fixture.date,
-                status: match.fixture.status.short,
-              });
-            });
-          }
-          
-          msnMatches = [...msnMatches, ...transformedGames];
+          return transformedGames;
         } catch (error) {
           console.error(
             `[HomeScreen] Error fetching MSN Sports for ${leagueId}:`,
             error
           );
-          // Special error logging for Copa do Brasil
-          if (leagueId === "Soccer_BrazilCopaDoBrasil") {
-            console.error(`[HomeScreen] ⚽ COPA DO BRASIL ERROR DETAILS:`, error);
-          }
+          return [];
         }
-      }
+      });
+
+      const leagueResults = await Promise.all(leaguePromises);
+      leagueResults.forEach((games) => {
+        msnMatches = [...msnMatches, ...games];
+      });
+
+      console.log(`[HomeScreen] Fetched ${msnMatches.length} total MSN matches for ${dateStr}`);
 
       // 3. SPECIAL: Fetch FIFA Intercontinental Cup from ESPN (not available in MSN)
       try {
@@ -808,7 +808,11 @@ export const HomeScreen = ({ navigation }: any) => {
                   date.getDate() === selectedDate.getDate() &&
                   date.getMonth() === selectedDate.getMonth();
                 const isDateToday = isToday(date);
-                const dateStr = date.toISOString().split("T")[0];
+                // Use local date formatting to avoid timezone shift issues
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, "0");
+                const day = String(date.getDate()).padStart(2, "0");
+                const dateStr = `${year}-${month}-${day}`;
                 const hasMatches = daysWithMatches.has(dateStr);
 
                 return (

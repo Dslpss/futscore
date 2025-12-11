@@ -6,6 +6,7 @@ import { MsnLeague, MsnPersonalizationStrip } from "../types";
 // MSN Sports API client
 const msnApiClient = axios.create({
   baseURL: CONFIG.MSN_SPORTS.BASE_URL,
+  timeout: 15000, // 15 second timeout
   headers: {
     "User-Agent":
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -282,12 +283,41 @@ export const msnSportsApi = {
       }
 
       console.log(
-        `[MSN API] Fetched ${allGames.length} games for ${leagueId} on ${date}${leagueInfo?.image?.id ? ' (with league logo)' : ''}`
+        `[MSN API] Fetched ${allGames.length} total games for ${leagueId}${leagueInfo?.image?.id ? ' (with league logo)' : ''}`
       );
 
+      // Debug: Log first few games dates
+      if (allGames.length > 0) {
+        console.log(`[MSN API] Sample games from ${leagueId}:`);
+        allGames.slice(0, 3).forEach((game: any, idx: number) => {
+          const ts = parseInt(game.startDateTime, 10);
+          const gd = new Date(ts);
+          const gdStr = `${gd.getFullYear()}-${String(gd.getMonth() + 1).padStart(2, "0")}-${String(gd.getDate()).padStart(2, "0")}`;
+          console.log(`  Game ${idx + 1}: ${gdStr} (ts: ${game.startDateTime})`);
+        });
+      }
+
+      // Always filter games by the requested date
+      // The API may return games from different dates, so we need to filter
+      let finalGames = allGames;
+      
+      if (allGames.length > 0) {
+        finalGames = allGames.filter((game: any) => {
+          if (!game.startDateTime) return false;
+          const timestamp = parseInt(game.startDateTime, 10);
+          const gameDate = new Date(timestamp);
+          const year = gameDate.getFullYear();
+          const month = String(gameDate.getMonth() + 1).padStart(2, "0");
+          const dayNum = String(gameDate.getDate()).padStart(2, "0");
+          const gameDateStr = `${year}-${month}-${dayNum}`;
+          return gameDateStr === date;
+        });
+        console.log(`[MSN API] Filtered ${allGames.length} -> ${finalGames.length} games for ${leagueId} on ${date}`);
+      }
+
       // Cache for 10 minutes (schedule data doesn't change frequently)
-      await setCachedData(cacheKey, allGames, 10 * 60 * 1000);
-      return allGames;
+      await setCachedData(cacheKey, finalGames, 10 * 60 * 1000);
+      return finalGames;
     } catch (error: any) {
       // 404 means no games scheduled for this date - not an error
       if (error?.response?.status === 404) {

@@ -25,6 +25,7 @@ import { useFavorites } from "../context/FavoritesContext";
 import { msnSportsApi } from "../services/msnSportsApi";
 import { transformMsnGameToMatch } from "../utils/msnTransformer";
 import { Match } from "../types";
+import { MatchStatsModal } from "../components/MatchStatsModal";
 
 // Configurar locale para português
 LocaleConfig.locales["pt-br"] = {
@@ -207,6 +208,10 @@ export function CalendarScreen({ navigation }: any) {
   // League logos cache - same method as LeaguesExplorer
   const [leagueLogos, setLeagueLogos] = useState<Record<string, string>>({});
 
+  // Modal state for match details
+  const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
+  const [showMatchModal, setShowMatchModal] = useState(false);
+
   // Load league logos - exact same method as LeaguesExplorer
   const loadLeagueLogos = useCallback(async () => {
     try {
@@ -296,19 +301,35 @@ export function CalendarScreen({ navigation }: any) {
   const loadMatchesForDate = useCallback(
     async (date: string) => {
       setLoadingMatches(true);
+      console.log(`[Calendar] Loading matches for date: ${date}`);
       try {
         const allMatches: Match[] = [];
 
-        // Buscar jogos de todas as ligas para a data
+        // Use getLiveAroundLeague which returns games from multiple dates
+        // This is better for calendar as it includes past games
         const promises = ALL_LEAGUES.map((leagueId) =>
-          msnSportsApi.getScheduleByDate(leagueId, date)
+          msnSportsApi.getLiveAroundLeague(leagueId)
         );
 
         const results = await Promise.all(promises);
 
-        results.forEach((games) => {
+        results.forEach((games: any[], idx: number) => {
           if (games && games.length > 0) {
-            const matches = games.map((game: any) =>
+            // Filter games by the selected date
+            const gamesForDate = games.filter((game: any) => {
+              if (!game.startDateTime) return false;
+              const timestamp = parseInt(game.startDateTime, 10);
+              const gameDate = new Date(timestamp);
+              const year = gameDate.getFullYear();
+              const month = String(gameDate.getMonth() + 1).padStart(2, "0");
+              const day = String(gameDate.getDate()).padStart(2, "0");
+              const gameDateStr = `${year}-${month}-${day}`;
+              return gameDateStr === date;
+            });
+            
+            console.log(`[Calendar] ${ALL_LEAGUES[idx]}: ${gamesForDate.length}/${games.length} games for ${date}`);
+            
+            const matches = gamesForDate.map((game: any) =>
               transformMsnGameToMatch(game)
             );
             allMatches.push(...matches);
@@ -506,7 +527,11 @@ export function CalendarScreen({ navigation }: any) {
           hasFavorite && styles.matchCardFavorite,
           isLive && styles.matchCardLive,
         ]}
-        activeOpacity={0.7}>
+        activeOpacity={0.7}
+        onPress={() => {
+          setSelectedMatch(match);
+          setShowMatchModal(true);
+        }}>
         {/* Header com liga e horário */}
         <View style={styles.matchHeader}>
           <View style={styles.leagueInfo}>
@@ -728,6 +753,16 @@ export function CalendarScreen({ navigation }: any) {
           <View style={styles.bottomSpacing} />
         </ScrollView>
       </LinearGradient>
+
+      {/* Match Details Modal */}
+      <MatchStatsModal
+        visible={showMatchModal}
+        match={selectedMatch}
+        onClose={() => {
+          setShowMatchModal(false);
+          setSelectedMatch(null);
+        }}
+      />
     </SafeAreaView>
   );
 }
