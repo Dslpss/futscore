@@ -347,7 +347,7 @@ export const espnApi = {
         const awayCompetitor = competition?.competitors?.find((c: any) => c.homeAway === 'away');
         
         // Map status: ESPN uses 'pre', 'in', 'post'
-        let status = 'pre';
+        let status: 'pre' | 'in' | 'post' = 'pre';
         if (event.status?.type?.state === 'in') status = 'in';
         if (event.status?.type?.state === 'post') status = 'post';
         
@@ -356,7 +356,7 @@ export const espnApi = {
           name: event.name,
           shortName: event.shortName,
           date: event.date,
-          status: status,
+          status,
           summary: event.status?.type?.shortDetail || event.status?.type?.description,
           period: event.status?.period,
           clock: event.status?.displayClock,
@@ -397,6 +397,110 @@ export const espnApi = {
       return events;
     } catch (error) {
       console.error('[ESPN API] Error fetching Intercontinental Cup:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Get FIFA World Cup 2026 events
+   * Uses /scoreboard endpoint with date range to fetch ALL scheduled World Cup games
+   * World Cup 2026: June 11 - July 19, 2026
+   */
+  getWorldCupEvents: async (): Promise<EspnLiveEvent[]> => {
+    const cacheKey = 'worldcup_scoreboard_all';
+    const CACHE_DURATION = 60 * 60 * 1000; // 1 hour (games don't change often)
+    
+    try {
+      // Check cache
+      const cached = await AsyncStorage.getItem(ESPN_CACHE_PREFIX + cacheKey);
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        if (Date.now() - timestamp < CACHE_DURATION) {
+          console.log('[ESPN API] Returning cached World Cup events');
+          return data as EspnLiveEvent[];
+        }
+      }
+    } catch (e) {
+      console.error('[ESPN CACHE] Error reading World Cup cache', e);
+    }
+
+    try {
+      console.log('[ESPN API] Fetching ALL World Cup 2026 games...');
+      
+      // Fetch all games using date range and high limit
+      // World Cup 2026: June 11 - July 19 (104 games total)
+      const response = await axios.get(
+        'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard',
+        { 
+          timeout: 20000,
+          params: {
+            dates: '20260611-20260720', // Full tournament range
+            limit: 150 // More than enough for 104 games
+          }
+        }
+      );
+
+      const events: EspnLiveEvent[] = [];
+      const rawEvents = response.data.events || [];
+      
+      for (const event of rawEvents) {
+        // Get competitors from competitions array
+        const competition = event.competitions?.[0];
+        const homeCompetitor = competition?.competitors?.find((c: any) => c.homeAway === 'home');
+        const awayCompetitor = competition?.competitors?.find((c: any) => c.homeAway === 'away');
+        
+        // Map status: ESPN uses 'pre', 'in', 'post'
+        let status: 'pre' | 'in' | 'post' = 'pre';
+        if (event.status?.type?.state === 'in') status = 'in';
+        if (event.status?.type?.state === 'post') status = 'post';
+        
+        events.push({
+          id: event.id,
+          name: event.name,
+          shortName: event.shortName,
+          date: event.date,
+          status,
+          summary: event.status?.type?.shortDetail || event.status?.type?.description,
+          period: event.status?.period,
+          clock: event.status?.displayClock,
+          location: competition?.venue?.fullName,
+          group: event.season?.type?.name || competition?.type?.abbreviation,
+          competitors: [
+            {
+              id: homeCompetitor?.id || '',
+              displayName: homeCompetitor?.team?.displayName || homeCompetitor?.team?.name || 'TBD',
+              abbreviation: homeCompetitor?.team?.abbreviation || '',
+              homeAway: 'home',
+              score: homeCompetitor?.score,
+              logo: homeCompetitor?.team?.logo || '',
+              winner: homeCompetitor?.winner,
+            },
+            {
+              id: awayCompetitor?.id || '',
+              displayName: awayCompetitor?.team?.displayName || awayCompetitor?.team?.name || 'TBD',  
+              abbreviation: awayCompetitor?.team?.abbreviation || '',
+              homeAway: 'away',
+              score: awayCompetitor?.score,
+              logo: awayCompetitor?.team?.logo || '',
+              winner: awayCompetitor?.winner,
+            },
+          ],
+        });
+      }
+
+      console.log(`[ESPN API] Found ${events.length} World Cup events`);
+
+      // Cache the results
+      try {
+        const cacheEntry = { data: events, timestamp: Date.now() };
+        await AsyncStorage.setItem(ESPN_CACHE_PREFIX + cacheKey, JSON.stringify(cacheEntry));
+      } catch (e) {
+        console.error('[ESPN CACHE] Error saving World Cup cache', e);
+      }
+
+      return events;
+    } catch (error) {
+      console.error('[ESPN API] Error fetching World Cup:', error);
       return [];
     }
   },

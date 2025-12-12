@@ -305,13 +305,13 @@ export interface EspnLiveCompetitor {
   displayName: string;
   abbreviation: string;
   homeAway: 'home' | 'away';
-  winner: boolean;
-  form: string; // e.g., "EVDDD"
-  score: string;
-  logo: string;
-  logoDark: string;
-  color: string;
-  record: string;
+  winner?: boolean;
+  form?: string; // e.g., "EVDDD"
+  score?: string;
+  logo?: string;
+  logoDark?: string;
+  color?: string;
+  record?: string;
   scoringSummary?: EspnScoringSummary[];
   goalieSummary?: EspnGoalieSummary[];
 }
@@ -322,11 +322,12 @@ export interface EspnLiveEvent {
   shortName: string;
   date: string;
   status: 'pre' | 'in' | 'post';
-  summary: string;
-  period: number;
-  clock: string;
-  location: string;
-  link: string;
+  summary?: string;
+  period?: number;
+  clock?: string;
+  location?: string;
+  link?: string;
+  group?: string; // World Cup group/phase
   situation?: {
     lastPlay: EspnLastPlay;
   };

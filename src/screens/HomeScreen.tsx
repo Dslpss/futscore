@@ -29,6 +29,7 @@ import { UpdateModal } from "../components/UpdateModal";
 import { EspnLiveCard } from "../components/EspnLiveCard";
 import { OndeAssistirCard } from "../components/OndeAssistirCard";
 import { PremiumFeaturesModal } from "../components/PremiumFeaturesModal";
+import { WorldCupModal } from "../components/WorldCupModal";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   Bell,
@@ -78,6 +79,7 @@ export const HomeScreen = ({ navigation }: any) => {
   const [updateInfo, setUpdateInfo] = useState<any>(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [showWorldCupModal, setShowWorldCupModal] = useState(false);
 
   // Date Selection State
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -1031,6 +1033,30 @@ export const HomeScreen = ({ navigation }: any) => {
               </View>
             </LinearGradient>
           </TouchableOpacity>
+
+          {/* World Cup 2026 Button */}
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => setShowWorldCupModal(true)}
+            activeOpacity={0.85}>
+            <LinearGradient
+              colors={["#1a3a4d", "#0f2027"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.actionButtonGradient}>
+              <View style={styles.actionButtonIconWrapper}>
+                <LinearGradient
+                  colors={["#FFD700", "#FFA500"]}
+                  style={styles.actionIconGradient}>
+                  <Text style={styles.actionButtonIcon}>🏆</Text>
+                </LinearGradient>
+              </View>
+              <View style={styles.actionButtonTextContainer}>
+                <Text style={styles.actionButtonText}>Copa 2026</Text>
+                <Text style={styles.actionButtonSubtext}>Calendário</Text>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
         </ScrollView>
       </View>
 
@@ -1558,6 +1584,12 @@ export const HomeScreen = ({ navigation }: any) => {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* World Cup 2026 Modal */}
+      <WorldCupModal
+        visible={showWorldCupModal}
+        onClose={() => setShowWorldCupModal(false)}
+      />
     </View>
   );
 };
