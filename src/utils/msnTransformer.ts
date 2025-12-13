@@ -30,6 +30,7 @@ export function transformMsnGameToMatch(game: any, leagueInfo?: any): Match {
   let statusShort = "NS"; // Not Started
   let statusLong = "Não Iniciado";
   let elapsed: number | undefined = undefined;
+  let elapsedSeconds: number | undefined = undefined;
 
   const gameStatus = game.gameState?.gameStatus;
   const detailedStatus =
@@ -94,9 +95,12 @@ export function transformMsnGameToMatch(game: any, leagueInfo?: any): Match {
       // Soccer has 2 halves of 45 minutes each
       // gameClock is total elapsed time (0 → 90+)
 
-      // Parse minutos jogados
+      // Parse minutos e segundos jogados
       if (gameClockMinutes) {
         elapsed = parseInt(gameClockMinutes) || 0;
+      }
+      if (gameClockSeconds) {
+        elapsedSeconds = parseInt(gameClockSeconds) || 0;
       }
 
       // Verificar se está no intervalo
@@ -164,6 +168,7 @@ export function transformMsnGameToMatch(game: any, leagueInfo?: any): Match {
         long: statusLong,
         short: statusShort,
         elapsed: elapsed,
+        elapsedSeconds: elapsedSeconds,
       },
       // Store the full MSN game ID for later use (statistics, lineups)
       // Some games have UUID format, others have SportRadar format

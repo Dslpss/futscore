@@ -76,6 +76,7 @@ export interface Match {
       long: string;
       short: string;
       elapsed?: number;
+      elapsedSeconds?: number;
     };
     venue?: {
       name: string;

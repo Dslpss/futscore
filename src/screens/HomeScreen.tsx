@@ -16,6 +16,8 @@ import {
   Alert,
   Linking,
   Image,
+  TextInput,
+  Animated,
 } from "react-native";
 import { useMatches } from "../context/MatchContext";
 import { useFavorites } from "../context/FavoritesContext";
@@ -30,6 +32,7 @@ import { EspnLiveCard } from "../components/EspnLiveCard";
 import { OndeAssistirCard } from "../components/OndeAssistirCard";
 import { PremiumFeaturesModal } from "../components/PremiumFeaturesModal";
 import { WorldCupModal } from "../components/WorldCupModal";
+import { TeamSearchBar } from "../components/TeamSearchBar";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   Bell,
@@ -42,7 +45,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Tv,
+  Search,
 } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import { api } from "../services/api";
 import { authApi, FavoriteTeam } from "../services/authApi";
@@ -56,6 +61,218 @@ import { inferMsnTeamId } from "../utils/teamIdMapper";
 import { MSN_LEAGUE_MAP } from "../utils/msnTransformer";
 
 const { width } = Dimensions.get("window");
+
+// Separate memoized search input component to prevent keyboard dismissal
+interface TeamSearchInputProps {
+  onSearchChange: (query: string) => void;
+  searchResults: Array<{ id: number; name: string; logo: string; country: string; msnId?: string }>;
+  searchingTeams: boolean;
+  isFavoriteTeam: (id: number) => boolean;
+  toggleFavoriteTeam: (id: number, info: { name: string; logo: string; country: string; msnId?: string }) => void;
+}
+
+const TeamSearchInput = React.memo(({ 
+  onSearchChange, 
+  searchResults, 
+  searchingTeams,
+  isFavoriteTeam,
+  toggleFavoriteTeam,
+}: TeamSearchInputProps) => {
+  const [localQuery, setLocalQuery] = useState("");
+  const [focused, setFocused] = useState(false);
+  const animValue = useRef(new Animated.Value(0)).current;
+
+  const handleChange = (text: string) => {
+    setLocalQuery(text);
+    onSearchChange(text);
+  };
+
+  const handleFocus = () => {
+    setFocused(true);
+    Animated.timing(animValue, {
+      toValue: 1,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
+  };
+
+  const handleBlur = () => {
+    setFocused(false);
+    Animated.timing(animValue, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
+  };
+
+  return (
+    <View style={teamSearchStyles.wrapper}>
+      <Animated.View
+        style={[
+          teamSearchStyles.container,
+          {
+            borderColor: animValue.interpolate({
+              inputRange: [0, 1],
+              outputRange: ["rgba(255,255,255,0.05)", "#22c55e"],
+            }),
+          },
+        ]}>
+        <Search size={18} color={focused ? "#22c55e" : "#71717a"} />
+        <TextInput
+          style={teamSearchStyles.input}
+          placeholder="Buscar time para favoritar..."
+          placeholderTextColor="#71717a"
+          value={localQuery}
+          onChangeText={handleChange}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+        />
+        {localQuery.length > 0 && (
+          <TouchableOpacity onPress={() => { setLocalQuery(""); onSearchChange(""); }}>
+            <Ionicons name="close-circle" size={18} color="#71717a" />
+          </TouchableOpacity>
+        )}
+      </Animated.View>
+
+      {/* Search Results Dropdown */}
+      {(searchResults.length > 0 || searchingTeams) && localQuery.length >= 2 && (
+        <View style={teamSearchStyles.resultsContainer}>
+          {searchingTeams ? (
+            <View style={teamSearchStyles.loadingContainer}>
+              <Text style={teamSearchStyles.loadingText}>Buscando times...</Text>
+            </View>
+          ) : (
+            searchResults.map((team) => (
+              <TouchableOpacity
+                key={team.id}
+                style={teamSearchStyles.resultItem}
+                onPress={() => {
+                  toggleFavoriteTeam(team.id, {
+                    name: team.name,
+                    logo: team.logo,
+                    country: team.country,
+                    msnId: team.msnId,
+                  });
+                }}
+                activeOpacity={0.7}
+              >
+                <Image
+                  source={{ uri: team.logo }}
+                  style={teamSearchStyles.resultLogo}
+                  resizeMode="contain"
+                />
+                <View style={teamSearchStyles.resultInfo}>
+                  <Text style={teamSearchStyles.resultName} numberOfLines={1}>
+                    {team.name}
+                  </Text>
+                  <Text style={teamSearchStyles.resultCountry}>{team.country}</Text>
+                </View>
+                <TouchableOpacity
+                  style={[
+                    teamSearchStyles.resultFavorite,
+                    isFavoriteTeam(team.id) && teamSearchStyles.resultFavoriteActive,
+                  ]}
+                  onPress={() => {
+                    toggleFavoriteTeam(team.id, {
+                      name: team.name,
+                      logo: team.logo,
+                      country: team.country,
+                      msnId: team.msnId,
+                    });
+                  }}
+                >
+                  <Heart
+                    size={18}
+                    color={isFavoriteTeam(team.id) ? "#22c55e" : "#71717a"}
+                    fill={isFavoriteTeam(team.id) ? "#22c55e" : "transparent"}
+                  />
+                </TouchableOpacity>
+              </TouchableOpacity>
+            ))
+          )}
+        </View>
+      )}
+    </View>
+  );
+});
+
+const teamSearchStyles = StyleSheet.create({
+  wrapper: {
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  container: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#18181b",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderWidth: 1,
+    gap: 10,
+  },
+  input: {
+    flex: 1,
+    color: "#e4e4e7",
+    fontSize: 15,
+    padding: 0,
+  },
+  resultsContainer: {
+    backgroundColor: "#1f1f23",
+    borderRadius: 12,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    overflow: "hidden",
+  },
+  loadingContainer: {
+    padding: 16,
+    alignItems: "center",
+  },
+  loadingText: {
+    color: "#71717a",
+    fontSize: 14,
+  },
+  resultItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.05)",
+  },
+  resultLogo: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.05)",
+  },
+  resultInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  resultName: {
+    color: "#e4e4e7",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  resultCountry: {
+    color: "#71717a",
+    fontSize: 12,
+    marginTop: 2,
+  },
+  resultFavorite: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  resultFavoriteActive: {
+    backgroundColor: "rgba(34, 197, 94, 0.15)",
+  },
+});
 
 interface Warning {
   _id: string;
@@ -71,7 +288,7 @@ export const HomeScreen = ({ navigation }: any) => {
     loading: contextLoading,
     refreshMatches: contextRefresh,
   } = useMatches();
-  const { favoriteTeams, backendFavorites } = useFavorites();
+  const { favoriteTeams, backendFavorites, toggleFavoriteTeam, isFavoriteTeam } = useFavorites();
   const { user, signOut } = useAuth();
   const [selectedLeague, setSelectedLeague] = useState<string>("ALL");
   const [warnings, setWarnings] = useState<Warning[]>([]);
@@ -97,6 +314,19 @@ export const HomeScreen = ({ navigation }: any) => {
     Array<{ teamId: number; match: Match }>
   >([]);
   const [loadingFavorites, setLoadingFavorites] = useState(false);
+
+  // Team Search State
+  const [teamSearchQuery, setTeamSearchQuery] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
+  const searchAnimation = useRef(new Animated.Value(0)).current;
+  const [searchResults, setSearchResults] = useState<Array<{
+    id: number;
+    name: string;
+    logo: string;
+    country: string;
+    msnId?: string;
+  }>>([]);
+  const [searchingTeams, setSearchingTeams] = useState(false);
 
   // Ref for league selector ScrollView to maintain position
   const leagueSelectorRef = useRef<ScrollView>(null);
@@ -701,6 +931,86 @@ export const HomeScreen = ({ navigation }: any) => {
     { code: "FINISHED", name: "Finalizados" },
   ];
 
+  // Search teams for adding favorites
+  const searchTeamsForFavorite = async (query: string) => {
+    if (query.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    setSearchingTeams(true);
+    try {
+      const { msnSportsApi } = await import("../services/msnSportsApi");
+      
+      const msnLeagues = [
+        { id: "Soccer_BrazilBrasileiroSerieA", sport: "Soccer", country: "Brazil" },
+        { id: "Soccer_BrazilCopaDoBrasil", sport: "Soccer", country: "Brazil" },
+        { id: "Soccer_InternationalClubsUEFAChampionsLeague", sport: "Soccer", country: "Europe" },
+        { id: "Soccer_SpainLaLiga", sport: "Soccer", country: "Spain" },
+        { id: "Soccer_EnglandPremierLeague", sport: "Soccer", country: "England" },
+        { id: "Soccer_GermanyBundesliga", sport: "Soccer", country: "Germany" },
+        { id: "Soccer_ItalySerieA", sport: "Soccer", country: "Italy" },
+        { id: "Soccer_FranceLigue1", sport: "Soccer", country: "France" },
+        { id: "Soccer_PortugalPrimeiraLiga", sport: "Soccer", country: "Portugal" },
+        { id: "Basketball_NBA", sport: "Basketball", country: "USA" },
+      ];
+
+      const teamsMap = new Map<number, { id: number; name: string; logo: string; country: string; msnId?: string }>();
+      const queryLower = query.toLowerCase();
+
+      // Fetch from multiple leagues in parallel
+      await Promise.all(
+        msnLeagues.map(async (league) => {
+          try {
+            const games = await msnSportsApi.getLiveAroundLeague(league.id, league.sport);
+            games.forEach((game: any) => {
+              game.participants?.forEach((participant: any) => {
+                const team = participant.team;
+                if (team && team.id) {
+                  const teamName = team.name?.localizedName || team.name?.rawName || "";
+                  // Filter by query
+                  if (teamName.toLowerCase().includes(queryLower)) {
+                    const teamId = parseInt(team.id.split("_").pop() || "0");
+                    if (!teamsMap.has(teamId)) {
+                      teamsMap.set(teamId, {
+                        id: teamId,
+                        name: teamName,
+                        logo: team.image?.id ? `https://www.bing.com/th?id=${team.image.id}&w=80&h=80` : "",
+                        country: league.country,
+                        msnId: team.id,
+                      });
+                    }
+                  }
+                }
+              });
+            });
+          } catch (error) {
+            // Ignore errors for individual leagues
+          }
+        })
+      );
+
+      setSearchResults(Array.from(teamsMap.values()).slice(0, 10)); // Limit to 10 results
+    } catch (error) {
+      console.error("Error searching teams:", error);
+      setSearchResults([]);
+    } finally {
+      setSearchingTeams(false);
+    }
+  };
+
+  // Debounced search effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (teamSearchQuery.length >= 2) {
+        searchTeamsForFavorite(teamSearchQuery);
+      } else {
+        setSearchResults([]);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [teamSearchQuery]);
+
   const generateDates = () => {
     const dates = [];
     for (let i = 0; i < 14; i++) {
@@ -882,6 +1192,9 @@ export const HomeScreen = ({ navigation }: any) => {
           </View>
         </View>
       </View>
+
+      {/* Team Search Bar */}
+      <TeamSearchBar />
 
       {/* Next Match Widget */}
       <NextMatchWidget
@@ -1183,6 +1496,17 @@ export const HomeScreen = ({ navigation }: any) => {
           .map((item) => [item.fixture.id, item])
       ).values()
     );
+
+    // Filter by team search query
+    if (teamSearchQuery.trim().length > 0) {
+      const query = teamSearchQuery.toLowerCase().trim();
+      return uniqueMatches.filter(
+        (m) =>
+          m.teams.home.name.toLowerCase().includes(query) ||
+          m.teams.away.name.toLowerCase().includes(query)
+      );
+    }
+
     return uniqueMatches;
   })();
 
@@ -1340,6 +1664,7 @@ export const HomeScreen = ({ navigation }: any) => {
         <FlatList
           data={sections}
           keyExtractor={(item) => item.title}
+          keyboardShouldPersistTaps="handled"
           renderItem={({ item }) => (
             <View style={styles.sectionContainer}>
               <View style={styles.sectionHeader}>
@@ -2282,5 +2607,88 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textTransform: "uppercase",
     letterSpacing: 0.5,
+  },
+  // Team Search Styles
+  searchWrapper: {
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#18181b",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderWidth: 1,
+    gap: 10,
+  },
+  searchInput: {
+    flex: 1,
+    color: "#e4e4e7",
+    fontSize: 15,
+    padding: 0,
+  },
+  fixedSearchWrapper: {
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === "android" ? (StatusBar.currentHeight || 0) + 12 : 12,
+    paddingBottom: 12,
+    backgroundColor: "#09090b",
+  },
+  // Search Results Dropdown Styles
+  searchResultsContainer: {
+    backgroundColor: "#1f1f23",
+    borderRadius: 12,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    overflow: "hidden",
+  },
+  searchLoadingContainer: {
+    padding: 16,
+    alignItems: "center",
+  },
+  searchLoadingText: {
+    color: "#71717a",
+    fontSize: 14,
+  },
+  searchResultItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.05)",
+  },
+  searchResultLogo: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.05)",
+  },
+  searchResultInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  searchResultName: {
+    color: "#e4e4e7",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  searchResultCountry: {
+    color: "#71717a",
+    fontSize: 12,
+    marginTop: 2,
+  },
+  searchResultFavorite: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  searchResultFavoriteActive: {
+    backgroundColor: "rgba(34, 197, 94, 0.15)",
   },
 });

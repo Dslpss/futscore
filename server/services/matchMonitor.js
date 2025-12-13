@@ -26,8 +26,8 @@ let notifiedGoals = {};
 let firstSeenTime = {};
 
 // Configuração - intervalos mais espaçados para evitar detecção
-const CHECK_INTERVAL_LIVE = 60 * 1000; // 1 minuto quando há jogos ao vivo
-const CHECK_INTERVAL_IDLE = 5 * 60 * 1000; // 5 minutos quando não há jogos
+const CHECK_INTERVAL_LIVE = 20 * 1000; // 20 segundos quando há jogos ao vivo (quase real-time)
+const CHECK_INTERVAL_IDLE = 2 * 60 * 1000; // 2 minutos quando não há jogos
 let currentInterval = CHECK_INTERVAL_IDLE;
 let intervalId = null;
 

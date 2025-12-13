@@ -79,14 +79,32 @@ export const MatchProvider: React.FC<{ children: ReactNode }> = ({
       fetchLeagues();
       fetchMatches();
     });
+  }, []); // Sem dependências - executa apenas na montagem inicial
 
-    // Polling every 60 seconds to respect API limits (10 req/min)
+  // Efeito de POLLING DINÂMICO - reage a mudanças nos jogos ao vivo
+  useEffect(() => {
+    // Dynamic polling based on live matches
+    const pollingInterval = liveMatches.length > 0 ? 15000 : 60000;
+    
+    console.log(`[MatchContext] Setting polling interval to ${pollingInterval}ms`);
+
     const interval = setInterval(() => {
-      fetchMatches();
-    }, 60000);
+      if (!loading) {
+        // Silent refresh (keep loading=false unless essential)
+        // We use a separate internal function or just call matchService directly
+        // But for now calling fetchMatches is fine, just be careful with setLoading(true) there
+        // Optimized: only fetch if not already loading
+        matchService.checkMatchesAndNotify(favoriteTeamsRef.current)
+          .then(({ liveMatches: live, todaysMatches: today }) => {
+             setLiveMatches(live);
+             setTodaysMatches(today);
+          })
+          .catch(err => console.error("Polling error", err));
+      }
+    }, pollingInterval);
 
     return () => clearInterval(interval);
-  }, []); // Sem dependências - executa apenas na montagem
+  }, [liveMatches.length, loading]); // Recria o intervalo quando o número de jogos ao vivo muda
 
   return (
     <MatchContext.Provider

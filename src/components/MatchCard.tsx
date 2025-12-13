@@ -130,10 +130,14 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
           {/* Header: League Badge & Status */}
           <View style={styles.header}>
             <View style={styles.leagueBadge}>
-              <Image
-                source={{ uri: match.league.logo }}
-                style={styles.leagueLogo}
-              />
+              {match.league.logo ? (
+                <Image
+                  source={{ uri: match.league.logo }}
+                  style={styles.leagueLogo}
+                />
+              ) : (
+                <Trophy size={14} color="#a1a1aa" style={{ marginRight: 6 }} />
+              )}
               <Text style={styles.leagueName} numberOfLines={1}>
                 {match.league.name}
               </Text>
@@ -164,12 +168,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
                 <View style={styles.liveBadge}>
                   <View style={styles.liveDot} />
                   <Text style={styles.liveText}>
-                    AO VIVO • {getLivePeriodLabel(statusShort)}
-                    {match.fixture.status.elapsed !== undefined &&
-                    !statusShort.startsWith("Q") &&
-                    !statusShort.startsWith("OT")
-                      ? ` ${match.fixture.status.elapsed}'`
-                      : ""}
+                    AO VIVO
                   </Text>
                 </View>
               ) : isFinished ? (
@@ -269,9 +268,31 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
                       {match.goals.away ?? 0}
                     </Text>
                   </View>
-                  <Text style={styles.statusLabel}>
-                    {getStatusLabel(match.fixture.status.short)}
-                  </Text>
+                  
+                  {isLive && (
+                    <Text style={styles.liveTimer}>
+                      {match.fixture.status.elapsed !== undefined && 
+                       !match.fixture.status.short.startsWith("Q") && 
+                       !match.fixture.status.short.startsWith("OT")
+                        ? `${match.fixture.status.elapsed}'${
+                            match.fixture.status.elapsedSeconds !== undefined
+                              ? `:${match.fixture.status.elapsedSeconds.toString().padStart(2, "0")}`
+                              : ""
+                          }`
+                        : getLivePeriodLabel(match.fixture.status.short)}
+                    </Text>
+                  )}
+
+                  {!isLive && (
+                    <Text style={styles.statusLabel}>
+                      {getStatusLabel(match.fixture.status.short)}
+                    </Text>
+                  )}
+                  {isLive && match.fixture.status.short !== "HT" && (
+                     <Text style={styles.livePeriod}>
+                       {getLivePeriodLabel(match.fixture.status.short)}
+                     </Text>
+                  )}
                 </>
               )}
             </View>
@@ -595,14 +616,14 @@ const styles = StyleSheet.create({
   container: {
     marginBottom: 16,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 12,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 16,
+    elevation: 10,
   },
   card: {
     borderRadius: 24,
-    padding: 18,
+    padding: 16,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.08)",
   },
@@ -612,121 +633,131 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 18,
+    marginBottom: 16,
+    height: 32, // Definindo altura para garantir alinhamento vertical consistente
   },
   headerRight: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    height: "100%",
   },
   notifyButton: {
     padding: 6,
-    borderRadius: 8,
+    borderRadius: 12,
     backgroundColor: "rgba(255,255,255,0.05)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   notifyButtonActive: {
     backgroundColor: "rgba(251, 191, 36, 0.15)",
+    borderColor: "rgba(251, 191, 36, 0.3)",
   },
   leagueBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.06)",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 14,
+    backgroundColor: "transparent",
+    paddingVertical: 0, // Removendo padding vertical para usar alignItems do pai
     flex: 1,
-    maxWidth: "60%",
+    marginRight: 8,
+    height: "100%",
   },
   leagueLogo: {
-    width: 18,
-    height: 18,
+    width: 20,
+    height: 20,
     resizeMode: "contain",
     marginRight: 8,
+    opacity: 0.9,
   },
   leagueName: {
-    color: "#a1a1aa",
+    color: "rgba(255, 255, 255, 0.7)",
     fontSize: 10,
     fontWeight: "700",
     textTransform: "uppercase",
-    letterSpacing: 0.3,
+    letterSpacing: 1.5,
     flex: 1,
+    textAlignVertical: "center", // Garante alinhamento vertical no Android
   },
 
   // Status badges
   halfTimeBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(251, 146, 60, 0.15)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 14,
+    backgroundColor: "rgba(251, 146, 60, 0.1)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 100,
     borderWidth: 1,
     borderColor: "rgba(251, 146, 60, 0.3)",
-    gap: 6,
+    gap: 4,
   },
   halfTimeIcon: {
-    fontSize: 12,
+    fontSize: 10,
   },
   halfTimeText: {
     color: "#fb923c",
     fontSize: 10,
-    fontWeight: "800",
+    fontWeight: "700",
     letterSpacing: 0.3,
   },
   liveBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(239, 68, 68, 0.15)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 14,
+    backgroundColor: "rgba(239, 68, 68, 0.1)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 100,
     borderWidth: 1,
     borderColor: "rgba(239, 68, 68, 0.3)",
   },
   liveDot: {
-    width: 6,
-    height: 6,
+    width: 5,
+    height: 5,
     borderRadius: 3,
     backgroundColor: "#ef4444",
     marginRight: 6,
     shadowColor: "#ef4444",
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 4,
+    shadowOpacity: 1,
+    shadowRadius: 6,
   },
   liveText: {
     color: "#ef4444",
     fontSize: 10,
-    fontWeight: "800",
+    fontWeight: "700",
     letterSpacing: 0.3,
   },
   finishedBadge: {
-    backgroundColor: "rgba(34, 197, 94, 0.12)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 14,
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 100,
     borderWidth: 1,
-    borderColor: "rgba(34, 197, 94, 0.25)",
+    borderColor: "rgba(255, 255, 255, 0.1)",
   },
   finishedText: {
-    color: "#22c55e",
+    color: "#a1a1aa",
     fontSize: 10,
-    fontWeight: "700",
+    fontWeight: "600",
     letterSpacing: 0.3,
   },
   scheduledBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.06)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
     gap: 6,
   },
   scheduledText: {
     color: "#e4e4e7",
-    fontSize: 13,
-    fontWeight: "700",
+    fontSize: 12,
+    fontWeight: "600",
   },
 
   // Match Content
@@ -734,6 +765,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
+    paddingHorizontal: 4,
   },
 
   // Team Section
@@ -744,65 +776,68 @@ const styles = StyleSheet.create({
   },
   favoriteButton: {
     position: "absolute",
-    top: -8,
-    right: 4,
+    top: -10,
+    right: 0,
     zIndex: 20,
-    padding: 4,
-    backgroundColor: "rgba(0,0,0,0.3)",
-    borderRadius: 12,
+    padding: 5,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    borderRadius: 50,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
   },
   teamLogoWrapper: {
-    marginBottom: 10,
+    marginBottom: 12,
+    alignItems: "center",
+    justifyContent: "center",
   },
   teamLogoGlow: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 2,
+    backgroundColor: "rgba(255,255,255,0.03)",
+    borderWidth: 1,
     borderColor: "rgba(255,255,255,0.08)",
+    shadowColor: "#fff",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
   },
   teamLogo: {
-    width: 42,
-    height: 42,
+    width: 44,
+    height: 44,
     resizeMode: "contain",
   },
   teamName: {
     color: "#fff",
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "700",
     textAlign: "center",
-    lineHeight: 16,
-    marginBottom: 6,
+    lineHeight: 18,
+    marginBottom: 8,
   },
   homeIndicator: {
-    backgroundColor: "rgba(34, 197, 94, 0.15)",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "rgba(34, 197, 94, 0.25)",
+    marginTop: 4,
   },
   homeIndicatorText: {
     color: "#22c55e",
-    fontSize: 8,
+    fontSize: 9,
     fontWeight: "800",
-    letterSpacing: 0.5,
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    opacity: 0.8,
   },
   awayIndicator: {
-    backgroundColor: "rgba(251, 191, 36, 0.15)",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "rgba(251, 191, 36, 0.25)",
+    marginTop: 4,
   },
   awayIndicatorText: {
     color: "#fbbf24",
-    fontSize: 8,
+    fontSize: 9,
     fontWeight: "800",
-    letterSpacing: 0.5,
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    opacity: 0.8,
   },
 
   // Center / Score Section
@@ -810,88 +845,104 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     flex: 1,
-    paddingTop: 8,
+    paddingTop: 4,
   },
   vsContainer: {
-    backgroundColor: "rgba(255,255,255,0.05)",
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.03)",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
+    borderColor: "rgba(255,255,255,0.05)",
   },
   vsText: {
     color: "#52525b",
-    fontSize: 16,
-    fontWeight: "900",
+    fontSize: 14,
+    fontWeight: "800",
+    fontStyle: "italic",
   },
   dateContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 8,
+    marginTop: 10,
     gap: 4,
+    backgroundColor: "rgba(0,0,0,0.2)",
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: 8,
   },
   dateText: {
     color: "#71717a",
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "600",
   },
   scoreBox: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.4)",
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
+    justifyContent: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   scoreBoxLive: {
-    backgroundColor: "rgba(34, 197, 94, 0.15)",
-    borderColor: "rgba(34, 197, 94, 0.3)",
+    // Glow effect handled by text shadow
   },
-  scoreNumber: {
-    color: "#fff",
-    fontSize: 28,
-    fontWeight: "900",
-    minWidth: 24,
-    textAlign: "center",
-  },
-  scoreNumberLive: {
+  liveTimer: {
     color: "#22c55e",
+    fontSize: 14,
+    fontWeight: "800",
+    marginTop: 6,
     textShadowColor: "rgba(34, 197, 94, 0.5)",
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 8,
+    fontVariant: ["tabular-nums"],
+  },
+  livePeriod: {
+    color: "#a1a1aa",
+    fontSize: 10,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    marginTop: 2,
+    letterSpacing: 0.5,
+  },
+  scoreNumber: {
+    color: "#fff",
+    fontSize: 32,
+    fontWeight: "800",
+    minWidth: 28,
+    textAlign: "center",
+    fontVariant: ["tabular-nums"],
+  },
+  scoreNumberLive: {
+    color: "#fff",
+    textShadowColor: "rgba(34, 197, 94, 0.6)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 15,
   },
   scoreDivider: {
-    width: 3,
-    height: 20,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    marginHorizontal: 10,
-    borderRadius: 2,
+    width: 2,
+    height: 16,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    marginHorizontal: 12,
+    borderRadius: 1,
   },
   scoreDividerLive: {
-    backgroundColor: "rgba(34, 197, 94, 0.4)",
+    backgroundColor: "rgba(34, 197, 94, 0.5)",
+    height: 24,
   },
   statusLabel: {
     color: "#71717a",
-    fontSize: 10,
-    fontWeight: "600",
+    fontSize: 9,
+    fontWeight: "700",
     textTransform: "uppercase",
     marginTop: 8,
-    letterSpacing: 0.3,
+    letterSpacing: 0.5,
   },
 
-  // Tap hint
+  // Tap hint - REMOVED
   tapHint: {
-    color: "rgba(255,255,255,0.25)",
-    fontSize: 10,
-    fontWeight: "500",
-    textAlign: "center",
-    marginTop: 14,
-    fontStyle: "italic",
+    display: "none",
   },
 
   // Footer: TV Channels & Round
