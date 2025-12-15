@@ -933,6 +933,112 @@ export const msnSportsApi = {
   },
 
   /**
+   * Get detailed player league statistics for two teams
+   * Returns goals, assists, cards with league rankings
+   * @param homeTeamId - Home team MSN ID
+   * @param awayTeamId - Away team MSN ID  
+   * @param leagueId - League ID (e.g., "Soccer_EnglandPremierLeague")
+   */
+  getPlayerLeagueStats: async (
+    homeTeamId: string,
+    awayTeamId: string,
+    leagueId: string
+  ): Promise<any> => {
+    const cacheKey = `playerleague_${homeTeamId}_${awayTeamId}`;
+    const cached = await getCachedData<any>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const params = {
+        ...CONFIG.MSN_SPORTS.BASE_PARAMS,
+        apikey: CONFIG.MSN_SPORTS.API_KEY,
+        activityId: generateActivityId(),
+        ocid: "sports-gamecenter",
+        ids: `${homeTeamId},${awayTeamId}`,
+        type: "Team",
+        scope: "Playerleague",
+        sport: "Soccer",
+        leagueid: leagueId,
+      };
+
+      console.log(`[MSN API] Fetching player league stats for ${leagueId}...`);
+
+      const response = await msnApiClient.get("/statistics", { params });
+
+      if (
+        !response.data ||
+        !response.data.value ||
+        response.data.value.length === 0
+      ) {
+        console.log("[MSN API] No player league stats available");
+        return null;
+      }
+
+      const statsData = response.data.value[0]?.statistics || [];
+
+      const transformPlayer = (p: any) => ({
+        id: p.player?.id || "",
+        name: p.player?.name?.rawName || "",
+        firstName: p.player?.firstName?.rawName || "",
+        lastName: p.player?.lastName?.rawName || "",
+        jerseyNumber: p.player?.jerseyNumber || "",
+        position: p.player?.playerPosition || "",
+        teamId: p.player?.teamId || "",
+        photo: p.player?.image?.id
+          ? `https://www.bing.com/th?id=${encodeURIComponent(p.player.image.id)}&w=100&h=100`
+          : "",
+        goalsScored: p.goalsScored || 0,
+        goalsScoredRank: p.goalsScoredRank,
+        goalsByHead: p.goalsByHead || 0,
+        goalsByHeadRank: p.goalsByHeadRank,
+        goalsByPenalty: p.goalsByPenalty || 0,
+        goalsByPenaltyRank: p.goalsByPenaltyRank,
+        assists: p.assists || 0,
+        assistsRank: p.assistsRank,
+        yellowCards: p.yellowCards || 0,
+        yellowCardsRank: p.yellowCardsRank,
+        redCards: p.redCards || 0,
+        redCardsRank: p.redCardsRank,
+        shotsOnTarget: p.shotsOnTarget || 0,
+        shotsOnTargetRank: p.shotsOnTargetRank,
+        shotsOffTarget: p.shotsOffTarget || 0,
+        shotsOffTargetRank: p.shotsOffTargetRank,
+        minutesPlayed: p.minutesPlayed || 0,
+        minutesPlayedRank: p.minutesPlayedRank,
+      });
+
+      const result: any = {
+        home: { teamId: homeTeamId, players: [], totalGoals: 0, totalAssists: 0, totalYellowCards: 0, totalRedCards: 0 },
+        away: { teamId: awayTeamId, players: [], totalGoals: 0, totalAssists: 0, totalYellowCards: 0, totalRedCards: 0 },
+      };
+
+      statsData.forEach((teamStats: any) => {
+        const isHome = teamStats.teamId === homeTeamId;
+        const key = isHome ? "home" : "away";
+
+        if (teamStats.playerStatistics) {
+          result[key].players = teamStats.playerStatistics.map(transformPlayer);
+          
+          // Calculate team totals
+          result[key].totalGoals = result[key].players.reduce((sum: number, p: any) => sum + p.goalsScored, 0);
+          result[key].totalAssists = result[key].players.reduce((sum: number, p: any) => sum + p.assists, 0);
+          result[key].totalYellowCards = result[key].players.reduce((sum: number, p: any) => sum + p.yellowCards, 0);
+          result[key].totalRedCards = result[key].players.reduce((sum: number, p: any) => sum + p.redCards, 0);
+        }
+      });
+
+      // Cache for 6 hours
+      await setCachedData(cacheKey, result, 6 * 60 * 60 * 1000);
+
+      console.log(`[MSN API] Fetched player stats - Home: ${result.home.players.length} players, Away: ${result.away.players.length} players`);
+      return result;
+    } catch (error) {
+      console.error("[MSN API] Error fetching player league stats:", error);
+      return null;
+    }
+  },
+
+  /**
    * Get team live schedule (finished and upcoming matches)
    * Uses /liveschedules endpoint which provides richer data including game outcomes
    * @param teamId - Team ID from MSN Sports (e.g., "SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_2001")

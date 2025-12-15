@@ -223,6 +223,52 @@ export interface MatchInjuries {
   away: TeamInjuries;
 }
 
+// Player League Statistics Types
+export interface PlayerLeagueStats {
+  id: string;
+  name: string;
+  firstName: string;
+  lastName: string;
+  jerseyNumber: string;
+  position: string;
+  teamId: string;
+  photo: string;
+  // Stats with rankings
+  goalsScored: number;
+  goalsScoredRank?: number;
+  goalsByHead: number;
+  goalsByHeadRank?: number;
+  goalsByPenalty: number;
+  goalsByPenaltyRank?: number;
+  assists: number;
+  assistsRank?: number;
+  yellowCards: number;
+  yellowCardsRank?: number;
+  redCards: number;
+  redCardsRank?: number;
+  shotsOnTarget: number;
+  shotsOnTargetRank?: number;
+  shotsOffTarget: number;
+  shotsOffTargetRank?: number;
+  minutesPlayed: number;
+  minutesPlayedRank?: number;
+}
+
+export interface TeamLeagueStats {
+  teamId: string;
+  players: PlayerLeagueStats[];
+  // Aggregated team stats
+  totalGoals: number;
+  totalAssists: number;
+  totalYellowCards: number;
+  totalRedCards: number;
+}
+
+export interface MatchLeagueStats {
+  home: TeamLeagueStats;
+  away: TeamLeagueStats;
+}
+
 // MSN Sports API Types
 export interface MsnLeague {
   id: string;

@@ -23,7 +23,7 @@ import {
   Thermometer,
   User,
 } from "lucide-react-native";
-import { Match, MatchTopPlayers, MatchInjuries } from "../types";
+import { Match, MatchTopPlayers, MatchInjuries, MatchLeagueStats } from "../types";
 import { api } from "../services/api";
 import { LinearGradient } from "expo-linear-gradient";
 
@@ -72,6 +72,7 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
   const [gameDetails, setGameDetails] = useState<GameDetails | null>(null);
   const [topPlayers, setTopPlayers] = useState<MatchTopPlayers | null>(null);
   const [injuries, setInjuries] = useState<MatchInjuries | null>(null);
+  const [playerLeagueStats, setPlayerLeagueStats] = useState<MatchLeagueStats | null>(null);
 
   useEffect(() => {
     if (visible && initialMatch) {
@@ -81,6 +82,7 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
       setGameDetails(null);
       setTopPlayers(null);
       setInjuries(null);
+      setPlayerLeagueStats(null);
     }
   }, [visible, initialMatch]);
 
@@ -192,6 +194,17 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
               if (injuriesData) {
                 setInjuries(injuriesData);
                 console.log("[MatchStatsModal] Fetched injuries successfully");
+              }
+
+              // Fetch detailed player league stats with rankings
+              const playerStatsData = await msnSportsApi.getPlayerLeagueStats(
+                homeTeamMsnId,
+                awayTeamMsnId,
+                leagueId
+              );
+              if (playerStatsData) {
+                setPlayerLeagueStats(playerStatsData);
+                console.log("[MatchStatsModal] Fetched player league stats successfully");
               }
             }
           }
@@ -390,6 +403,19 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
       };
     }
     return { isInjured: false };
+  };
+
+  // Helper function to get player's goals rank from league stats
+  const getPlayerGoalsRank = (playerName: string, teamSide: 'home' | 'away'): number | undefined => {
+    if (!playerLeagueStats) return undefined;
+    
+    const teamStats = teamSide === 'home' ? playerLeagueStats.home : playerLeagueStats.away;
+    const player = teamStats.players.find(
+      (p) => playerName.toLowerCase().includes(p.lastName.toLowerCase()) ||
+             p.name.toLowerCase().includes(playerName.toLowerCase().split(' ').pop() || '')
+    );
+    
+    return player?.goalsScoredRank;
   };
 
   return (
@@ -1291,6 +1317,42 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                 <View style={styles.playersContainer}>
                   <Text style={styles.sectionTitle}>Destaques do Jogo</Text>
                   
+                  {/* Team Stats Summary */}
+                  {playerLeagueStats && (
+                    <View style={styles.teamStatsSummary}>
+                      <Text style={styles.comparisonTitle}>📊 Temporada</Text>
+                      <View style={styles.teamStatsGrid}>
+                        <View style={styles.teamStatsColumn}>
+                          <Text style={styles.teamStatsValue}>{playerLeagueStats.home.totalGoals}</Text>
+                          <Text style={styles.teamStatsLabel}>Gols</Text>
+                        </View>
+                        <View style={styles.teamStatsColumn}>
+                          <Text style={styles.teamStatsValue}>{playerLeagueStats.home.totalAssists}</Text>
+                          <Text style={styles.teamStatsLabel}>Assist.</Text>
+                        </View>
+                        <View style={styles.teamStatsDivider}>
+                          <Text style={styles.teamStatsVs}>vs</Text>
+                        </View>
+                        <View style={styles.teamStatsColumn}>
+                          <Text style={styles.teamStatsValue}>{playerLeagueStats.away.totalGoals}</Text>
+                          <Text style={styles.teamStatsLabel}>Gols</Text>
+                        </View>
+                        <View style={styles.teamStatsColumn}>
+                          <Text style={styles.teamStatsValue}>{playerLeagueStats.away.totalAssists}</Text>
+                          <Text style={styles.teamStatsLabel}>Assist.</Text>
+                        </View>
+                      </View>
+                      <View style={styles.teamCardsRow}>
+                        <Text style={styles.teamCardsText}>
+                          🟨 {playerLeagueStats.home.totalYellowCards} | 🟥 {playerLeagueStats.home.totalRedCards}
+                        </Text>
+                        <Text style={styles.teamCardsText}>
+                          🟨 {playerLeagueStats.away.totalYellowCards} | 🟥 {playerLeagueStats.away.totalRedCards}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+                  
                   {/* Scorer Comparison Bar */}
                   {topPlayers.home.goalScorer && topPlayers.away.goalScorer && (
                     <View style={styles.comparisonSection}>
@@ -1313,6 +1375,11 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                           <Text style={styles.comparisonStats}>
                             {topPlayers.home.goalScorer.stats.goalsScored} gols
                           </Text>
+                          {getPlayerGoalsRank(topPlayers.home.goalScorer.lastName, 'home') && (
+                            <Text style={styles.rankBadge}>
+                              {getPlayerGoalsRank(topPlayers.home.goalScorer.lastName, 'home')}º na liga
+                            </Text>
+                          )}
                         </View>
                         
                         <View style={styles.comparisonBarContainer}>
@@ -1355,6 +1422,11 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                           <Text style={styles.comparisonStats}>
                             {topPlayers.away.goalScorer.stats.goalsScored} gols
                           </Text>
+                          {getPlayerGoalsRank(topPlayers.away.goalScorer.lastName, 'away') && (
+                            <Text style={styles.rankBadge}>
+                              {getPlayerGoalsRank(topPlayers.away.goalScorer.lastName, 'away')}º na liga
+                            </Text>
+                          )}
                         </View>
                       </View>
                     </View>
@@ -2397,5 +2469,65 @@ const styles = StyleSheet.create({
     color: "#a1a1aa",
     fontSize: 11,
     fontWeight: "500",
+  },
+
+  // Team Stats Summary Styles
+  teamStatsSummary: {
+    backgroundColor: "rgba(34, 197, 94, 0.08)",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "rgba(34, 197, 94, 0.2)",
+  },
+  teamStatsGrid: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+    marginTop: 12,
+  },
+  teamStatsColumn: {
+    alignItems: "center",
+    minWidth: 50,
+  },
+  teamStatsValue: {
+    color: "#22c55e",
+    fontSize: 24,
+    fontWeight: "700",
+  },
+  teamStatsLabel: {
+    color: "#a1a1aa",
+    fontSize: 11,
+    marginTop: 2,
+  },
+  teamStatsDivider: {
+    paddingHorizontal: 12,
+  },
+  teamStatsVs: {
+    color: "#52525b",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  teamCardsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.08)",
+  },
+  teamCardsText: {
+    color: "#a1a1aa",
+    fontSize: 12,
+  },
+  rankBadge: {
+    color: "#fbbf24",
+    fontSize: 10,
+    fontWeight: "600",
+    marginTop: 2,
+    backgroundColor: "rgba(251, 191, 36, 0.15)",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
   },
 });
