@@ -74,19 +74,37 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
   const [injuries, setInjuries] = useState<MatchInjuries | null>(null);
   const [playerLeagueStats, setPlayerLeagueStats] = useState<MatchLeagueStats | null>(null);
   const [teamPositions, setTeamPositions] = useState<{ home: number | null; away: number | null }>({ home: null, away: null });
+  const [recentMatches, setRecentMatches] = useState<{ home: any[]; away: any[] }>({ home: [], away: [] });
+  const [pollData, setPollData] = useState<{ options: { id: string; count: number }[]; type: string } | null>(null);
+  
+  // Track the current match ID to avoid unnecessary reloads when parent refreshes data
+  const [currentMatchId, setCurrentMatchId] = useState<string | null>(null);
 
+  // Update match data silently when parent refreshes (preserves scroll position)
   useEffect(() => {
     if (visible && initialMatch) {
-      loadMatchDetails();
-    } else {
+      // Only reload everything if it's a different match
+      const matchId = initialMatch.fixture.id?.toString() || initialMatch.fixture.msnGameId || '';
+      if (matchId !== currentMatchId) {
+        setCurrentMatchId(matchId);
+        loadMatchDetails();
+      } else {
+        // Same match, just update the match object silently
+        setMatch(initialMatch);
+      }
+    } else if (!visible) {
+      // Reset everything when modal closes
+      setCurrentMatchId(null);
       setMatch(null);
       setGameDetails(null);
       setTopPlayers(null);
       setInjuries(null);
       setPlayerLeagueStats(null);
       setTeamPositions({ home: null, away: null });
+      setRecentMatches({ home: [], away: [] });
+      setPollData(null);
     }
-  }, [visible, initialMatch]);
+  }, [visible, initialMatch?.fixture?.id, initialMatch?.fixture?.msnGameId]);
 
   const loadMatchDetails = async () => {
     if (!initialMatch) return;
@@ -225,6 +243,41 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                   setTeamPositions({ home: homePos || null, away: awayPos || null });
                   console.log(`[MatchStatsModal] Team positions - Home: ${homePos}, Away: ${awayPos}`);
                 }
+              }
+
+              // Fetch recent matches for both teams
+              try {
+                const [homeSchedule, awaySchedule] = await Promise.all([
+                  msnSportsApi.getTeamLiveSchedule(homeTeamMsnId, 7),
+                  msnSportsApi.getTeamLiveSchedule(awayTeamMsnId, 7),
+                ]);
+
+                const filterFinishedGames = (games: any[]) => 
+                  games.filter((g: any) => g.gameState?.gameStatus === 'Final').slice(0, 5);
+
+                if (homeSchedule.length > 0 || awaySchedule.length > 0) {
+                  setRecentMatches({
+                    home: filterFinishedGames(homeSchedule || []),
+                    away: filterFinishedGames(awaySchedule || []),
+                  });
+                  console.log(`[MatchStatsModal] Fetched recent matches - Home: ${homeSchedule?.length || 0}, Away: ${awaySchedule?.length || 0}`);
+                }
+              } catch (scheduleError) {
+                console.log('[MatchStatsModal] Could not fetch team schedules:', scheduleError);
+              }
+
+              // Fetch poll/voting data
+              try {
+                const msnGameId = initialMatch.fixture.msnGameId;
+                if (msnGameId) {
+                  const poll = await msnSportsApi.getPoll(msnGameId);
+                  if (poll?.options?.length > 0) {
+                    setPollData(poll);
+                    console.log(`[MatchStatsModal] Fetched poll data - ${poll.options.length} options`);
+                  }
+                }
+              } catch (pollError) {
+                console.log('[MatchStatsModal] Could not fetch poll:', pollError);
               }
             }
           }
@@ -844,6 +897,142 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                   )}
                 </View>
               )}
+
+              {/* Recent Matches History */}
+              {(recentMatches.home.length > 0 || recentMatches.away.length > 0) && (
+                <View style={styles.recentMatchesCard}>
+                  <Text style={styles.recentMatchesTitle}>📅 Últimos Jogos</Text>
+                  
+                  <View style={styles.recentMatchesContainer}>
+                    {/* Home Team Column */}
+                    <View style={styles.recentMatchesColumn}>
+                      <View style={styles.recentMatchesHeader}>
+                        <Image source={{ uri: match.teams.home.logo }} style={styles.recentTeamLogo} />
+                        <Text style={styles.recentTeamName} numberOfLines={1}>
+                          {match.teams.home.name}
+                        </Text>
+                      </View>
+                      {recentMatches.home.map((game, index) => {
+                        const myParticipant = game.participants?.find((p: any) => 
+                          p.team?.id?.includes(match.teams.home.id?.toString()) || 
+                          p.team?.name?.rawName?.includes(match.teams.home.name) ||
+                          match.teams.home.name.includes(p.team?.name?.rawName || "xyz")
+                        ) || game.participants?.[0];
+                        
+                        const opponent = game.participants?.find((p: any) => p !== myParticipant);
+                        const outcome = myParticipant?.gameOutcome;
+                        const myScore = myParticipant?.result?.score || 0;
+                        const opScore = opponent?.result?.score || 0;
+                        
+                        const outcomeLetter = outcome === 'Won' ? 'V' : outcome === 'Lost' ? 'D' : 'E';
+                        const outcomeColor = outcome === 'Won' ? '#22c55e' : outcome === 'Lost' ? '#ef4444' : '#eab308';
+                        
+                        return (
+                          <View key={game.id || index} style={styles.recentMatchRow}>
+                            <View style={[styles.recentOutcomeBadge, { backgroundColor: outcomeColor }]}>
+                              <Text style={styles.recentOutcomeText}>{outcomeLetter}</Text>
+                            </View>
+                            <Text style={styles.recentScoreText}>{myScore}-{opScore}</Text>
+                            <Text style={styles.recentVsText}>vs</Text>
+                            <Text style={styles.recentOpponentName}>{opponent?.team?.abbreviation || opponent?.team?.shortName?.rawName || '???'}</Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+
+                    {/* Divider */}
+                    <View style={styles.recentMatchesDivider} />
+
+                    {/* Away Team Column */}
+                    <View style={styles.recentMatchesColumn}>
+                      <View style={styles.recentMatchesHeader}>
+                        <Image source={{ uri: match.teams.away.logo }} style={styles.recentTeamLogo} />
+                        <Text style={styles.recentTeamName} numberOfLines={1}>
+                          {match.teams.away.name}
+                        </Text>
+                      </View>
+                      {recentMatches.away.map((game, index) => {
+                        const myParticipant = game.participants?.find((p: any) => 
+                          p.team?.id?.includes(match.teams.away.id?.toString()) || 
+                          p.team?.name?.rawName?.includes(match.teams.away.name) ||
+                          match.teams.away.name.includes(p.team?.name?.rawName || "xyz")
+                        ) || game.participants?.[0];
+                        
+                        const opponent = game.participants?.find((p: any) => p !== myParticipant);
+                        const outcome = myParticipant?.gameOutcome;
+                        const myScore = myParticipant?.result?.score || 0;
+                        const opScore = opponent?.result?.score || 0;
+                        
+                        const outcomeLetter = outcome === 'Won' ? 'V' : outcome === 'Lost' ? 'D' : 'E';
+                        const outcomeColor = outcome === 'Won' ? '#22c55e' : outcome === 'Lost' ? '#ef4444' : '#eab308';
+                        
+                        return (
+                          <View key={game.id || index} style={styles.recentMatchRow}>
+                            <View style={[styles.recentOutcomeBadge, { backgroundColor: outcomeColor }]}>
+                              <Text style={styles.recentOutcomeText}>{outcomeLetter}</Text>
+                            </View>
+                            <Text style={styles.recentScoreText}>{myScore}-{opScore}</Text>
+                            <Text style={styles.recentVsText}>vs</Text>
+                            <Text style={styles.recentOpponentName}>{opponent?.team?.abbreviation || opponent?.team?.shortName?.rawName || '???'}</Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              {/* Fan Voting / Poll Section */}
+              {pollData && pollData.options?.length >= 2 && (() => {
+                const homeTeamMsnId = match.teams.home.msnId || '';
+                const awayTeamMsnId = match.teams.away.msnId || '';
+                
+                const homeOption = pollData.options.find(o => 
+                  o.id?.includes(homeTeamMsnId) || homeTeamMsnId?.includes(o.id?.split('_').pop() || '')
+                );
+                const awayOption = pollData.options.find(o => 
+                  o.id?.includes(awayTeamMsnId) || awayTeamMsnId?.includes(o.id?.split('_').pop() || '')
+                );
+                
+                const homeVotes = homeOption?.count || 0;
+                const awayVotes = awayOption?.count || 0;
+                const totalVotes = homeVotes + awayVotes;
+                
+                if (totalVotes === 0) return null;
+                
+                const homePercent = Math.round((homeVotes / totalVotes) * 100);
+                const awayPercent = Math.round((awayVotes / totalVotes) * 100);
+                
+                return (
+                  <View style={styles.pollCard}>
+                    <Text style={styles.pollTitle}>🗳️ Palpite da Torcida</Text>
+                    
+                    <View style={styles.pollContainer}>
+                      {/* Home Team */}
+                      <View style={styles.pollTeamRow}>
+                        <Image source={{ uri: match.teams.home.logo }} style={styles.pollTeamLogo} />
+                        <Text style={styles.pollTeamName} numberOfLines={1}>{match.teams.home.name}</Text>
+                        <Text style={styles.pollPercent}>{homePercent}%</Text>
+                      </View>
+                      <View style={styles.pollBarContainer}>
+                        <View style={[styles.pollBar, styles.pollBarHome, { width: `${homePercent}%` }]} />
+                      </View>
+                      
+                      {/* Away Team */}
+                      <View style={styles.pollTeamRow}>
+                        <Image source={{ uri: match.teams.away.logo }} style={styles.pollTeamLogo} />
+                        <Text style={styles.pollTeamName} numberOfLines={1}>{match.teams.away.name}</Text>
+                        <Text style={styles.pollPercent}>{awayPercent}%</Text>
+                      </View>
+                      <View style={styles.pollBarContainer}>
+                        <View style={[styles.pollBar, styles.pollBarAway, { width: `${awayPercent}%` }]} />
+                      </View>
+                      
+                      <Text style={styles.pollVoteCount}>{totalVotes.toLocaleString('pt-BR')} votos</Text>
+                    </View>
+                  </View>
+                );
+              })()}
 
               {/* Probabilities (if available from MSN Sports) */}
               {match.probabilities && (
@@ -2571,5 +2760,158 @@ const styles = StyleSheet.create({
     color: "#60a5fa",
     fontSize: 11,
     fontWeight: "700",
+  },
+
+  // Recent Matches Styles
+  recentMatchesCard: {
+    backgroundColor: "rgba(59, 130, 246, 0.08)",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "rgba(59, 130, 246, 0.2)",
+  },
+  recentMatchesTitle: {
+    color: "#e4e4e7",
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  recentMatchesContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  recentMatchesColumn: {
+    flex: 1,
+  },
+  recentMatchesHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+    gap: 6,
+  },
+  recentTeamLogo: {
+    width: 20,
+    height: 20,
+    resizeMode: "contain",
+  },
+  recentTeamName: {
+    color: "#a1a1aa",
+    fontSize: 11,
+    fontWeight: "600",
+    maxWidth: 80,
+  },
+  recentMatchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 5,
+    gap: 6,
+  },
+  recentOutcomeBadge: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  recentOutcomeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  recentScoreText: {
+    color: "#e4e4e7",
+    fontSize: 12,
+    fontWeight: "600",
+    minWidth: 28,
+    textAlign: "center",
+  },
+  recentVsText: {
+    color: "#52525b",
+    fontSize: 9,
+  },
+  recentOpponentLogo: {
+    width: 16,
+    height: 16,
+    resizeMode: "contain",
+  },
+  recentMatchesDivider: {
+    width: 1,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    marginHorizontal: 8,
+  },
+  recentOpponentName: {
+    color: "#a1a1aa",
+    fontSize: 10,
+    fontWeight: "600",
+    minWidth: 30,
+  },
+
+  // Poll / Fan Voting Styles
+  pollCard: {
+    backgroundColor: "rgba(139, 92, 246, 0.08)",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "rgba(139, 92, 246, 0.2)",
+  },
+  pollTitle: {
+    color: "#e4e4e7",
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  pollContainer: {
+    gap: 8,
+  },
+  pollTeamRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
+  },
+  pollTeamLogo: {
+    width: 24,
+    height: 24,
+    resizeMode: "contain",
+  },
+  pollTeamName: {
+    color: "#e4e4e7",
+    fontSize: 13,
+    fontWeight: "600",
+    flex: 1,
+  },
+  pollPercent: {
+    color: "#a78bfa",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  pollBarContainer: {
+    height: 8,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderRadius: 4,
+    marginBottom: 12,
+    overflow: "hidden",
+  },
+  pollBar: {
+    height: "100%",
+    borderRadius: 4,
+  },
+  pollBarHome: {
+    backgroundColor: "#22c55e",
+  },
+  pollBarAway: {
+    backgroundColor: "#ef4444",
+  },
+  pollVoteCount: {
+    color: "#71717a",
+    fontSize: 11,
+    textAlign: "center",
+    marginTop: 4,
   },
 });

@@ -701,6 +701,54 @@ export const msnSportsApi = {
   },
 
   /**
+   * Get fan poll/voting data for a specific match (Pick Winner)
+   * @param gameId - MSN Sports game ID (numeric part)
+   */
+  getPoll: async (gameId: string): Promise<any> => {
+    const numericId = gameId.split("_").pop() || gameId;
+    const cacheKey = `poll_${numericId}`;
+    const cached = await getCachedData<any>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const userId = `m-${generateActivityId().replace(/-/g, "").substring(0, 32)}`;
+      const params = {
+        ...CONFIG.MSN_SPORTS.BASE_PARAMS,
+        apikey: CONFIG.MSN_SPORTS.API_KEY,
+        activityId: generateActivityId(),
+        ocid: "sports-gamecenter",
+        it: "web",
+        scn: "ANON",
+        pollId: `PickWinner-${numericId}`,
+        userid: userId,
+        user: userId,
+      };
+
+      console.log(`[MSN API] Fetching poll for game ${numericId}...`);
+
+      const response = await msnApiClient.get("/poll", { params });
+
+      if (!response.data?.value?.[0]) {
+        return null;
+      }
+
+      const pollData = response.data.value[0];
+      await setCachedData(cacheKey, pollData, 2 * 60 * 1000);
+
+      console.log(`[MSN API] Fetched poll - ${pollData.options?.length || 0} options`);
+      return pollData;
+    } catch (error: any) {
+      // Poll may not be available for all games - don't log as error
+      if (error?.response?.status === 400 || error?.response?.status === 404) {
+        console.log(`[MSN API] No poll available for game ${numericId}`);
+      } else {
+        console.error("[MSN API] Error fetching poll:", error);
+      }
+      return null;
+    }
+  },
+
+  /**
    * Get league standings/classification table
    * @param leagueId - League ID (e.g., "Soccer_EnglandPremierLeague")
    */
