@@ -1014,9 +1014,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  // Tap hint - REMOVED
+  // Tap hint
   tapHint: {
-    display: "none",
+    color: "#52525b",
+    fontSize: 10,
+    textAlign: "center",
+    marginTop: 12,
+    fontStyle: "italic",
   },
 
   // Footer: TV Channels & Round
@@ -1325,3 +1329,4 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
   },
 });
+

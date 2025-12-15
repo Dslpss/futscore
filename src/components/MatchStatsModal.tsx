@@ -73,6 +73,7 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
   const [topPlayers, setTopPlayers] = useState<MatchTopPlayers | null>(null);
   const [injuries, setInjuries] = useState<MatchInjuries | null>(null);
   const [playerLeagueStats, setPlayerLeagueStats] = useState<MatchLeagueStats | null>(null);
+  const [teamPositions, setTeamPositions] = useState<{ home: number | null; away: number | null }>({ home: null, away: null });
 
   useEffect(() => {
     if (visible && initialMatch) {
@@ -83,6 +84,7 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
       setTopPlayers(null);
       setInjuries(null);
       setPlayerLeagueStats(null);
+      setTeamPositions({ home: null, away: null });
     }
   }, [visible, initialMatch]);
 
@@ -205,6 +207,24 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
               if (playerStatsData) {
                 setPlayerLeagueStats(playerStatsData);
                 console.log("[MatchStatsModal] Fetched player league stats successfully");
+              }
+
+              // Fetch standings to get team positions
+              const standingsData = await msnSportsApi.getStandings(leagueId);
+              if (standingsData?.standings) {
+                const homePos = standingsData.standings.find(
+                  (s: any) => s.team?.id === homeTeamMsnId || 
+                              s.team?.id?.includes(initialMatch.teams.home.id.toString())
+                )?.overallRank;
+                const awayPos = standingsData.standings.find(
+                  (s: any) => s.team?.id === awayTeamMsnId || 
+                              s.team?.id?.includes(initialMatch.teams.away.id.toString())
+                )?.overallRank;
+                
+                if (homePos || awayPos) {
+                  setTeamPositions({ home: homePos || null, away: awayPos || null });
+                  console.log(`[MatchStatsModal] Team positions - Home: ${homePos}, Away: ${awayPos}`);
+                }
               }
             }
           }
@@ -480,6 +500,11 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                       <Text style={styles.teamName} numberOfLines={2}>
                         {match.teams.home.name}
                       </Text>
+                      {teamPositions.home && (
+                        <View style={styles.positionBadge}>
+                          <Text style={styles.positionText}>{teamPositions.home}º</Text>
+                        </View>
+                      )}
                     </View>
 
                     {/* Score Display */}
@@ -541,6 +566,11 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                       <Text style={styles.teamName} numberOfLines={2}>
                         {match.teams.away.name}
                       </Text>
+                      {teamPositions.away && (
+                        <View style={styles.positionBadge}>
+                          <Text style={styles.positionText}>{teamPositions.away}º</Text>
+                        </View>
+                      )}
                     </View>
                   </View>
 
@@ -2529,5 +2559,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 8,
+  },
+  positionBadge: {
+    backgroundColor: "rgba(59, 130, 246, 0.2)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginTop: 6,
+  },
+  positionText: {
+    color: "#60a5fa",
+    fontSize: 11,
+    fontWeight: "700",
   },
 });
