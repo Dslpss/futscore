@@ -23,7 +23,7 @@ import {
   Thermometer,
   User,
 } from "lucide-react-native";
-import { Match } from "../types";
+import { Match, MatchTopPlayers, MatchInjuries } from "../types";
 import { api } from "../services/api";
 import { LinearGradient } from "expo-linear-gradient";
 
@@ -65,11 +65,13 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
 }) => {
   const [match, setMatch] = useState<Match | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"stats" | "lineups" | "goals">(
+  const [activeTab, setActiveTab] = useState<"stats" | "lineups" | "goals" | "players">(
     "stats"
   );
   const [goals, setGoals] = useState<any[]>([]);
   const [gameDetails, setGameDetails] = useState<GameDetails | null>(null);
+  const [topPlayers, setTopPlayers] = useState<MatchTopPlayers | null>(null);
+  const [injuries, setInjuries] = useState<MatchInjuries | null>(null);
 
   useEffect(() => {
     if (visible && initialMatch) {
@@ -77,6 +79,8 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
     } else {
       setMatch(null);
       setGameDetails(null);
+      setTopPlayers(null);
+      setInjuries(null);
     }
   }, [visible, initialMatch]);
 
@@ -156,6 +160,40 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
             console.log(
               `[MatchStatsModal] Fetched ${lineups.length} lineups from MSN`
             );
+          }
+
+          // Fetch top players for both teams
+          const homeTeamMsnId = (initialMatch.teams.home as any).msnId;
+          const awayTeamMsnId = (initialMatch.teams.away as any).msnId;
+          
+          if (homeTeamMsnId && awayTeamMsnId) {
+            // Extract league ID from team msnId
+            // Format: SportRadar_Soccer_EnglandPremierLeague_2025_Team_35
+            const parts = homeTeamMsnId.split("_");
+            const leagueId = parts.length >= 3 ? `${parts[1]}_${parts[2]}` : "";
+            
+            if (leagueId) {
+              console.log(`[MatchStatsModal] Fetching top players for league: ${leagueId}`);
+              const playersData = await msnSportsApi.getTopPlayers(
+                homeTeamMsnId,
+                awayTeamMsnId,
+                leagueId
+              );
+              if (playersData) {
+                setTopPlayers(playersData);
+                console.log("[MatchStatsModal] Fetched top players successfully");
+              }
+
+              // Fetch injuries for both teams
+              const injuriesData = await msnSportsApi.getTeamInjuries(
+                homeTeamMsnId,
+                awayTeamMsnId
+              );
+              if (injuriesData) {
+                setInjuries(injuriesData);
+                console.log("[MatchStatsModal] Fetched injuries successfully");
+              }
+            }
           }
 
           // Only fetch statistics and timeline if match has started or finished
@@ -632,6 +670,91 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                   </View>
                 )}
 
+              {/* Injuries Section - Departamento Médico */}
+              {injuries && (injuries.home.injuredPlayers.length > 0 || injuries.away.injuredPlayers.length > 0) && (
+                <View style={styles.injuriesCard}>
+                  <Text style={styles.injuriesTitle}>🏥 Departamento Médico</Text>
+                  
+                  {/* Home Team Injuries */}
+                  {injuries.home.injuredPlayers.length > 0 && (
+                    <View style={styles.teamInjuries}>
+                      <View style={styles.teamInjuryHeader}>
+                        <Image
+                          source={{ uri: match.teams.home.logo }}
+                          style={styles.injuryTeamLogo}
+                        />
+                        <Text style={styles.teamInjuryName}>{match.teams.home.name}</Text>
+                        <View style={styles.injuryCountBadge}>
+                          <Text style={styles.injuryCountText}>{injuries.home.injuredPlayers.length}</Text>
+                        </View>
+                      </View>
+                      {injuries.home.injuredPlayers.map((player) => (
+                        <View key={player.id} style={styles.injuredPlayerRow}>
+                          <View style={[
+                            styles.injuryStatusIcon,
+                            player.injuryStatus === 'Out' && styles.injuryStatusOut,
+                            player.injuryStatus === 'Doubtful' && styles.injuryStatusDoubtful,
+                            (player.injuryStatus === 'Injured' || player.injuryStatus === 'GameTimeDecision') && styles.injuryStatusInjured,
+                          ]}>
+                            <Text style={styles.injuryStatusEmoji}>
+                              {player.injuryStatus === 'Out' ? '🔴' : 
+                               player.injuryStatus === 'Doubtful' ? '🟡' : '⚕️'}
+                            </Text>
+                          </View>
+                          <View style={styles.injuredPlayerInfo}>
+                            <Text style={styles.injuredPlayerName}>
+                              {player.jerseyNumber && `${player.jerseyNumber}. `}{player.lastName || player.name}
+                            </Text>
+                            <Text style={styles.injuryDescription}>
+                              {player.injuryDescription || player.injuryStatus}
+                            </Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  {/* Away Team Injuries */}
+                  {injuries.away.injuredPlayers.length > 0 && (
+                    <View style={styles.teamInjuries}>
+                      <View style={styles.teamInjuryHeader}>
+                        <Image
+                          source={{ uri: match.teams.away.logo }}
+                          style={styles.injuryTeamLogo}
+                        />
+                        <Text style={styles.teamInjuryName}>{match.teams.away.name}</Text>
+                        <View style={styles.injuryCountBadge}>
+                          <Text style={styles.injuryCountText}>{injuries.away.injuredPlayers.length}</Text>
+                        </View>
+                      </View>
+                      {injuries.away.injuredPlayers.map((player) => (
+                        <View key={player.id} style={styles.injuredPlayerRow}>
+                          <View style={[
+                            styles.injuryStatusIcon,
+                            player.injuryStatus === 'Out' && styles.injuryStatusOut,
+                            player.injuryStatus === 'Doubtful' && styles.injuryStatusDoubtful,
+                            (player.injuryStatus === 'Injured' || player.injuryStatus === 'GameTimeDecision') && styles.injuryStatusInjured,
+                          ]}>
+                            <Text style={styles.injuryStatusEmoji}>
+                              {player.injuryStatus === 'Out' ? '🔴' : 
+                               player.injuryStatus === 'Doubtful' ? '🟡' : '⚕️'}
+                            </Text>
+                          </View>
+                          <View style={styles.injuredPlayerInfo}>
+                            <Text style={styles.injuredPlayerName}>
+                              {player.jerseyNumber && `${player.jerseyNumber}. `}{player.lastName || player.name}
+                            </Text>
+                            <Text style={styles.injuryDescription}>
+                              {player.injuryDescription || player.injuryStatus}
+                            </Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              )}
+
               {/* Probabilities (if available from MSN Sports) */}
               {match.probabilities && (
                 <View style={styles.probabilitiesCard}>
@@ -755,6 +878,22 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                         Escalações
                       </Text>
                     </TouchableOpacity>
+                    {topPlayers && (
+                      <TouchableOpacity
+                        style={[
+                          styles.tabButton,
+                          activeTab === "players" && styles.activeTabButton,
+                        ]}
+                        onPress={() => setActiveTab("players")}>
+                        <Text
+                          style={[
+                            styles.tabText,
+                            activeTab === "players" && styles.activeTabText,
+                          ]}>
+                          Destaques
+                        </Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
 
                   {activeTab === "stats" ? (
@@ -894,6 +1033,12 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                                 {goal.player.number}. {goal.player.name}
                                 {goal.isPenalty && " (Pênalti)"}
                                 {goal.isOwnGoal && " (Gol Contra)"}
+                              </Text>
+                              <Text style={styles.goalTeamName}>
+                                {goal.teamId?.includes(match.teams.home.id?.toString()) || 
+                                 goal.teamId?.includes("home") 
+                                  ? match.teams.home.name 
+                                  : match.teams.away.name}
                               </Text>
                               {goal.assist && !goal.isDisallowed && (
                                 <Text style={styles.goalAssist}>
@@ -1069,6 +1214,183 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                     </View>
                   )}
                 </>
+              )}
+              
+              {activeTab === "players" && topPlayers && (
+                /* Featured Players / Top Players Tab */
+                <View style={styles.playersContainer}>
+                  <Text style={styles.sectionTitle}>Destaques do Jogo</Text>
+                  
+                  {/* Scorer Comparison Bar */}
+                  {topPlayers.home.goalScorer && topPlayers.away.goalScorer && (
+                    <View style={styles.comparisonSection}>
+                      <Text style={styles.comparisonTitle}>⚽ Artilheiros</Text>
+                      <View style={styles.comparisonRow}>
+                        <View style={styles.comparisonPlayer}>
+                          {topPlayers.home.goalScorer.photo ? (
+                            <Image 
+                              source={{ uri: topPlayers.home.goalScorer.photo }}
+                              style={styles.comparisonPhoto}
+                            />
+                          ) : (
+                            <View style={[styles.comparisonPhoto, styles.photoPlaceholder]}>
+                              <User size={20} color="#71717a" />
+                            </View>
+                          )}
+                          <Text style={styles.comparisonName} numberOfLines={1}>
+                            {topPlayers.home.goalScorer.lastName}
+                          </Text>
+                          <Text style={styles.comparisonStats}>
+                            {topPlayers.home.goalScorer.stats.goalsScored} gols
+                          </Text>
+                        </View>
+                        
+                        <View style={styles.comparisonBarContainer}>
+                          <View style={styles.comparisonBar}>
+                            <View 
+                              style={[
+                                styles.comparisonBarSegment,
+                                styles.comparisonBarHome,
+                                { 
+                                  flex: topPlayers.home.goalScorer.stats.goalsScored || 1 
+                                }
+                              ]} 
+                            />
+                            <View 
+                              style={[
+                                styles.comparisonBarSegment,
+                                styles.comparisonBarAway,
+                                { 
+                                  flex: topPlayers.away.goalScorer.stats.goalsScored || 1 
+                                }
+                              ]} 
+                            />
+                          </View>
+                        </View>
+                        
+                        <View style={styles.comparisonPlayer}>
+                          {topPlayers.away.goalScorer.photo ? (
+                            <Image 
+                              source={{ uri: topPlayers.away.goalScorer.photo }}
+                              style={styles.comparisonPhoto}
+                            />
+                          ) : (
+                            <View style={[styles.comparisonPhoto, styles.photoPlaceholder]}>
+                              <User size={20} color="#71717a" />
+                            </View>
+                          )}
+                          <Text style={styles.comparisonName} numberOfLines={1}>
+                            {topPlayers.away.goalScorer.lastName}
+                          </Text>
+                          <Text style={styles.comparisonStats}>
+                            {topPlayers.away.goalScorer.stats.goalsScored} gols
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Assist Leaders */}
+                  {topPlayers.home.assistLeader && topPlayers.away.assistLeader && (
+                    <View style={styles.comparisonSection}>
+                      <Text style={styles.comparisonTitle}>🅰️ Assistências</Text>
+                      <View style={styles.comparisonRow}>
+                        <View style={styles.comparisonPlayer}>
+                          {topPlayers.home.assistLeader.photo ? (
+                            <Image 
+                              source={{ uri: topPlayers.home.assistLeader.photo }}
+                              style={styles.comparisonPhoto}
+                            />
+                          ) : (
+                            <View style={[styles.comparisonPhoto, styles.photoPlaceholder]}>
+                              <User size={20} color="#71717a" />
+                            </View>
+                          )}
+                          <Text style={styles.comparisonName} numberOfLines={1}>
+                            {topPlayers.home.assistLeader.lastName}
+                          </Text>
+                          <Text style={styles.comparisonStats}>
+                            {topPlayers.home.assistLeader.stats.assists} assists
+                          </Text>
+                        </View>
+                        
+                        <View style={styles.comparisonBarContainer}>
+                          <View style={styles.comparisonBar}>
+                            <View 
+                              style={[
+                                styles.comparisonBarSegment,
+                                styles.comparisonBarHome,
+                                { flex: topPlayers.home.assistLeader.stats.assists || 1 }
+                              ]} 
+                            />
+                            <View 
+                              style={[
+                                styles.comparisonBarSegment,
+                                styles.comparisonBarAway,
+                                { flex: topPlayers.away.assistLeader.stats.assists || 1 }
+                              ]} 
+                            />
+                          </View>
+                        </View>
+                        
+                        <View style={styles.comparisonPlayer}>
+                          {topPlayers.away.assistLeader.photo ? (
+                            <Image 
+                              source={{ uri: topPlayers.away.assistLeader.photo }}
+                              style={styles.comparisonPhoto}
+                            />
+                          ) : (
+                            <View style={[styles.comparisonPhoto, styles.photoPlaceholder]}>
+                              <User size={20} color="#71717a" />
+                            </View>
+                          )}
+                          <Text style={styles.comparisonName} numberOfLines={1}>
+                            {topPlayers.away.assistLeader.lastName}
+                          </Text>
+                          <Text style={styles.comparisonStats}>
+                            {topPlayers.away.assistLeader.stats.assists} assists
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Card Alert Section */}
+                  {((topPlayers.home.cardLeader?.stats.yellowCards || 0) >= 4 ||
+                    (topPlayers.away.cardLeader?.stats.yellowCards || 0) >= 4) && (
+                    <View style={styles.cardAlertSection}>
+                      <Text style={styles.cardAlertTitle}>⚠️ Alerta de Suspensão</Text>
+                      
+                      {(topPlayers.home.cardLeader?.stats.yellowCards || 0) >= 4 && (
+                        <View style={styles.cardAlertRow}>
+                          <View style={styles.cardAlertBadge}>
+                            <Text style={styles.cardAlertIcon}>🟨</Text>
+                            <Text style={styles.cardAlertCount}>
+                              {topPlayers.home.cardLeader?.stats.yellowCards}
+                            </Text>
+                          </View>
+                          <Text style={styles.cardAlertPlayer}>
+                            {topPlayers.home.cardLeader?.lastName} ({match.teams.home.name})
+                          </Text>
+                        </View>
+                      )}
+                      
+                      {(topPlayers.away.cardLeader?.stats.yellowCards || 0) >= 4 && (
+                        <View style={styles.cardAlertRow}>
+                          <View style={styles.cardAlertBadge}>
+                            <Text style={styles.cardAlertIcon}>🟨</Text>
+                            <Text style={styles.cardAlertCount}>
+                              {topPlayers.away.cardLeader?.stats.yellowCards}
+                            </Text>
+                          </View>
+                          <Text style={styles.cardAlertPlayer}>
+                            {topPlayers.away.cardLeader?.lastName} ({match.teams.away.name})
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  )}
+                </View>
               )}
             </ScrollView>
           ) : (
@@ -1606,6 +1928,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 8,
   },
+  goalTeamName: {
+    color: "#71717a",
+    fontSize: 12,
+    marginBottom: 4,
+  },
   goalTimeContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -1753,5 +2080,215 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 14,
     fontWeight: "700",
+  },
+
+  // Players / Destaques Tab Styles
+  playersContainer: {
+    paddingVertical: 16,
+  },
+  comparisonSection: {
+    backgroundColor: "rgba(255,255,255,0.03)",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+  },
+  comparisonTitle: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "700",
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  comparisonRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  comparisonPlayer: {
+    alignItems: "center",
+    width: 80,
+  },
+  comparisonPhoto: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    marginBottom: 8,
+  },
+  photoPlaceholder: {
+    backgroundColor: "rgba(255,255,255,0.1)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  comparisonName: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  comparisonStats: {
+    color: "#22c55e",
+    fontSize: 11,
+    fontWeight: "700",
+    marginTop: 2,
+  },
+  comparisonBarContainer: {
+    flex: 1,
+    paddingHorizontal: 12,
+  },
+  comparisonBar: {
+    flexDirection: "row",
+    height: 8,
+    borderRadius: 4,
+    overflow: "hidden",
+    backgroundColor: "rgba(255,255,255,0.05)",
+  },
+  comparisonBarSegment: {
+    height: "100%",
+  },
+  comparisonBarHome: {
+    backgroundColor: "#22c55e",
+    borderTopLeftRadius: 4,
+    borderBottomLeftRadius: 4,
+  },
+  comparisonBarAway: {
+    backgroundColor: "#3b82f6",
+    borderTopRightRadius: 4,
+    borderBottomRightRadius: 4,
+  },
+
+  // Card Alert Styles
+  cardAlertSection: {
+    backgroundColor: "rgba(251, 191, 36, 0.1)",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "rgba(251, 191, 36, 0.2)",
+  },
+  cardAlertTitle: {
+    color: "#fbbf24",
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: 12,
+  },
+  cardAlertRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(251, 191, 36, 0.1)",
+  },
+  cardAlertBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.1)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginRight: 12,
+  },
+  cardAlertIcon: {
+    fontSize: 14,
+    marginRight: 4,
+  },
+  cardAlertCount: {
+    color: "#fbbf24",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  cardAlertPlayer: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "500",
+    flex: 1,
+  },
+
+  // Injuries / Departamento Médico Styles
+  injuriesCard: {
+    backgroundColor: "rgba(239, 68, 68, 0.05)",
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: "rgba(239, 68, 68, 0.15)",
+  },
+  injuriesTitle: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 16,
+  },
+  teamInjuries: {
+    marginBottom: 16,
+  },
+  teamInjuryHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.1)",
+  },
+  injuryTeamLogo: {
+    width: 24,
+    height: 24,
+    marginRight: 8,
+  },
+  teamInjuryName: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
+    flex: 1,
+  },
+  injuryCountBadge: {
+    backgroundColor: "rgba(239, 68, 68, 0.3)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  injuryCountText: {
+    color: "#ef4444",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  injuredPlayerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingLeft: 8,
+  },
+  injuryStatusIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  injuryStatusOut: {
+    backgroundColor: "rgba(239, 68, 68, 0.2)",
+  },
+  injuryStatusDoubtful: {
+    backgroundColor: "rgba(251, 191, 36, 0.2)",
+  },
+  injuryStatusInjured: {
+    backgroundColor: "rgba(59, 130, 246, 0.2)",
+  },
+  injuryStatusEmoji: {
+    fontSize: 14,
+  },
+  injuredPlayerInfo: {
+    flex: 1,
+  },
+  injuredPlayerName: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  injuryDescription: {
+    color: "#a1a1aa",
+    fontSize: 12,
+    marginTop: 2,
   },
 });

@@ -747,6 +747,192 @@ export const msnSportsApi = {
   },
 
   /**
+   * Get top players for specified teams (goals, assists, cards leaders)
+   * @param homeTeamId - Home team MSN ID (e.g., "SportRadar_Soccer_EnglandPremierLeague_2025_Team_35")
+   * @param awayTeamId - Away team MSN ID
+   * @param leagueId - League ID (e.g., "Soccer_EnglandPremierLeague")
+   */
+  getTopPlayers: async (
+    homeTeamId: string,
+    awayTeamId: string,
+    leagueId: string
+  ): Promise<any> => {
+    const cacheKey = `top_players_${homeTeamId}_${awayTeamId}`;
+    const cached = await getCachedData<any>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const params = {
+        ...CONFIG.MSN_SPORTS.BASE_PARAMS,
+        apikey: CONFIG.MSN_SPORTS.API_KEY,
+        activityId: generateActivityId(),
+        ocid: "sports-gamecenter",
+        ids: `${homeTeamId},${awayTeamId}`,
+        type: "Team",
+        sport: "Soccer",
+        leagueid: leagueId,
+      };
+
+      console.log(`[MSN API] Fetching top players for ${homeTeamId} vs ${awayTeamId}...`);
+
+      const response = await msnApiClient.get("/topplayers", { params });
+
+      if (
+        !response.data ||
+        !response.data.value ||
+        response.data.value.length === 0
+      ) {
+        console.log("[MSN API] No top players data available");
+        return null;
+      }
+
+      const topPlayersData = response.data.value[0]?.topPlayers || [];
+      
+      // Transform the data into a more usable format
+      const result: any = {
+        home: { teamId: homeTeamId },
+        away: { teamId: awayTeamId },
+      };
+
+      topPlayersData.forEach((teamData: any) => {
+        const isHome = teamData.teamId === homeTeamId;
+        const key = isHome ? "home" : "away";
+
+        teamData.categoryPlayerStatistics?.forEach((category: any) => {
+          const stat = category.statistics?.[0];
+          if (!stat?.player) return;
+
+          const player = {
+            id: stat.player.id,
+            name: stat.player.name?.rawName || "",
+            firstName: stat.player.firstName?.rawName || "",
+            lastName: stat.player.lastName?.rawName || "",
+            jerseyNumber: stat.player.jerseyNumber || "",
+            position: stat.player.playerPosition || "",
+            photo: stat.player.image?.id
+              ? `https://www.bing.com/th?id=${encodeURIComponent(stat.player.image.id)}&w=100&h=100`
+              : "",
+            country: stat.player.country?.name || "",
+            countryCode: stat.player.country?.abbreviation || "",
+            teamId: stat.player.teamId,
+            stats: {
+              goalsScored: stat.goalsScored,
+              goalsScoredRank: stat.goalsScoredRank,
+              assists: stat.assists,
+              assistsRank: stat.assistsRank,
+              yellowCards: stat.yellowCards,
+              yellowCardsRank: stat.yellowCardsRank,
+              yellowRedCards: stat.yellowRedCards,
+              shotsOnTarget: stat.shotsOnTarget,
+              shotsOffTarget: stat.shotsOffTarget,
+              goalsByHead: stat.goalsByHead,
+              goalsByPenalty: stat.goalsByPenalty,
+              minutesPlayed: stat.minutesPlayed,
+            },
+            category: category.category,
+          };
+
+          if (category.category === "Goals") {
+            result[key].goalScorer = player;
+          } else if (category.category === "Assists") {
+            result[key].assistLeader = player;
+          } else if (category.category === "Cards") {
+            result[key].cardLeader = player;
+          }
+        });
+      });
+
+      // Cache for 6 hours (player stats don't change during a match)
+      await setCachedData(cacheKey, result, 6 * 60 * 60 * 1000);
+
+      console.log(`[MSN API] Fetched top players successfully`);
+      return result;
+    } catch (error) {
+      console.error("[MSN API] Error fetching top players:", error);
+      return null;
+    }
+  },
+
+  /**
+   * Get team injuries/availability for specified teams
+   * @param homeTeamId - Home team MSN ID
+   * @param awayTeamId - Away team MSN ID
+   */
+  getTeamInjuries: async (
+    homeTeamId: string,
+    awayTeamId: string
+  ): Promise<any> => {
+    const cacheKey = `injuries_${homeTeamId}_${awayTeamId}`;
+    const cached = await getCachedData<any>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const params = {
+        ...CONFIG.MSN_SPORTS.BASE_PARAMS,
+        apikey: CONFIG.MSN_SPORTS.API_KEY,
+        activityId: generateActivityId(),
+        ocid: "sports-gamecenter",
+        ids: `${homeTeamId},${awayTeamId}`,
+        scope: "Injuries",
+      };
+
+      console.log(`[MSN API] Fetching injuries for ${homeTeamId} vs ${awayTeamId}...`);
+
+      const response = await msnApiClient.get("/teamplayers", { params });
+
+      if (
+        !response.data ||
+        !response.data.value ||
+        response.data.value.length === 0
+      ) {
+        console.log("[MSN API] No injuries data available");
+        return null;
+      }
+
+      const teamPlayersData = response.data.value[0]?.teamPlayers || [];
+      
+      // Transform the data into a more usable format
+      const result: any = {
+        home: { teamId: homeTeamId, injuredPlayers: [] },
+        away: { teamId: awayTeamId, injuredPlayers: [] },
+      };
+
+      teamPlayersData.forEach((teamData: any) => {
+        const isHome = teamData.teamId === homeTeamId;
+        const key = isHome ? "home" : "away";
+
+        if (teamData.players) {
+          result[key].injuredPlayers = teamData.players
+            .filter((p: any) => p.activeStatus?.injuryStatus)
+            .map((player: any) => ({
+              id: player.id,
+              name: player.name?.rawName || `${player.firstName?.rawName} ${player.lastName?.rawName}`,
+              firstName: player.firstName?.rawName || "",
+              lastName: player.lastName?.rawName || "",
+              jerseyNumber: player.jerseyNumber || "",
+              position: player.playerPosition || "",
+              photo: player.image?.id
+                ? `https://www.bing.com/th?id=${encodeURIComponent(player.image.id)}&w=100&h=100`
+                : "",
+              injuryStatus: player.activeStatus?.injuryStatus || "Unknown",
+              injuryDescription: player.activeStatus?.injuryDescription || "",
+              teamId: player.teamId || teamData.teamId,
+            }));
+        }
+      });
+
+      // Cache for 2 hours (injuries don't change frequently during a day)
+      await setCachedData(cacheKey, result, 2 * 60 * 60 * 1000);
+
+      console.log(`[MSN API] Fetched injuries - Home: ${result.home.injuredPlayers.length}, Away: ${result.away.injuredPlayers.length}`);
+      return result;
+    } catch (error) {
+      console.error("[MSN API] Error fetching injuries:", error);
+      return null;
+    }
+  },
+
+  /**
    * Get team live schedule (finished and upcoming matches)
    * Uses /liveschedules endpoint which provides richer data including game outcomes
    * @param teamId - Team ID from MSN Sports (e.g., "SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_2001")
@@ -823,13 +1009,13 @@ export const msnSportsApi = {
   },
 
   /**
-   * Get top players for a team with detailed statistics
+   * Get top players for a single team with detailed statistics
    * This endpoint provides player info including jersey number, position, photo, etc.
    * @param teamId - Team ID from MSN Sports (e.g., "SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_2020")
    * @param leagueId - League ID (e.g., "Soccer_BrazilBrasileiroSerieA")
    * @returns Array of players with statistics
    */
-  getTopPlayers: async (teamId: string, leagueId?: string): Promise<any[]> => {
+  getTeamTopPlayers: async (teamId: string, leagueId?: string): Promise<any[]> => {
     const cacheKey = `top_players_${teamId}`;
     const cached = await getCachedData<any[]>(cacheKey);
     if (cached) return cached;

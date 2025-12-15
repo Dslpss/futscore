@@ -156,6 +156,73 @@ export interface ApiResponse<T> {
   response: T[];
 }
 
+// Top Players Types
+export interface TopPlayerStats {
+  goalsScored?: number;
+  goalsScoredRank?: number;
+  assists?: number;
+  assistsRank?: number;
+  yellowCards?: number;
+  yellowCardsRank?: number;
+  yellowRedCards?: number;
+  shotsOnTarget?: number;
+  shotsOffTarget?: number;
+  goalsByHead?: number;
+  goalsByPenalty?: number;
+  minutesPlayed?: number;
+}
+
+export interface TopPlayer {
+  id: string;
+  name: string;
+  firstName: string;
+  lastName: string;
+  jerseyNumber: string;
+  position: string;
+  photo: string;
+  country: string;
+  countryCode: string;
+  teamId: string;
+  stats: TopPlayerStats;
+  category: 'Goals' | 'Assists' | 'Cards';
+}
+
+export interface TeamTopPlayers {
+  teamId: string;
+  goalScorer?: TopPlayer;
+  assistLeader?: TopPlayer;
+  cardLeader?: TopPlayer;
+}
+
+export interface MatchTopPlayers {
+  home: TeamTopPlayers;
+  away: TeamTopPlayers;
+}
+
+// Injury Types
+export interface InjuredPlayer {
+  id: string;
+  name: string;
+  firstName: string;
+  lastName: string;
+  jerseyNumber: string;
+  position: string;
+  photo: string;
+  injuryStatus: 'Out' | 'Doubtful' | 'Injured' | 'GameTimeDecision' | 'Unknown' | 'Other';
+  injuryDescription?: string;
+  teamId: string;
+}
+
+export interface TeamInjuries {
+  teamId: string;
+  injuredPlayers: InjuredPlayer[];
+}
+
+export interface MatchInjuries {
+  home: TeamInjuries;
+  away: TeamInjuries;
+}
+
 // MSN Sports API Types
 export interface MsnLeague {
   id: string;
