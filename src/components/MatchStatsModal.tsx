@@ -372,6 +372,26 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
 
   if (!visible) return null;
 
+  // Helper function to check if a player is injured
+  const getPlayerInjuryStatus = (playerName: string, teamSide: 'home' | 'away'): { isInjured: boolean; status?: string; description?: string } => {
+    if (!injuries) return { isInjured: false };
+    
+    const teamInjuries = teamSide === 'home' ? injuries.home : injuries.away;
+    const injuredPlayer = teamInjuries.injuredPlayers.find(
+      (p) => playerName.toLowerCase().includes(p.lastName.toLowerCase()) ||
+             p.name.toLowerCase().includes(playerName.toLowerCase().split(' ').pop() || '')
+    );
+    
+    if (injuredPlayer) {
+      return {
+        isInjured: true,
+        status: injuredPlayer.injuryStatus,
+        description: injuredPlayer.injuryDescription,
+      };
+    }
+    return { isInjured: false };
+  };
+
   return (
     <Modal
       animationType="slide"
@@ -674,6 +694,20 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
               {injuries && (injuries.home.injuredPlayers.length > 0 || injuries.away.injuredPlayers.length > 0) && (
                 <View style={styles.injuriesCard}>
                   <Text style={styles.injuriesTitle}>🏥 Departamento Médico</Text>
+                  <View style={styles.injuryLegend}>
+                    <View style={styles.legendItem}>
+                      <Text style={styles.legendEmoji}>🔴</Text>
+                      <Text style={styles.legendText}>Fora</Text>
+                    </View>
+                    <View style={styles.legendItem}>
+                      <Text style={styles.legendEmoji}>🟡</Text>
+                      <Text style={styles.legendText}>Dúvida</Text>
+                    </View>
+                    <View style={styles.legendItem}>
+                      <Text style={styles.legendEmoji}>⚕️</Text>
+                      <Text style={styles.legendText}>Recuperação</Text>
+                    </View>
+                  </View>
                   
                   {/* Home Team Injuries */}
                   {injuries.home.injuredPlayers.length > 0 && (
@@ -1081,7 +1115,9 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                         </View>
 
                         <Text style={styles.lineupSectionTitle}>Titulares</Text>
-                        {match.lineups[0].startXI.map((player) => (
+                        {match.lineups[0].startXI.map((player) => {
+                          const injuryInfo = getPlayerInjuryStatus(player.name, 'home');
+                          return (
                           <View key={player.id} style={styles.playerRow}>
                             {player.photo ? (
                               <Image
@@ -1096,15 +1132,24 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                             <Text style={styles.playerNumber}>
                               {player.number}
                             </Text>
-                            <Text style={styles.playerName}>{player.name}</Text>
+                            <Text style={[styles.playerName, injuryInfo.isInjured && styles.playerNameInjured]}>
+                              {player.name}
+                            </Text>
+                            {injuryInfo.isInjured && (
+                              <Text style={styles.playerInjuryBadge}>
+                                {injuryInfo.status === 'Out' ? '🔴' : injuryInfo.status === 'Doubtful' ? '🟡' : '⚕️'}
+                              </Text>
+                            )}
                             <Text style={styles.playerPosition}>
                               {player.pos}
                             </Text>
                           </View>
-                        ))}
+                        );})}
 
                         <Text style={styles.lineupSectionTitle}>Reservas</Text>
-                        {match.lineups[0].substitutes.map((player) => (
+                        {match.lineups[0].substitutes.map((player) => {
+                          const injuryInfo = getPlayerInjuryStatus(player.name, 'home');
+                          return (
                           <View key={player.id} style={styles.playerRow}>
                             {player.photo ? (
                               <Image
@@ -1119,12 +1164,19 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                             <Text style={styles.playerNumber}>
                               {player.number}
                             </Text>
-                            <Text style={styles.playerName}>{player.name}</Text>
+                            <Text style={[styles.playerName, injuryInfo.isInjured && styles.playerNameInjured]}>
+                              {player.name}
+                            </Text>
+                            {injuryInfo.isInjured && (
+                              <Text style={styles.playerInjuryBadge}>
+                                {injuryInfo.status === 'Out' ? '🔴' : injuryInfo.status === 'Doubtful' ? '🟡' : '⚕️'}
+                              </Text>
+                            )}
                             <Text style={styles.playerPosition}>
                               {player.pos}
                             </Text>
                           </View>
-                        ))}
+                        );})}
 
                         <View style={styles.coachContainer}>
                           <Text style={styles.coachLabel}>Técnico:</Text>
@@ -1153,7 +1205,9 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                         </View>
 
                         <Text style={styles.lineupSectionTitle}>Titulares</Text>
-                        {match.lineups[1].startXI.map((player) => (
+                        {match.lineups[1].startXI.map((player) => {
+                          const injuryInfo = getPlayerInjuryStatus(player.name, 'away');
+                          return (
                           <View key={player.id} style={styles.playerRow}>
                             {player.photo ? (
                               <Image
@@ -1168,15 +1222,24 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                             <Text style={styles.playerNumber}>
                               {player.number}
                             </Text>
-                            <Text style={styles.playerName}>{player.name}</Text>
+                            <Text style={[styles.playerName, injuryInfo.isInjured && styles.playerNameInjured]}>
+                              {player.name}
+                            </Text>
+                            {injuryInfo.isInjured && (
+                              <Text style={styles.playerInjuryBadge}>
+                                {injuryInfo.status === 'Out' ? '🔴' : injuryInfo.status === 'Doubtful' ? '🟡' : '⚕️'}
+                              </Text>
+                            )}
                             <Text style={styles.playerPosition}>
                               {player.pos}
                             </Text>
                           </View>
-                        ))}
+                        );})}
 
                         <Text style={styles.lineupSectionTitle}>Reservas</Text>
-                        {match.lineups[1].substitutes.map((player) => (
+                        {match.lineups[1].substitutes.map((player) => {
+                          const injuryInfo = getPlayerInjuryStatus(player.name, 'away');
+                          return (
                           <View key={player.id} style={styles.playerRow}>
                             {player.photo ? (
                               <Image
@@ -1191,12 +1254,19 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                             <Text style={styles.playerNumber}>
                               {player.number}
                             </Text>
-                            <Text style={styles.playerName}>{player.name}</Text>
+                            <Text style={[styles.playerName, injuryInfo.isInjured && styles.playerNameInjured]}>
+                              {player.name}
+                            </Text>
+                            {injuryInfo.isInjured && (
+                              <Text style={styles.playerInjuryBadge}>
+                                {injuryInfo.status === 'Out' ? '🔴' : injuryInfo.status === 'Doubtful' ? '🟡' : '⚕️'}
+                              </Text>
+                            )}
                             <Text style={styles.playerPosition}>
                               {player.pos}
                             </Text>
                           </View>
-                        ))}
+                        );})}
 
                         <View style={styles.coachContainer}>
                           <Text style={styles.coachLabel}>Técnico:</Text>
@@ -2290,5 +2360,42 @@ const styles = StyleSheet.create({
     color: "#a1a1aa",
     fontSize: 12,
     marginTop: 2,
+  },
+
+  // Lineup injury indicator styles
+  playerNameInjured: {
+    color: "#ef4444",
+    opacity: 0.8,
+  },
+  playerInjuryBadge: {
+    fontSize: 10,
+    marginLeft: 4,
+    marginRight: 4,
+  },
+
+  // Injury Legend Styles
+  injuryLegend: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 16,
+    marginBottom: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: "rgba(255,255,255,0.03)",
+    borderRadius: 8,
+  },
+  legendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  legendEmoji: {
+    fontSize: 12,
+  },
+  legendText: {
+    color: "#a1a1aa",
+    fontSize: 11,
+    fontWeight: "500",
   },
 });
