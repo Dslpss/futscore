@@ -26,6 +26,7 @@ import {
 import { Match, MatchTopPlayers, MatchInjuries, MatchLeagueStats } from "../types";
 import { api } from "../services/api";
 import { LinearGradient } from "expo-linear-gradient";
+import { TeamDetailsModal } from "./TeamDetailsModal";
 
 interface GameDetails {
   venue?: {
@@ -76,6 +77,7 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
   const [teamPositions, setTeamPositions] = useState<{ home: number | null; away: number | null }>({ home: null, away: null });
   const [recentMatches, setRecentMatches] = useState<{ home: any[]; away: any[] }>({ home: [], away: [] });
   const [pollData, setPollData] = useState<{ options: { id: string; count: number }[]; type: string } | null>(null);
+  const [selectedTeam, setSelectedTeam] = useState<{ id: number; name: string; logo: string; country: string; msnId?: string } | null>(null);
   
   // Track the current match ID to avoid unnecessary reloads when parent refreshes data
   const [currentMatchId, setCurrentMatchId] = useState<string | null>(null);
@@ -491,7 +493,9 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
     return player?.goalsScoredRank;
   };
 
+
   return (
+    <>
     <Modal
       animationType="slide"
       transparent={true}
@@ -538,17 +542,28 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                     {/* Home Team */}
                     <View style={styles.teamSection}>
                       <View style={styles.teamLogoContainer}>
-                        <LinearGradient
-                          colors={[
-                            "rgba(255,255,255,0.1)",
-                            "rgba(255,255,255,0.05)",
-                          ]}
-                          style={styles.teamLogoGlow}>
-                          <Image
-                            source={{ uri: match.teams.home.logo }}
-                            style={styles.teamLogo}
-                          />
-                        </LinearGradient>
+                        <TouchableOpacity
+                          activeOpacity={0.7}
+                          onPress={() => setSelectedTeam({
+                            id: match.teams.home.id,
+                            name: match.teams.home.name,
+                            logo: match.teams.home.logo,
+                            country: match.league.country || '',
+                            msnId: (match.teams.home as any).msnId,
+                          })}
+                        >
+                          <LinearGradient
+                            colors={[
+                              "rgba(255,255,255,0.1)",
+                              "rgba(255,255,255,0.05)",
+                            ]}
+                            style={styles.teamLogoGlow}>
+                            <Image
+                              source={{ uri: match.teams.home.logo }}
+                              style={styles.teamLogo}
+                            />
+                          </LinearGradient>
+                        </TouchableOpacity>
                       </View>
                       <Text style={styles.teamName} numberOfLines={2}>
                         {match.teams.home.name}
@@ -604,17 +619,28 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                     {/* Away Team */}
                     <View style={styles.teamSection}>
                       <View style={styles.teamLogoContainer}>
-                        <LinearGradient
-                          colors={[
-                            "rgba(255,255,255,0.1)",
-                            "rgba(255,255,255,0.05)",
-                          ]}
-                          style={styles.teamLogoGlow}>
-                          <Image
-                            source={{ uri: match.teams.away.logo }}
-                            style={styles.teamLogo}
-                          />
-                        </LinearGradient>
+                        <TouchableOpacity
+                          activeOpacity={0.7}
+                          onPress={() => setSelectedTeam({
+                            id: match.teams.away.id,
+                            name: match.teams.away.name,
+                            logo: match.teams.away.logo,
+                            country: match.league.country || '',
+                            msnId: (match.teams.away as any).msnId,
+                          })}
+                        >
+                          <LinearGradient
+                            colors={[
+                              "rgba(255,255,255,0.1)",
+                              "rgba(255,255,255,0.05)",
+                            ]}
+                            style={styles.teamLogoGlow}>
+                            <Image
+                              source={{ uri: match.teams.away.logo }}
+                              style={styles.teamLogo}
+                            />
+                          </LinearGradient>
+                        </TouchableOpacity>
                       </View>
                       <Text style={styles.teamName} numberOfLines={2}>
                         {match.teams.away.name}
@@ -1764,6 +1790,14 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
         </View>
       </View>
     </Modal>
+
+      {/* Team Details Modal - opens when clicking team logo */}
+      <TeamDetailsModal
+        visible={!!selectedTeam}
+        onClose={() => setSelectedTeam(null)}
+        team={selectedTeam}
+      />
+    </>
   );
 };
 
