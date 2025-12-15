@@ -207,9 +207,21 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
                 />
               </TouchableOpacity>
 
-              <View style={styles.teamLogoWrapper}>
+              <View style={[
+                styles.teamLogoWrapper,
+                match.teams.home.colors?.primary && {
+                  borderColor: `#${match.teams.home.colors.primary}`,
+                  borderWidth: 2,
+                  borderRadius: 32,
+                }
+              ]}>
                 <LinearGradient
-                  colors={["rgba(255,255,255,0.1)", "rgba(255,255,255,0.03)"]}
+                  colors={[
+                    match.teams.home.colors?.primary 
+                      ? `#${match.teams.home.colors.primary}20` 
+                      : "rgba(255,255,255,0.1)", 
+                    "rgba(255,255,255,0.03)"
+                  ]}
                   style={styles.teamLogoGlow}>
                   <Image
                     source={{ uri: match.teams.home.logo }}
@@ -242,6 +254,46 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
                       {format(new Date(match.fixture.date), "dd/MM")}
                     </Text>
                   </View>
+                  
+                  {/* Win Probability Bar */}
+                  {match.probabilities && (
+                    <View style={styles.probabilityContainer}>
+                      <View style={styles.probabilityBar}>
+                        <View 
+                          style={[
+                            styles.probabilitySegment, 
+                            styles.probabilityHome,
+                            { flex: match.probabilities.home }
+                          ]} 
+                        />
+                        <View 
+                          style={[
+                            styles.probabilitySegment, 
+                            styles.probabilityDraw,
+                            { flex: match.probabilities.draw }
+                          ]} 
+                        />
+                        <View 
+                          style={[
+                            styles.probabilitySegment, 
+                            styles.probabilityAway,
+                            { flex: match.probabilities.away }
+                          ]} 
+                        />
+                      </View>
+                      <View style={styles.probabilityLabels}>
+                        <Text style={styles.probabilityTextHome}>
+                          {match.probabilities.home.toFixed(0)}%
+                        </Text>
+                        <Text style={styles.probabilityTextDraw}>
+                          {match.probabilities.draw.toFixed(0)}%
+                        </Text>
+                        <Text style={styles.probabilityTextAway}>
+                          {match.probabilities.away.toFixed(0)}%
+                        </Text>
+                      </View>
+                    </View>
+                  )}
                 </>
               ) : (
                 <>
@@ -284,9 +336,19 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
                   )}
 
                   {!isLive && (
-                    <Text style={styles.statusLabel}>
-                      {getStatusLabel(match.fixture.status.short)}
-                    </Text>
+                    <>
+                      <Text style={styles.statusLabel}>
+                        {getStatusLabel(match.fixture.status.short)}
+                      </Text>
+                      {/* Half-time score for finished games */}
+                      {isFinished && 
+                       match.score?.halftime?.home !== null && 
+                       match.score?.halftime?.away !== null && (
+                        <Text style={styles.halftimeScore}>
+                          (HT: {match.score?.halftime?.home}-{match.score?.halftime?.away})
+                        </Text>
+                      )}
+                    </>
                   )}
                   {isLive && match.fixture.status.short !== "HT" && (
                      <Text style={styles.livePeriod}>
@@ -316,9 +378,21 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
                 />
               </TouchableOpacity>
 
-              <View style={styles.teamLogoWrapper}>
+              <View style={[
+                styles.teamLogoWrapper,
+                match.teams.away.colors?.primary && {
+                  borderColor: `#${match.teams.away.colors.primary}`,
+                  borderWidth: 2,
+                  borderRadius: 32,
+                }
+              ]}>
                 <LinearGradient
-                  colors={["rgba(255,255,255,0.1)", "rgba(255,255,255,0.03)"]}
+                  colors={[
+                    match.teams.away.colors?.primary 
+                      ? `#${match.teams.away.colors.primary}20` 
+                      : "rgba(255,255,255,0.1)", 
+                    "rgba(255,255,255,0.03)"
+                  ]}
                   style={styles.teamLogoGlow}>
                   <Image
                     source={{ uri: match.teams.away.logo }}
@@ -1190,5 +1264,64 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#71717a",
     paddingHorizontal: 6,
+  },
+
+  // Probability Bar Styles
+  probabilityContainer: {
+    marginTop: 12,
+    width: "100%",
+    paddingHorizontal: 4,
+  },
+  probabilityBar: {
+    flexDirection: "row",
+    height: 6,
+    borderRadius: 3,
+    overflow: "hidden",
+    backgroundColor: "rgba(255,255,255,0.05)",
+  },
+  probabilitySegment: {
+    height: "100%",
+  },
+  probabilityHome: {
+    backgroundColor: "#22c55e",
+    borderTopLeftRadius: 3,
+    borderBottomLeftRadius: 3,
+  },
+  probabilityDraw: {
+    backgroundColor: "#71717a",
+  },
+  probabilityAway: {
+    backgroundColor: "#3b82f6",
+    borderTopRightRadius: 3,
+    borderBottomRightRadius: 3,
+  },
+  probabilityLabels: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 4,
+  },
+  probabilityTextHome: {
+    fontSize: 9,
+    fontWeight: "700",
+    color: "#22c55e",
+  },
+  probabilityTextDraw: {
+    fontSize: 9,
+    fontWeight: "700",
+    color: "#71717a",
+  },
+  probabilityTextAway: {
+    fontSize: 9,
+    fontWeight: "700",
+    color: "#3b82f6",
+  },
+
+  // Half-time Score Style
+  halftimeScore: {
+    color: "#71717a",
+    fontSize: 10,
+    fontWeight: "600",
+    marginTop: 4,
+    fontStyle: "italic",
   },
 });

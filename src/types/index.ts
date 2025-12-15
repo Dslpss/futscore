@@ -11,6 +11,10 @@ export interface Team {
   name: string;
   logo: string;
   msnId?: string; // MSN Sports Team ID (e.g., "SportRadar_Soccer_BrazilBrasileiroSerieA_2025_Team_2001")
+  colors?: {
+    primary: string;   // Hex color e.g., "d20222"
+    secondary: string; // Hex color e.g., "da020e"
+  };
 }
 
 export interface Statistics {

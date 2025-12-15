@@ -253,6 +253,12 @@ export function transformMsnGameToMatch(game: any, leagueInfo?: any): Match {
           ? `https://www.bing.com/th?id=${homeParticipant.team.image.id}&w=80&h=80`
           : "",
         msnId: homeParticipant?.team?.id, // Store MSN Team ID for later use
+        colors: homeParticipant?.team?.colors?.primaryColorHex
+          ? {
+              primary: homeParticipant.team.colors.primaryColorHex,
+              secondary: homeParticipant.team.colors.secondaryColorHex || homeParticipant.team.colors.primaryColorHex,
+            }
+          : undefined,
       },
       away: {
         id: awayParticipant?.team?.id
@@ -266,6 +272,12 @@ export function transformMsnGameToMatch(game: any, leagueInfo?: any): Match {
           ? `https://www.bing.com/th?id=${awayParticipant.team.image.id}&w=80&h=80`
           : "",
         msnId: awayParticipant?.team?.id, // Store MSN Team ID for later use
+        colors: awayParticipant?.team?.colors?.primaryColorHex
+          ? {
+              primary: awayParticipant.team.colors.primaryColorHex,
+              secondary: awayParticipant.team.colors.secondaryColorHex || awayParticipant.team.colors.primaryColorHex,
+            }
+          : undefined,
       },
     },
     goals: {
