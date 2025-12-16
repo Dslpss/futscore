@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Constants from "expo-constants";
 import {
   View,
@@ -33,6 +33,7 @@ import { OndeAssistirCard } from "../components/OndeAssistirCard";
 import { PremiumFeaturesModal } from "../components/PremiumFeaturesModal";
 import { WorldCupModal } from "../components/WorldCupModal";
 import { TeamSearchBar } from "../components/TeamSearchBar";
+import { TVCardsSection } from "../components/TVCardsSection";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   Bell,
@@ -335,10 +336,6 @@ export const HomeScreen = ({ navigation }: any) => {
   // Ref for league selector ScrollView to maintain position
   const leagueSelectorRef = useRef<ScrollView>(null);
   const leagueScrollPosition = useRef<number>(0);
-
-  // Memoize ESPN and OndeAssistir cards to prevent remounting on re-renders
-  const memoizedEspnCard = useMemo(() => <EspnLiveCard />, []);
-  const memoizedOndeAssistirCard = useMemo(() => <OndeAssistirCard />, []);
 
   const isToday = (date: Date) => {
     const today = new Date();
@@ -1225,14 +1222,8 @@ export const HomeScreen = ({ navigation }: any) => {
         }}
       />
 
-      {/* ESPN and OndeAssistir Cards - Fixed height container to prevent layout shifts */}
-      <View style={styles.tvCardsContainer}>
-        {/* ESPN Live Games Card - Memoized */}
-        {memoizedEspnCard}
-
-        {/* Onde Assistir - Brazilian TV Channels - Memoized */}
-        {memoizedOndeAssistirCard}
-      </View>
+      {/* ESPN, OndeAssistir, and News Cards - Fully isolated component */}
+      <TVCardsSection />
 
       {/* Action Buttons - Favorites, Standings, and Leagues Explorer */}
       <View style={styles.actionButtonsContainer}>
@@ -1492,6 +1483,17 @@ export const HomeScreen = ({ navigation }: any) => {
       ))}
     </View>
   );
+
+  // Memoize the header element to prevent FlatList from remounting it
+  // Only re-create when essential values change
+  const memoizedHeader = useMemo(() => renderHeader(), [
+    selectedDate,
+    warnings,
+    daysWithMatches,
+    selectedLeague,
+    loadingFavorites,
+    favoriteNextMatches,
+  ]);
 
   // Filter matches by selected league
   const filteredMatches = (() => {
@@ -1818,7 +1820,7 @@ export const HomeScreen = ({ navigation }: any) => {
             </View>
           )}
           contentContainerStyle={styles.listContent}
-          ListHeaderComponent={renderHeader}
+          ListHeaderComponent={memoizedHeader}
           refreshControl={
             <RefreshControl
               refreshing={loading}
