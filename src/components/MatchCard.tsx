@@ -299,26 +299,42 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
                 <>
                   <View
                     style={[styles.scoreBox, isLive && styles.scoreBoxLive]}>
-                    <Text
-                      style={[
-                        styles.scoreNumber,
-                        isLive && styles.scoreNumberLive,
-                      ]}>
-                      {match.goals.home ?? 0}
-                    </Text>
+                    {/* Home Score with Penalties */}
+                    <View style={styles.scoreWithPenalty}>
+                      <Text
+                        style={[
+                          styles.scoreNumber,
+                          isLive && styles.scoreNumberLive,
+                        ]}>
+                        {match.goals.home ?? 0}
+                      </Text>
+                      {match.score?.penalties && match.score.penalties.home !== null && (
+                        <Text style={styles.penaltyScore}>
+                          ({match.score.penalties.home})
+                        </Text>
+                      )}
+                    </View>
                     <View
                       style={[
                         styles.scoreDivider,
                         isLive && styles.scoreDividerLive,
                       ]}
                     />
-                    <Text
-                      style={[
-                        styles.scoreNumber,
-                        isLive && styles.scoreNumberLive,
-                      ]}>
-                      {match.goals.away ?? 0}
-                    </Text>
+                    {/* Away Score with Penalties */}
+                    <View style={styles.scoreWithPenalty}>
+                      {match.score?.penalties && match.score.penalties.away !== null && (
+                        <Text style={styles.penaltyScore}>
+                          ({match.score.penalties.away})
+                        </Text>
+                      )}
+                      <Text
+                        style={[
+                          styles.scoreNumber,
+                          isLive && styles.scoreNumberLive,
+                        ]}>
+                        {match.goals.away ?? 0}
+                      </Text>
+                    </View>
                   </View>
                   
                   {isLive && (
@@ -1012,6 +1028,20 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     marginTop: 8,
     letterSpacing: 0.5,
+  },
+  // Score with penalty container
+  scoreWithPenalty: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  // Penalty shootout score style
+  penaltyScore: {
+    color: "#22c55e",
+    fontSize: 14,
+    fontWeight: "700",
+    marginHorizontal: 2,
+    opacity: 0.9,
   },
 
   // Tap hint

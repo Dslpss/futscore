@@ -578,13 +578,27 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                     {/* Score Display */}
                     <View style={styles.scoreSection}>
                       <View style={styles.scoreBox}>
-                        <Text style={styles.scoreNumber}>
-                          {match.goals.home ?? 0}
-                        </Text>
+                        <View style={styles.scoreWithPenalty}>
+                          <Text style={styles.scoreNumber}>
+                            {match.goals.home ?? 0}
+                          </Text>
+                          {match.score?.penalties && match.score.penalties.home !== null && (
+                            <Text style={styles.penaltyScoreModal}>
+                              ({match.score.penalties.home})
+                            </Text>
+                          )}
+                        </View>
                         <View style={styles.scoreDivider} />
-                        <Text style={styles.scoreNumber}>
-                          {match.goals.away ?? 0}
-                        </Text>
+                        <View style={styles.scoreWithPenalty}>
+                          {match.score?.penalties && match.score.penalties.away !== null && (
+                            <Text style={styles.penaltyScoreModal}>
+                              ({match.score.penalties.away})
+                            </Text>
+                          )}
+                          <Text style={styles.scoreNumber}>
+                            {match.goals.away ?? 0}
+                          </Text>
+                        </View>
                       </View>
                       <View style={styles.statusBadge}>
                         <View
@@ -606,6 +620,8 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                         <Text style={styles.statusText}>
                           {match.fixture.status.short === "FT"
                             ? "Encerrado"
+                            : match.fixture.status.short === "PEN"
+                            ? "Pênaltis"
                             : match.fixture.status.long}
                         </Text>
                       </View>
@@ -1951,6 +1967,20 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.3)",
     marginHorizontal: 12,
     borderRadius: 2,
+  },
+  // Score with penalty container
+  scoreWithPenalty: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  // Penalty shootout score style for modal
+  penaltyScoreModal: {
+    color: "#22c55e",
+    fontSize: 16,
+    fontWeight: "700",
+    marginHorizontal: 3,
+    opacity: 0.9,
   },
   statusBadge: {
     flexDirection: "row",

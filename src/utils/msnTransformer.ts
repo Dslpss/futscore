@@ -149,6 +149,27 @@ export function transformMsnGameToMatch(game: any, leagueInfo?: any): Match {
     ? parseInt(awayParticipant.result.score)
     : null;
 
+  // Get penalty shootout scores if available
+  const homePenalties: number | null = homeParticipant?.result?.soccerPenalties
+    ? parseInt(homeParticipant.result.soccerPenalties)
+    : null;
+  const awayPenalties: number | null = awayParticipant?.result?.soccerPenalties
+    ? parseInt(awayParticipant.result.soccerPenalties)
+    : null;
+
+  // Check if match has penalty shootout period
+  const hasPenaltyPeriod = homeParticipant?.playingPeriodScores?.some(
+    (s: any) => s.playingPeriod?.playingPeriodType === "Penalties"
+  ) || awayParticipant?.playingPeriodScores?.some(
+    (s: any) => s.playingPeriod?.playingPeriodType === "Penalties"
+  );
+
+  // Update status if match was decided by penalties
+  if (hasPenaltyPeriod && (gameStatus === "Final" || gameStatus === "Post")) {
+    statusShort = "PEN";
+    statusLong = "Pênaltis";
+  }
+
   // Get halftime scores if available
   const homeHalftime = homeParticipant?.playingPeriodScores?.find(
     (s: any) => s.playingPeriod?.number === "1"
@@ -295,6 +316,15 @@ export function transformMsnGameToMatch(game: any, leagueInfo?: any): Match {
         home: homeScore,
         away: awayScore,
       },
+      // Include penalty shootout scores if match was decided by penalties
+      ...(homePenalties !== null || awayPenalties !== null
+        ? {
+            penalties: {
+              home: homePenalties,
+              away: awayPenalties,
+            },
+          }
+        : {}),
     },
     // Add probabilities if available
     probabilities:

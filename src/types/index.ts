@@ -113,6 +113,10 @@ export interface Match {
       home: number | null;
       away: number | null;
     };
+    penalties?: {
+      home: number | null;
+      away: number | null;
+    };
   };
   probabilities?: {
     home: number;
