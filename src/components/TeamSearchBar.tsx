@@ -36,7 +36,6 @@ export const TeamSearchBar: React.FC<TeamSearchBarProps> = ({ onTeamAdded }) => 
   const [focused, setFocused] = useState(false);
   
   const animValue = useRef(new Animated.Value(0)).current;
-  const scaleValue = useRef(new Animated.Value(1)).current;
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const searchTeams = useCallback(async (searchQuery: string) => {
@@ -121,34 +120,24 @@ export const TeamSearchBar: React.FC<TeamSearchBarProps> = ({ onTeamAdded }) => 
 
   const handleFocus = () => {
     setFocused(true);
-    Animated.parallel([
+    animValue.stopAnimation(() => {
       Animated.timing(animValue, {
         toValue: 1,
         duration: 250,
         useNativeDriver: false,
-      }),
-      Animated.spring(scaleValue, {
-        toValue: 1.01,
-        useNativeDriver: true,
-        friction: 8,
-      }),
-    ]).start();
+      }).start();
+    });
   };
 
   const handleBlur = () => {
     setFocused(false);
-    Animated.parallel([
+    animValue.stopAnimation(() => {
       Animated.timing(animValue, {
         toValue: 0,
         duration: 200,
         useNativeDriver: false,
-      }),
-      Animated.spring(scaleValue, {
-        toValue: 1,
-        useNativeDriver: true,
-        friction: 8,
-      }),
-    ]).start();
+      }).start();
+    });
   };
 
   const handleToggleFavorite = (team: TeamResult) => {
@@ -193,7 +182,6 @@ export const TeamSearchBar: React.FC<TeamSearchBarProps> = ({ onTeamAdded }) => 
           styles.searchBox, 
           { 
             borderColor,
-            transform: [{ scale: scaleValue }],
           }
         ]}
       >

@@ -89,20 +89,24 @@ const TeamSearchInput = React.memo(({
 
   const handleFocus = () => {
     setFocused(true);
-    Animated.timing(animValue, {
-      toValue: 1,
-      duration: 200,
-      useNativeDriver: false,
-    }).start();
+    animValue.stopAnimation(() => {
+      Animated.timing(animValue, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: false,
+      }).start();
+    });
   };
 
   const handleBlur = () => {
     setFocused(false);
-    Animated.timing(animValue, {
-      toValue: 0,
-      duration: 200,
-      useNativeDriver: false,
-    }).start();
+    animValue.stopAnimation(() => {
+      Animated.timing(animValue, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: false,
+      }).start();
+    });
   };
 
   return (
