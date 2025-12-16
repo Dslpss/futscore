@@ -39,6 +39,30 @@ export const LeaguesExplorer = ({ navigation }: any) => {
     try {
       setLoading(true);
       const data = await msnSportsApi.getPersonalizationStrip();
+      
+      // Adiciona Campeonato Carioca se não estiver na lista
+      const hasCarioca = data.some(l => l.sportWithLeague === 'Soccer_BrazilCarioca');
+      if (!hasCarioca) {
+        const cariocaLeague: MsnLeague = {
+          id: 'SportRadar_Soccer_BrazilCarioca_2026',
+          sport: 'soccer',
+          sportWithLeague: 'Soccer_BrazilCarioca',
+          name: {
+            rawName: 'Carioca, Serie A',
+            localizedName: 'Campeonato Carioca',
+          },
+          image: {
+            id: 'OSB.EZe70_mp5lqhJ0Py5juOgA--.png',
+          },
+          secondaryIds: [],
+          navUrls: {
+            schedule: 'esportes/futebol/campeonato_carioca/calendario',
+            leagueHome: 'esportes/futebol/campeonato_carioca',
+          },
+        };
+        data.push(cariocaLeague);
+      }
+      
       setLeagues(data);
     } catch (error) {
       console.error('Error loading leagues:', error);
@@ -52,6 +76,30 @@ export const LeaguesExplorer = ({ navigation }: any) => {
       setRefreshing(true);
       await msnSportsApi.clearCache();
       const data = await msnSportsApi.getPersonalizationStrip();
+      
+      // Adiciona Campeonato Carioca se não estiver na lista
+      const hasCarioca = data.some(l => l.sportWithLeague === 'Soccer_BrazilCarioca');
+      if (!hasCarioca) {
+        const cariocaLeague: MsnLeague = {
+          id: 'SportRadar_Soccer_BrazilCarioca_2026',
+          sport: 'soccer',
+          sportWithLeague: 'Soccer_BrazilCarioca',
+          name: {
+            rawName: 'Carioca, Serie A',
+            localizedName: 'Campeonato Carioca',
+          },
+          image: {
+            id: 'OSB.EZe70_mp5lqhJ0Py5juOgA--.png',
+          },
+          secondaryIds: [],
+          navUrls: {
+            schedule: 'esportes/futebol/campeonato_carioca/calendario',
+            leagueHome: 'esportes/futebol/campeonato_carioca',
+          },
+        };
+        data.push(cariocaLeague);
+      }
+      
       setLeagues(data);
     } catch (error) {
       console.error('Error refreshing leagues:', error);

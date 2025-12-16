@@ -504,6 +504,14 @@ export const MSN_LEAGUE_MAP: Record<
     imageId: "",
     country: "Internacional",
   },
+  Soccer_BrazilCarioca: {
+    id: "CAR",
+    sport: "Soccer",
+    name: "Campeonato Carioca",
+    logo: "https://www.bing.com/th?id=OSB.EZe70_mp5lqhJ0Py5juOgA--.png&w=100&h=100",
+    imageId: "OSB.EZe70_mp5lqhJ0Py5juOgA--.png",
+    country: "Brasil",
+  },
 };
 
 /**
@@ -522,6 +530,7 @@ export function getMsnLeagueIds(): string[] {
     "Soccer_FranceLigue1",
     "Soccer_PortugalPrimeiraLiga",
     "Basketball_NBA",
+    "Soccer_BrazilCarioca",
   ];
 }
 

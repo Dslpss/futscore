@@ -51,5 +51,10 @@ export const LEAGUES = [
     name: "Copa Intercontinental",
     logo: "https://a.espncdn.com/i/leaguelogos/soccer/500/22902.png",
   },
+  {
+    id: "Soccer_BrazilCarioca",
+    name: "Campeonato Carioca",
+    logo: "https://www.bing.com/th?id=OSB.EZe70_mp5lqhJ0Py5juOgA--.png&w=100&h=100",
+  },
 ];
 

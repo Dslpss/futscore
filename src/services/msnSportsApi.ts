@@ -1793,4 +1793,71 @@ export const msnSportsApi = {
       return [];
     }
   },
+
+  /**
+   * Get sports news articles from MSN News Feed
+   * @param top - Number of articles to fetch (default: 10)
+   * @param skip - Number of articles to skip for pagination (default: 0)
+   * @returns Array of news articles
+   */
+  getSportsNews: async (top: number = 10, skip: number = 0): Promise<any[]> => {
+    const cacheKey = `sports_news_${top}_${skip}`;
+    const cached = await getCachedData<any[]>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      // Sports feed ID from MSN
+      const sportsFeedId = "Y_dd939fa7-ea85-4757-bd2d-5b0914156c83";
+      
+      const params = {
+        apikey: CONFIG.MSN_SPORTS.API_KEY,
+        cm: "pt-br",
+        market: "pt-br",
+        contentType: "article,video",
+        ids: sportsFeedId,
+        infopaneCount: 0,
+        queryType: "myFeed",
+        top: top,
+        skip: skip,
+        timeOut: 3000,
+        activityId: generateActivityId(),
+        ocid: "sports-vertical-landing",
+        it: "web",
+        scn: "ANON",
+        user: `m-${Date.now()}`,
+      };
+
+      console.log("[MSN NEWS API] Fetching sports news...");
+
+      // Use assets.msn.com instead of api.msn.com for news
+      const response = await axios.get("https://assets.msn.com/service/news/feed", {
+        params,
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          Accept: "*/*",
+          "Accept-Language": "pt-BR,pt;q=0.8,en-US;q=0.5,en;q=0.3",
+          Referer: "https://www.msn.com/",
+          Origin: "https://www.msn.com",
+        },
+        timeout: 15000,
+      });
+
+      if (!response.data || !response.data.value || !response.data.value[0]) {
+        console.error("[MSN NEWS API] Invalid response structure");
+        return [];
+      }
+
+      const newsData = response.data.value[0];
+      const articles = newsData.subCards || [];
+
+      console.log(`[MSN NEWS API] Fetched ${articles.length} news articles`);
+
+      // Cache for 10 minutes
+      await setCachedData(cacheKey, articles, 10 * 60 * 1000);
+      return articles;
+    } catch (error) {
+      console.error("[MSN NEWS API] Error fetching sports news:", error);
+      return [];
+    }
+  },
 };

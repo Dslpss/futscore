@@ -366,6 +366,7 @@ export const HomeScreen = ({ navigation }: any) => {
         "Soccer_SpainLaLiga",
         "Soccer_PortugalPrimeiraLiga",
         "Basketball_NBA",
+        "Soccer_BrazilCarioca",
       ];
       
       const today = new Date();
@@ -413,6 +414,7 @@ export const HomeScreen = ({ navigation }: any) => {
           "Soccer_SpainLaLiga",
           "Soccer_PortugalPrimeiraLiga",
           "Basketball_NBA",
+          "Soccer_BrazilCarioca",
         ];
         
         // Clear schedule cache for selected date
@@ -459,6 +461,7 @@ export const HomeScreen = ({ navigation }: any) => {
         "Soccer_SpainLaLiga", // La Liga
         "Soccer_PortugalPrimeiraLiga",
         "Basketball_NBA",
+        "Soccer_BrazilCarioca",
       ];
 
       let msnMatches: Match[] = [];
@@ -914,21 +917,22 @@ export const HomeScreen = ({ navigation }: any) => {
   };
 
   const leagues = [
-    { code: "ALL", name: "Todos" },
-    { code: "FAV", name: "Favoritos" },
-    { code: "BSA", name: "Brasileirão" },
-    { code: "CDB", name: "Copa do Brasil" },
-    { code: "FIC", name: "Intercontinental" },
-    { code: "CL", name: "Champions" },
-    { code: "EL", name: "Europa League" },
-    { code: "PD", name: "La Liga" },
-    { code: "PL", name: "Premier League" },
-    { code: "BL1", name: "Bundesliga" },
-    { code: "SA", name: "Serie A" },
-    { code: "FL1", name: "Ligue 1" },
-    { code: "PPL", name: "Liga Portugal" },
-    { code: "NBA", name: "NBA" },
-    { code: "FINISHED", name: "Finalizados" },
+    { code: "ALL", name: "Todos", icon: "🌍" },
+    { code: "FAV", name: "Favoritos", icon: "⭐" },
+    { code: "BSA", name: "Brasileirão", icon: "🇧🇷" },
+    { code: "CDB", name: "Copa do Brasil", icon: "🏆" },
+    { code: "CAR", name: "Carioca", icon: "🏟️" },
+    { code: "FIC", name: "Intercontinental", icon: "🌎" },
+    { code: "CL", name: "Champions", icon: "⚽" },
+    { code: "EL", name: "Europa League", icon: "🔶" },
+    { code: "PD", name: "La Liga", icon: "🇪🇸" },
+    { code: "PL", name: "Premier", icon: "🦁" },
+    { code: "BL1", name: "Bundesliga", icon: "🇩🇪" },
+    { code: "SA", name: "Serie A", icon: "🇮🇹" },
+    { code: "FL1", name: "Ligue 1", icon: "🇫🇷" },
+    { code: "PPL", name: "Portugal", icon: "🇵🇹" },
+    { code: "NBA", name: "NBA", icon: "🏀" },
+    { code: "FINISHED", name: "Finalizados", icon: "✅" },
   ];
 
   // Search teams for adding favorites
@@ -953,6 +957,7 @@ export const HomeScreen = ({ navigation }: any) => {
         { id: "Soccer_FranceLigue1", sport: "Soccer", country: "France" },
         { id: "Soccer_PortugalPrimeiraLiga", sport: "Soccer", country: "Portugal" },
         { id: "Basketball_NBA", sport: "Basketball", country: "USA" },
+        { id: "Soccer_BrazilCarioca", sport: "Soccer", country: "Brazil" },
       ];
 
       const teamsMap = new Map<number, { id: number; name: string; logo: string; country: string; msnId?: string }>();
@@ -1227,6 +1232,13 @@ export const HomeScreen = ({ navigation }: any) => {
 
       {/* Action Buttons - Favorites, Standings, and Leagues Explorer */}
       <View style={styles.actionButtonsContainer}>
+        <View style={styles.actionButtonsHeader}>
+          <Text style={styles.actionButtonsTitle}>Ações Rápidas</Text>
+          <View style={styles.swipeHint}>
+            <Text style={styles.swipeHintText}>Deslize para ver mais</Text>
+            <Text style={styles.swipeHintArrow}>›</Text>
+          </View>
+        </View>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -1370,11 +1382,42 @@ export const HomeScreen = ({ navigation }: any) => {
               </View>
             </LinearGradient>
           </TouchableOpacity>
+
+          {/* News Button */}
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate("News")}
+            activeOpacity={0.85}>
+            <LinearGradient
+              colors={["#1e3a5f", "#1a1a2e"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.actionButtonGradient}>
+              <View style={styles.actionButtonIconWrapper}>
+                <LinearGradient
+                  colors={["#3b82f6", "#2563eb"]}
+                  style={styles.actionIconGradient}>
+                  <Text style={styles.actionButtonIcon}>📰</Text>
+                </LinearGradient>
+              </View>
+              <View style={styles.actionButtonTextContainer}>
+                <Text style={styles.actionButtonText}>Notícias</Text>
+                <Text style={styles.actionButtonSubtext}>Esportes</Text>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
         </ScrollView>
       </View>
 
       {/* League Selector */}
       <View style={styles.leagueSelectorWrapper}>
+        <View style={styles.leagueSelectorHeader}>
+          <Text style={styles.leagueSelectorTitle}>Competições</Text>
+          <View style={styles.swipeHint}>
+            <Text style={styles.swipeHintText}>Deslize para ver mais</Text>
+            <Text style={styles.swipeHintArrow}>›</Text>
+          </View>
+        </View>
         <ScrollView
           ref={leagueSelectorRef}
           horizontal
@@ -1393,33 +1436,44 @@ export const HomeScreen = ({ navigation }: any) => {
               });
             }
           }}>
-          {leagues.map((league) => (
-            <TouchableOpacity
-              key={league.code}
-              style={[
-                styles.leagueButton,
-                selectedLeague === league.code && styles.leagueButtonActive,
-              ]}
-              onPress={() => setSelectedLeague(league.code)}
-              activeOpacity={0.8}>
-              {selectedLeague === league.code && (
-                <LinearGradient
-                  colors={["#22c55e", "#16a34a"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={StyleSheet.absoluteFillObject}
-                />
-              )}
-              <Text
+          {leagues.map((league, index) => {
+            const isSelected = selectedLeague === league.code;
+            const isFirst = index === 0;
+            const isLast = index === leagues.length - 1;
+            
+            return (
+              <TouchableOpacity
+                key={league.code}
                 style={[
-                  styles.leagueButtonText,
-                  selectedLeague === league.code &&
-                    styles.leagueButtonTextActive,
-                ]}>
-                {league.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                  styles.leagueChip,
+                  isFirst && styles.leagueChipFirst,
+                  isLast && styles.leagueChipLast,
+                  isSelected && styles.leagueChipActive,
+                ]}
+                onPress={() => setSelectedLeague(league.code)}
+                activeOpacity={0.7}>
+                {isSelected && (
+                  <LinearGradient
+                    colors={["#22c55e", "#16a34a"]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={[StyleSheet.absoluteFillObject, { borderRadius: 16 }]}
+                  />
+                )}
+                <View style={styles.leagueChipContent}>
+                  <Text style={styles.leagueChipIcon}>{league.icon}</Text>
+                  <Text
+                    style={[
+                      styles.leagueChipText,
+                      isSelected && styles.leagueChipTextActive,
+                    ]}>
+                    {league.name}
+                  </Text>
+                </View>
+                {isSelected && <View style={styles.leagueChipGlow} />}
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
       </View>
 
@@ -1468,6 +1522,7 @@ export const HomeScreen = ({ navigation }: any) => {
         const msnMapping: Record<string, string> = {
           BSA: "BrazilBrasileiroSerieA", // Brasileirão also in MSN
           CDB: "BrazilCopaDoBrasil", // Copa do Brasil
+          CAR: "BrazilCarioca", // Campeonato Carioca
           FIC: "FIFAIntercontinentalCup", // Copa Intercontinental
           CL: "InternationalClubsUEFAChampionsLeague", // Champions League
           EL: "UEFAEuropaLeague", // Europa League
@@ -1540,6 +1595,7 @@ export const HomeScreen = ({ navigation }: any) => {
     PD: "Soccer_SpainLaLiga",
     PPL: "Soccer_PortugalPrimeiraLiga",
     NBA: "Basketball_NBA",
+    CAR: "Soccer_BrazilCarioca",
     // Full IDs (in case match.league.id comes in this format)
     Soccer_BrazilBrasileiroSerieA: "Soccer_BrazilBrasileiroSerieA",
     Soccer_InternationalClubsUEFAChampionsLeague:
@@ -1552,6 +1608,7 @@ export const HomeScreen = ({ navigation }: any) => {
     Soccer_SpainLaLiga: "Soccer_SpainLaLiga",
     Soccer_PortugalPrimeiraLiga: "Soccer_PortugalPrimeiraLiga",
     Basketball_NBA: "Basketball_NBA",
+    Soccer_BrazilCarioca: "Soccer_BrazilCarioca",
   };
 
   // Group scheduled matches by league
@@ -1947,6 +2004,27 @@ const styles = StyleSheet.create({
   tvCardsContainer: {
     minHeight: 420,
     overflow: 'hidden',
+  },
+  actionButtonsContainer: {
+    marginBottom: 16,
+  },
+  actionButtonsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
+  actionButtonsTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#71717a",
+    textTransform: "uppercase",
+    letterSpacing: 1.5,
+  },
+  actionButtonsContent: {
+    paddingRight: 20,
+    gap: 10,
   },
   headerGradient: {
     position: "absolute",
@@ -2359,17 +2437,111 @@ const styles = StyleSheet.create({
   },
 
   leagueSelectorWrapper: {
-    marginHorizontal: -4,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  leagueSelectorHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
+  leagueSelectorTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#71717a",
+    textTransform: "uppercase",
+    letterSpacing: 1.5,
+  },
+  swipeHint: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginLeft: "auto",
+    backgroundColor: "rgba(34, 197, 94, 0.1)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(34, 197, 94, 0.2)",
+  },
+  swipeHintText: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#22c55e",
+    letterSpacing: 0.3,
+  },
+  swipeHintArrow: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#22c55e",
+    marginLeft: 4,
+  },
+  leagueSelectorLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    marginLeft: 12,
   },
   leagueSelectorContainer: {
     flexDirection: "row",
-    backgroundColor: "#18181b",
-    padding: 4,
-    borderRadius: 40,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.05)",
-    minWidth: "100%", // Ensure it takes full width if content is small
+    gap: 8,
+    paddingRight: 20,
   },
+  leagueChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    backgroundColor: "rgba(24, 24, 27, 0.9)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    overflow: "hidden",
+    position: "relative",
+  },
+  leagueChipFirst: {
+    marginLeft: 0,
+  },
+  leagueChipLast: {
+    marginRight: 0,
+  },
+  leagueChipActive: {
+    borderColor: "rgba(34, 197, 94, 0.3)",
+    shadowColor: "#22c55e",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  leagueChipContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    zIndex: 1,
+    gap: 6,
+  },
+  leagueChipIcon: {
+    fontSize: 14,
+  },
+  leagueChipText: {
+    color: "#a1a1aa",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  leagueChipTextActive: {
+    color: "#fff",
+    fontWeight: "700",
+  },
+  leagueChipGlow: {
+    position: "absolute",
+    top: -10,
+    left: "50%",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(34, 197, 94, 0.2)",
+    transform: [{ translateX: -20 }],
+  },
+  // Legacy styles (keep for backwards compatibility)
   leagueButton: {
     paddingVertical: 10,
     paddingHorizontal: 24,
@@ -2463,14 +2635,6 @@ const styles = StyleSheet.create({
     color: "#71717a",
     fontSize: 14,
     textAlign: "center",
-  },
-  actionButtonsContainer: {
-    marginBottom: 20,
-    marginHorizontal: -16,
-  },
-  actionButtonsContent: {
-    paddingHorizontal: 16,
-    gap: 12,
   },
   actionButton: {
     borderRadius: 16,
