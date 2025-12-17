@@ -62,6 +62,29 @@ export const LeaguesExplorer = ({ navigation }: any) => {
         };
         data.push(cariocaLeague);
       }
+
+      // Adiciona Campeonato Mineiro se não estiver na lista
+      const hasMineiro = data.some(l => l.sportWithLeague === 'Soccer_BrazilMineiro');
+      if (!hasMineiro) {
+        const mineiroLeague: MsnLeague = {
+          id: 'SportRadar_Soccer_BrazilMineiro_2026',
+          sport: 'soccer',
+          sportWithLeague: 'Soccer_BrazilMineiro',
+          name: {
+            rawName: 'Mineiro, Modulo I',
+            localizedName: 'Campeonato Mineiro',
+          },
+          image: {
+            id: 'OSB.AQypHhNwDa8NWPcVeBX8JA--.png',
+          },
+          secondaryIds: [],
+          navUrls: {
+            schedule: 'esportes/futebol/campeonato_mineiro/calendario',
+            leagueHome: 'esportes/futebol/campeonato_mineiro',
+          },
+        };
+        data.push(mineiroLeague);
+      }
       
       setLeagues(data);
     } catch (error) {
@@ -98,6 +121,29 @@ export const LeaguesExplorer = ({ navigation }: any) => {
           },
         };
         data.push(cariocaLeague);
+      }
+
+      // Adiciona Campeonato Mineiro se não estiver na lista
+      const hasMineiro = data.some(l => l.sportWithLeague === 'Soccer_BrazilMineiro');
+      if (!hasMineiro) {
+        const mineiroLeague: MsnLeague = {
+          id: 'SportRadar_Soccer_BrazilMineiro_2026',
+          sport: 'soccer',
+          sportWithLeague: 'Soccer_BrazilMineiro',
+          name: {
+            rawName: 'Mineiro, Modulo I',
+            localizedName: 'Campeonato Mineiro',
+          },
+          image: {
+            id: 'OSB.AQypHhNwDa8NWPcVeBX8JA--.png',
+          },
+          secondaryIds: [],
+          navUrls: {
+            schedule: 'esportes/futebol/campeonato_mineiro/calendario',
+            leagueHome: 'esportes/futebol/campeonato_mineiro',
+          },
+        };
+        data.push(mineiroLeague);
       }
       
       setLeagues(data);

@@ -56,5 +56,10 @@ export const LEAGUES = [
     name: "Campeonato Carioca",
     logo: "https://www.bing.com/th?id=OSB.EZe70_mp5lqhJ0Py5juOgA--.png&w=100&h=100",
   },
+  {
+    id: "Soccer_BrazilMineiro",
+    name: "Campeonato Mineiro",
+    logo: "https://www.bing.com/th?id=OSB.AQypHhNwDa8NWPcVeBX8JA--.png&w=100&h=100",
+  },
 ];
 

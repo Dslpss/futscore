@@ -47,6 +47,7 @@ import {
   ChevronRight,
   Tv,
   Search,
+  Radio,
 } from "lucide-react-native";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
@@ -368,6 +369,7 @@ export const HomeScreen = ({ navigation }: any) => {
         "Soccer_PortugalPrimeiraLiga",
         "Basketball_NBA",
         "Soccer_BrazilCarioca",
+        "Soccer_BrazilMineiro",
       ];
       
       const today = new Date();
@@ -416,6 +418,7 @@ export const HomeScreen = ({ navigation }: any) => {
           "Soccer_PortugalPrimeiraLiga",
           "Basketball_NBA",
           "Soccer_BrazilCarioca",
+          "Soccer_BrazilMineiro",
         ];
         
         // Clear schedule cache for selected date
@@ -463,6 +466,7 @@ export const HomeScreen = ({ navigation }: any) => {
         "Soccer_PortugalPrimeiraLiga",
         "Basketball_NBA",
         "Soccer_BrazilCarioca",
+        "Soccer_BrazilMineiro",
       ];
 
       let msnMatches: Match[] = [];
@@ -959,6 +963,7 @@ export const HomeScreen = ({ navigation }: any) => {
         { id: "Soccer_PortugalPrimeiraLiga", sport: "Soccer", country: "Portugal" },
         { id: "Basketball_NBA", sport: "Basketball", country: "USA" },
         { id: "Soccer_BrazilCarioca", sport: "Soccer", country: "Brazil" },
+        { id: "Soccer_BrazilMineiro", sport: "Soccer", country: "Brazil" },
       ];
 
       const teamsMap = new Map<number, { id: number; name: string; logo: string; country: string; msnId?: string }>();
@@ -1401,6 +1406,30 @@ export const HomeScreen = ({ navigation }: any) => {
               </View>
             </LinearGradient>
           </TouchableOpacity>
+
+          {/* Radios Button */}
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate("Radios")}
+            activeOpacity={0.85}>
+            <LinearGradient
+              colors={["#3d1e5f", "#1a1a2e"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.actionButtonGradient}>
+              <View style={styles.actionButtonIconWrapper}>
+                <LinearGradient
+                  colors={["#8b5cf6", "#6366f1"]}
+                  style={styles.actionIconGradient}>
+                  <Text style={styles.actionButtonIcon}>📻</Text>
+                </LinearGradient>
+              </View>
+              <View style={styles.actionButtonTextContainer}>
+                <Text style={styles.actionButtonText}>Rádios</Text>
+                <Text style={styles.actionButtonSubtext}>Ao Vivo</Text>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
         </ScrollView>
       </View>
 
@@ -1615,6 +1644,8 @@ export const HomeScreen = ({ navigation }: any) => {
     Soccer_PortugalPrimeiraLiga: "Soccer_PortugalPrimeiraLiga",
     Basketball_NBA: "Basketball_NBA",
     Soccer_BrazilCarioca: "Soccer_BrazilCarioca",
+    MIN: "Soccer_BrazilMineiro",
+    Soccer_BrazilMineiro: "Soccer_BrazilMineiro",
   };
 
   // Group scheduled matches by league

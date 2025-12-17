@@ -512,6 +512,14 @@ export const MSN_LEAGUE_MAP: Record<
     imageId: "OSB.EZe70_mp5lqhJ0Py5juOgA--.png",
     country: "Brasil",
   },
+  Soccer_BrazilMineiro: {
+    id: "MIN",
+    sport: "Soccer",
+    name: "Campeonato Mineiro",
+    logo: "https://www.bing.com/th?id=OSB.AQypHhNwDa8NWPcVeBX8JA--.png&w=100&h=100",
+    imageId: "OSB.AQypHhNwDa8NWPcVeBX8JA--.png",
+    country: "Brasil",
+  },
 };
 
 /**
@@ -531,6 +539,7 @@ export function getMsnLeagueIds(): string[] {
     "Soccer_PortugalPrimeiraLiga",
     "Basketball_NBA",
     "Soccer_BrazilCarioca",
+    "Soccer_BrazilMineiro",
   ];
 }
 

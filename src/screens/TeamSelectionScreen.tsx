@@ -64,6 +64,8 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({
     { code: "all", name: "Todas" },
     { code: "favorites", name: "Favoritos" },
     { code: "BSA", name: "Brasileirão" },
+    { code: "CAR", name: "Carioca" },
+    { code: "MIN", name: "Mineiro" },
     { code: "CDB", name: "Copa do Brasil" },
     { code: "CL", name: "Champions" },
     { code: "EL", name: "Europa League" },
@@ -167,6 +169,18 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({
           sport: "Basketball",
           name: "NBA",
           country: "USA",
+        },
+        {
+          id: "Soccer_BrazilCarioca",
+          sport: "Soccer",
+          name: "CAR",
+          country: "Brazil",
+        },
+        {
+          id: "Soccer_BrazilMineiro",
+          sport: "Soccer",
+          name: "MIN",
+          country: "Brazil",
         },
       ];
 
@@ -311,6 +325,16 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({
             country: "Europe",
           },
           NBA: { id: "Basketball_NBA", sport: "Basketball", country: "USA" },
+          CAR: {
+            id: "Soccer_BrazilCarioca",
+            sport: "Soccer",
+            country: "Brazil",
+          },
+          MIN: {
+            id: "Soccer_BrazilMineiro",
+            sport: "Soccer",
+            country: "Brazil",
+          },
         };
 
         if (msnLeagueMap[leagueCode]) {

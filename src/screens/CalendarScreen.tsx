@@ -173,6 +173,29 @@ const LEAGUE_MAPPINGS: Record<string, string[]> = {
   Soccer_PortugalPrimeiraLiga: ["Benfica", "Porto", "Sporting CP", "Braga"],
   // NBA
   Basketball_NBA: [],
+  // Campeonato Carioca
+  Soccer_BrazilCarioca: [
+    "Flamengo",
+    "Fluminense",
+    "Vasco da Gama",
+    "Botafogo",
+    "Madureira",
+    "Bangu",
+    "Nova Iguaçu",
+    "Volta Redonda",
+  ],
+  // Campeonato Mineiro
+  Soccer_BrazilMineiro: [
+    "Cruzeiro",
+    "Atlético Mineiro",
+    "América Mineiro",
+    "Tombense",
+    "Athletic Club",
+    "Uberlândia",
+    "Pouso Alegre",
+    "Villa Nova",
+    "Betim",
+  ],
 };
 
 const ALL_LEAGUES = Object.keys(LEAGUE_MAPPINGS);
@@ -453,6 +476,8 @@ export function CalendarScreen({ navigation }: any) {
               (leagueName.includes("ligue 1") && keyLower.includes("ligue1")) ||
               (leagueName.includes("portugal") && keyLower.includes("portugal")) ||
               (leagueName.includes("nba") && keyLower.includes("nba")) ||
+              (leagueName.includes("carioca") && keyLower.includes("carioca")) ||
+              (leagueName.includes("mineiro") && keyLower.includes("mineiro")) ||
               (leagueName === sportWithLeague.toLowerCase())
             ) {
               logo = logoUrl;
