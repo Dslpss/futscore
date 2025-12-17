@@ -61,5 +61,15 @@ export const LEAGUES = [
     name: "Campeonato Mineiro",
     logo: "https://www.bing.com/th?id=OSB.AQypHhNwDa8NWPcVeBX8JA--.png&w=100&h=100",
   },
+  {
+    id: "Soccer_BrazilPaulistaSerieA1",
+    name: "Campeonato Paulista",
+    logo: "https://www.bing.com/th?id=OSB.nc1SdrFhr_iRsfehpGKRrQ--.png&w=100&h=100",
+  },
+  {
+    id: "Soccer_BrazilGaucho",
+    name: "Campeonato Gaúcho",
+    logo: "https://www.bing.com/th?id=OSB.ZkNO8eZsdqmMWmkJWegsWg--.png&w=100&h=100",
+  },
 ];
 

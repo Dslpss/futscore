@@ -66,6 +66,8 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({
     { code: "BSA", name: "Brasileirão" },
     { code: "CAR", name: "Carioca" },
     { code: "MIN", name: "Mineiro" },
+    { code: "PAU", name: "Paulista" },
+    { code: "GAU", name: "Gaúcho" },
     { code: "CDB", name: "Copa do Brasil" },
     { code: "CL", name: "Champions" },
     { code: "EL", name: "Europa League" },
@@ -180,6 +182,18 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({
           id: "Soccer_BrazilMineiro",
           sport: "Soccer",
           name: "MIN",
+          country: "Brazil",
+        },
+        {
+          id: "Soccer_BrazilPaulistaSerieA1",
+          sport: "Soccer",
+          name: "PAU",
+          country: "Brazil",
+        },
+        {
+          id: "Soccer_BrazilGaucho",
+          sport: "Soccer",
+          name: "GAU",
           country: "Brazil",
         },
       ];
@@ -332,6 +346,16 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({
           },
           MIN: {
             id: "Soccer_BrazilMineiro",
+            sport: "Soccer",
+            country: "Brazil",
+          },
+          PAU: {
+            id: "Soccer_BrazilPaulistaSerieA1",
+            sport: "Soccer",
+            country: "Brazil",
+          },
+          GAU: {
+            id: "Soccer_BrazilGaucho",
             sport: "Soccer",
             country: "Brazil",
           },

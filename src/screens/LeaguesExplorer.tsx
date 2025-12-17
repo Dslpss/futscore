@@ -85,6 +85,52 @@ export const LeaguesExplorer = ({ navigation }: any) => {
         };
         data.push(mineiroLeague);
       }
+
+      // Adiciona Campeonato Paulista se não estiver na lista
+      const hasPaulista = data.some(l => l.sportWithLeague === 'Soccer_BrazilPaulistaSerieA1');
+      if (!hasPaulista) {
+        const paulistaLeague: MsnLeague = {
+          id: 'SportRadar_Soccer_BrazilPaulistaSerieA1_2026',
+          sport: 'soccer',
+          sportWithLeague: 'Soccer_BrazilPaulistaSerieA1',
+          name: {
+            rawName: 'Paulista, Serie A1',
+            localizedName: 'Campeonato Paulista',
+          },
+          image: {
+            id: 'OSB.nc1SdrFhr_iRsfehpGKRrQ--.png',
+          },
+          secondaryIds: [],
+          navUrls: {
+            schedule: 'esportes/futebol/campeonato_paulista/calendario',
+            leagueHome: 'esportes/futebol/campeonato_paulista',
+          },
+        };
+        data.push(paulistaLeague);
+      }
+
+      // Adiciona Campeonato Gaúcho se não estiver na lista
+      const hasGaucho = data.some(l => l.sportWithLeague === 'Soccer_BrazilGaucho');
+      if (!hasGaucho) {
+        const gauchoLeague: MsnLeague = {
+          id: 'SportRadar_Soccer_BrazilGaucho_2026',
+          sport: 'soccer',
+          sportWithLeague: 'Soccer_BrazilGaucho',
+          name: {
+            rawName: 'Gaucho, Serie A1',
+            localizedName: 'Campeonato Gaúcho',
+          },
+          image: {
+            id: 'OSB.ZkNO8eZsdqmMWmkJWegsWg--.png',
+          },
+          secondaryIds: [],
+          navUrls: {
+            schedule: 'esportes/futebol/campeonato_gaucho/calendario',
+            leagueHome: 'esportes/futebol/campeonato_gaucho',
+          },
+        };
+        data.push(gauchoLeague);
+      }
       
       setLeagues(data);
     } catch (error) {
@@ -144,6 +190,52 @@ export const LeaguesExplorer = ({ navigation }: any) => {
           },
         };
         data.push(mineiroLeague);
+      }
+
+      // Adiciona Campeonato Paulista se não estiver na lista
+      const hasPaulista = data.some(l => l.sportWithLeague === 'Soccer_BrazilPaulistaSerieA1');
+      if (!hasPaulista) {
+        const paulistaLeague: MsnLeague = {
+          id: 'SportRadar_Soccer_BrazilPaulistaSerieA1_2026',
+          sport: 'soccer',
+          sportWithLeague: 'Soccer_BrazilPaulistaSerieA1',
+          name: {
+            rawName: 'Paulista, Serie A1',
+            localizedName: 'Campeonato Paulista',
+          },
+          image: {
+            id: 'OSB.nc1SdrFhr_iRsfehpGKRrQ--.png',
+          },
+          secondaryIds: [],
+          navUrls: {
+            schedule: 'esportes/futebol/campeonato_paulista/calendario',
+            leagueHome: 'esportes/futebol/campeonato_paulista',
+          },
+        };
+        data.push(paulistaLeague);
+      }
+
+      // Adiciona Campeonato Gaúcho se não estiver na lista
+      const hasGaucho = data.some(l => l.sportWithLeague === 'Soccer_BrazilGaucho');
+      if (!hasGaucho) {
+        const gauchoLeague: MsnLeague = {
+          id: 'SportRadar_Soccer_BrazilGaucho_2026',
+          sport: 'soccer',
+          sportWithLeague: 'Soccer_BrazilGaucho',
+          name: {
+            rawName: 'Gaucho, Serie A1',
+            localizedName: 'Campeonato Gaúcho',
+          },
+          image: {
+            id: 'OSB.ZkNO8eZsdqmMWmkJWegsWg--.png',
+          },
+          secondaryIds: [],
+          navUrls: {
+            schedule: 'esportes/futebol/campeonato_gaucho/calendario',
+            leagueHome: 'esportes/futebol/campeonato_gaucho',
+          },
+        };
+        data.push(gauchoLeague);
       }
       
       setLeagues(data);

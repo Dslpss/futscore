@@ -196,6 +196,34 @@ const LEAGUE_MAPPINGS: Record<string, string[]> = {
     "Villa Nova",
     "Betim",
   ],
+  // Campeonato Paulista
+  Soccer_BrazilPaulistaSerieA1: [
+    "Corinthians",
+    "Palmeiras",
+    "São Paulo",
+    "Santos",
+    "Red Bull Bragantino",
+    "Guarani",
+    "Ponte Preta",
+    "Novorizontino",
+    "Mirassol",
+    "Inter de Limeira",
+    "São Bernardo",
+    "Água Santa",
+  ],
+  // Campeonato Gaúcho
+  Soccer_BrazilGaucho: [
+    "Grêmio",
+    "Internacional",
+    "Juventude",
+    "Caxias",
+    "Brasil de Pelotas",
+    "Ypiranga",
+    "São José",
+    "Pelotas",
+    "Guarany",
+    "Avenida",
+  ],
 };
 
 const ALL_LEAGUES = Object.keys(LEAGUE_MAPPINGS);
@@ -478,6 +506,9 @@ export function CalendarScreen({ navigation }: any) {
               (leagueName.includes("nba") && keyLower.includes("nba")) ||
               (leagueName.includes("carioca") && keyLower.includes("carioca")) ||
               (leagueName.includes("mineiro") && keyLower.includes("mineiro")) ||
+              (leagueName.includes("paulista") && keyLower.includes("paulista")) ||
+              (leagueName.includes("gaucho") && keyLower.includes("gaucho")) ||
+              (leagueName.includes("gaúcho") && keyLower.includes("gaucho")) ||
               (leagueName === sportWithLeague.toLowerCase())
             ) {
               logo = logoUrl;

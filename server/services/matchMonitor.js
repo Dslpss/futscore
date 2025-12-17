@@ -208,6 +208,27 @@ async function fetchLiveMatches() {
       name: "Europa League",
       sport: "Soccer",
     },
+    // Campeonatos Estaduais Brasileiros
+    {
+      id: "Soccer_BrazilCarioca",
+      name: "Campeonato Carioca",
+      sport: "Soccer",
+    },
+    {
+      id: "Soccer_BrazilMineiro",
+      name: "Campeonato Mineiro",
+      sport: "Soccer",
+    },
+    {
+      id: "Soccer_BrazilPaulistaSerieA1",
+      name: "Campeonato Paulista",
+      sport: "Soccer",
+    },
+    {
+      id: "Soccer_BrazilGaucho",
+      name: "Campeonato Gaúcho",
+      sport: "Soccer",
+    },
     // Basketball
     { id: "Basketball_NBA", name: "NBA", sport: "Basketball" },
   ];

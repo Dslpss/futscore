@@ -370,6 +370,8 @@ export const HomeScreen = ({ navigation }: any) => {
         "Basketball_NBA",
         "Soccer_BrazilCarioca",
         "Soccer_BrazilMineiro",
+        "Soccer_BrazilPaulistaSerieA1",
+        "Soccer_BrazilGaucho",
       ];
       
       const today = new Date();
@@ -419,6 +421,8 @@ export const HomeScreen = ({ navigation }: any) => {
           "Basketball_NBA",
           "Soccer_BrazilCarioca",
           "Soccer_BrazilMineiro",
+          "Soccer_BrazilPaulistaSerieA1",
+          "Soccer_BrazilGaucho",
         ];
         
         // Clear schedule cache for selected date
@@ -467,6 +471,8 @@ export const HomeScreen = ({ navigation }: any) => {
         "Basketball_NBA",
         "Soccer_BrazilCarioca",
         "Soccer_BrazilMineiro",
+        "Soccer_BrazilPaulistaSerieA1",
+        "Soccer_BrazilGaucho",
       ];
 
       let msnMatches: Match[] = [];
@@ -964,6 +970,8 @@ export const HomeScreen = ({ navigation }: any) => {
         { id: "Basketball_NBA", sport: "Basketball", country: "USA" },
         { id: "Soccer_BrazilCarioca", sport: "Soccer", country: "Brazil" },
         { id: "Soccer_BrazilMineiro", sport: "Soccer", country: "Brazil" },
+        { id: "Soccer_BrazilPaulistaSerieA1", sport: "Soccer", country: "Brazil" },
+        { id: "Soccer_BrazilGaucho", sport: "Soccer", country: "Brazil" },
       ];
 
       const teamsMap = new Map<number, { id: number; name: string; logo: string; country: string; msnId?: string }>();
@@ -1646,6 +1654,10 @@ export const HomeScreen = ({ navigation }: any) => {
     Soccer_BrazilCarioca: "Soccer_BrazilCarioca",
     MIN: "Soccer_BrazilMineiro",
     Soccer_BrazilMineiro: "Soccer_BrazilMineiro",
+    PAU: "Soccer_BrazilPaulistaSerieA1",
+    Soccer_BrazilPaulistaSerieA1: "Soccer_BrazilPaulistaSerieA1",
+    GAU: "Soccer_BrazilGaucho",
+    Soccer_BrazilGaucho: "Soccer_BrazilGaucho",
   };
 
   // Group scheduled matches by league

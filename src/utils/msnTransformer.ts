@@ -520,6 +520,22 @@ export const MSN_LEAGUE_MAP: Record<
     imageId: "OSB.AQypHhNwDa8NWPcVeBX8JA--.png",
     country: "Brasil",
   },
+  Soccer_BrazilPaulistaSerieA1: {
+    id: "PAU",
+    sport: "Soccer",
+    name: "Campeonato Paulista",
+    logo: "https://www.bing.com/th?id=OSB.nc1SdrFhr_iRsfehpGKRrQ--.png&w=100&h=100",
+    imageId: "OSB.nc1SdrFhr_iRsfehpGKRrQ--.png",
+    country: "Brasil",
+  },
+  Soccer_BrazilGaucho: {
+    id: "GAU",
+    sport: "Soccer",
+    name: "Campeonato Gaúcho",
+    logo: "https://www.bing.com/th?id=OSB.ZkNO8eZsdqmMWmkJWegsWg--.png&w=100&h=100",
+    imageId: "OSB.ZkNO8eZsdqmMWmkJWegsWg--.png",
+    country: "Brasil",
+  },
 };
 
 /**
@@ -540,6 +556,8 @@ export function getMsnLeagueIds(): string[] {
     "Basketball_NBA",
     "Soccer_BrazilCarioca",
     "Soccer_BrazilMineiro",
+    "Soccer_BrazilPaulistaSerieA1",
+    "Soccer_BrazilGaucho",
   ];
 }
 
