@@ -141,7 +141,7 @@ async function sendPushToAll(title, body, data = {}, filter = {}) {
         if (!isMarkedMatch && !isFavoriteTeamMatch) continue;
         
         if (isMarkedMatch) {
-          console.log(`[Push] Match ${matchIdStr} is in user's favoriteMatchIds (bell icon)`);
+          console.log(`[Push] ✓ Match ${matchIdStr}/${msnGameIdStr || 'no-msn'} is in user's favoriteMatchIds (bell icon) - user: ${user.pushToken?.substring(0, 30)}...`);
         }
       }
 
@@ -218,6 +218,7 @@ async function notifyMatchStarted(match) {
   await sendPushToAll(title, body, {
     type: "match_start",
     matchId: match.id,
+    msnGameId: match.id, // Include msnGameId for bell icon matching
     homeTeamId: match.homeTeamId,
     awayTeamId: match.awayTeamId,
   });
@@ -253,6 +254,7 @@ async function notifyGoal(
   await sendPushToAll(title, body, {
     type: "goal",
     matchId: match.id,
+    msnGameId: match.id, // Include msnGameId for bell icon matching
     homeTeamId: match.homeTeamId,
     awayTeamId: match.awayTeamId,
     scorer: scorerTeam,
@@ -277,6 +279,7 @@ async function notifyYellowCard(match, playerName, teamName, minute = null) {
   await sendPushToAll(title, body, {
     type: "yellow_card",
     matchId: match.id,
+    msnGameId: match.id,
     homeTeamId: match.homeTeamId,
     awayTeamId: match.awayTeamId,
     playerName,
@@ -311,6 +314,7 @@ async function notifyRedCard(
   await sendPushToAll(title, body, {
     type: "red_card",
     matchId: match.id,
+    msnGameId: match.id,
     homeTeamId: match.homeTeamId,
     awayTeamId: match.awayTeamId,
     playerName,
@@ -363,6 +367,7 @@ async function notifyPenalty(
   await sendPushToAll(title, body, {
     type: "penalty",
     matchId: match.id,
+    msnGameId: match.id,
     homeTeamId: match.homeTeamId,
     awayTeamId: match.awayTeamId,
     teamName,
@@ -424,6 +429,7 @@ async function notifyVAR(match, decision, affectedTeam = null, minute = null) {
   await sendPushToAll(title, body, {
     type: "var",
     matchId: match.id,
+    msnGameId: match.id,
     homeTeamId: match.homeTeamId,
     awayTeamId: match.awayTeamId,
     decision,
@@ -452,6 +458,7 @@ async function notifySubstitution(
   await sendPushToAll(title, body, {
     type: "substitution",
     matchId: match.id,
+    msnGameId: match.id,
     homeTeamId: match.homeTeamId,
     awayTeamId: match.awayTeamId,
     teamName,
@@ -473,6 +480,7 @@ async function notifyHalfTime(match) {
   await sendPushToAll(title, body, {
     type: "half_time",
     matchId: match.id,
+    msnGameId: match.id,
     homeTeamId: match.homeTeamId,
     awayTeamId: match.awayTeamId,
   });
@@ -490,6 +498,7 @@ async function notifySecondHalfStarted(match) {
   await sendPushToAll(title, body, {
     type: "second_half_start",
     matchId: match.id,
+    msnGameId: match.id,
     homeTeamId: match.homeTeamId,
     awayTeamId: match.awayTeamId,
   });
@@ -514,6 +523,7 @@ async function notifyMatchEnded(match) {
   await sendPushToAll(title, body, {
     type: "match_end",
     matchId: match.id,
+    msnGameId: match.id,
     homeTeamId: match.homeTeamId,
     awayTeamId: match.awayTeamId,
   });
