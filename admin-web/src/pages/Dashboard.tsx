@@ -3,6 +3,7 @@ import { WarningList } from "../components/WarningList";
 import { UpdateManager } from "../components/UpdateManager";
 import { UserStats } from "../components/UserStats";
 import { ApkUploader } from "../components/ApkUploader";
+import { UpdateNotificationSender } from "../components/UpdateNotificationSender";
 import { LogOut, LayoutDashboard } from "lucide-react";
 
 export const Dashboard = () => {
@@ -51,6 +52,7 @@ export const Dashboard = () => {
               <h2 className="mb-4 text-xl font-bold text-white">Gerenciar App</h2>
               <UpdateManager />
             </div>
+            <UpdateNotificationSender />
             <ApkUploader />
           </div>
         </div>

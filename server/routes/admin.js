@@ -4,6 +4,7 @@ const Warning = require("../models/Warning");
 const AppVersion = require("../models/AppVersion");
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
+const { sendPushToAll, expo, Expo } = require("../services/pushNotifications");
 
 // Middleware to check if user is admin
 const authMiddleware = async (req, res, next) => {
@@ -235,6 +236,167 @@ router.put("/users/:id/admin", authMiddleware, async (req, res) => {
     console.log(`[Admin] User ${user.email} admin status changed to ${isAdmin} by ${req.user.email}`);
     res.json({ message: isAdmin ? "Usuário promovido a admin." : "Privilégios de admin removidos.", user });
   } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// --- PUSH NOTIFICATIONS ---
+
+// Send update notification to all users (Admin)
+router.post("/notifications/update", authMiddleware, async (req, res) => {
+  try {
+    const { title, body, version } = req.body;
+
+    if (!title || !body) {
+      return res.status(400).json({ message: "Título e mensagem são obrigatórios." });
+    }
+
+    // Fetch all users with push tokens
+    const users = await User.find({ pushToken: { $ne: null } }).select("pushToken");
+
+    if (users.length === 0) {
+      return res.json({ 
+        message: "Nenhum usuário com token de push encontrado.",
+        sentCount: 0,
+        totalEligible: 0
+      });
+    }
+
+    // Build messages array
+    const { Expo } = require("expo-server-sdk");
+    const messages = [];
+
+    for (const user of users) {
+      if (!Expo.isExpoPushToken(user.pushToken)) continue;
+
+      messages.push({
+        to: user.pushToken,
+        sound: "default",
+        title,
+        body,
+        data: { 
+          type: "app_update",
+          version: version || null
+        },
+        priority: "high",
+        channelId: "updates",
+      });
+    }
+
+    if (messages.length === 0) {
+      return res.json({ 
+        message: "Nenhum token de push válido encontrado.",
+        sentCount: 0,
+        totalEligible: users.length
+      });
+    }
+
+    // Send notifications individually to avoid PUSH_TOO_MANY_EXPERIENCE_IDS error
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const message of messages) {
+      try {
+        const ticketChunk = await expo.sendPushNotificationsAsync([message]);
+        
+        if (ticketChunk[0]?.status === 'error') {
+          console.error(`[Admin Push] ❌ Erro para token ${message.to?.substring(0, 30)}...: ${ticketChunk[0].message}`);
+          errorCount++;
+        } else {
+          successCount++;
+        }
+      } catch (error) {
+        console.error(`[Admin Push] ❌ Erro ao enviar para ${message.to?.substring(0, 30)}...:`, error.message);
+        errorCount++;
+      }
+    }
+
+    console.log(`[Admin] Update notification sent by ${req.user.email}: ${successCount}/${messages.length} success`);
+
+    res.json({
+      message: `Notificação enviada com sucesso!`,
+      sentCount: successCount,
+      errorCount,
+      totalEligible: messages.length
+    });
+  } catch (err) {
+    console.error("[Admin Push] Error:", err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Send custom notification to all users (Admin)
+router.post("/notifications/broadcast", authMiddleware, async (req, res) => {
+  try {
+    const { title, body, data = {} } = req.body;
+
+    if (!title || !body) {
+      return res.status(400).json({ message: "Título e mensagem são obrigatórios." });
+    }
+
+    // Fetch all users with push tokens
+    const users = await User.find({ pushToken: { $ne: null } }).select("pushToken");
+
+    if (users.length === 0) {
+      return res.json({ 
+        message: "Nenhum usuário com token de push encontrado.",
+        sentCount: 0,
+        totalEligible: 0
+      });
+    }
+
+    const { Expo } = require("expo-server-sdk");
+    const messages = [];
+
+    for (const user of users) {
+      if (!Expo.isExpoPushToken(user.pushToken)) continue;
+
+      messages.push({
+        to: user.pushToken,
+        sound: "default",
+        title,
+        body,
+        data: { type: "broadcast", ...data },
+        priority: "high",
+        channelId: "updates",
+      });
+    }
+
+    if (messages.length === 0) {
+      return res.json({ 
+        message: "Nenhum token de push válido encontrado.",
+        sentCount: 0,
+        totalEligible: users.length
+      });
+    }
+
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const message of messages) {
+      try {
+        const ticketChunk = await expo.sendPushNotificationsAsync([message]);
+        
+        if (ticketChunk[0]?.status === 'error') {
+          errorCount++;
+        } else {
+          successCount++;
+        }
+      } catch (error) {
+        errorCount++;
+      }
+    }
+
+    console.log(`[Admin] Broadcast notification sent by ${req.user.email}: ${successCount}/${messages.length} success`);
+
+    res.json({
+      message: `Notificação enviada com sucesso!`,
+      sentCount: successCount,
+      errorCount,
+      totalEligible: messages.length
+    });
+  } catch (err) {
+    console.error("[Admin Push] Error:", err);
     res.status(500).json({ message: err.message });
   }
 });
