@@ -9,7 +9,6 @@ import { HomeScreen } from "./src/screens/HomeScreen";
 import { LoginScreen } from "./src/screens/LoginScreen";
 import { RegisterScreen } from "./src/screens/RegisterScreen";
 import { ForgotPasswordScreen } from "./src/screens/ForgotPasswordScreen";
-import { ResetPasswordScreen } from "./src/screens/ResetPasswordScreen";
 import { TeamSelectionScreen } from "./src/screens/TeamSelectionScreen";
 import { LeaguesExplorer } from "./src/screens/LeaguesExplorer";
 import { StandingsScreen } from "./src/screens/StandingsScreen";
@@ -99,7 +98,6 @@ function AppNavigation() {
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-      <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
     </Stack.Navigator>
   );
 }

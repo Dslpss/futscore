@@ -115,10 +115,6 @@ export const ForgotPasswordScreen = () => {
     }
   };
 
-  const handleGoToResetPassword = () => {
-    navigation.navigate('ResetPassword', { email });
-  };
-
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -201,7 +197,7 @@ export const ForgotPasswordScreen = () => {
                       {isLoading ? (
                         <ActivityIndicator color="#fff" />
                       ) : (
-                        <Text style={styles.buttonText}>Enviar código</Text>
+                        <Text style={styles.buttonText}>Enviar link de recuperação</Text>
                       )}
                     </LinearGradient>
                   </TouchableOpacity>
@@ -235,19 +231,20 @@ export const ForgotPasswordScreen = () => {
 
                 <Text style={styles.successTitle}>Email enviado!</Text>
                 <Text style={styles.successSubtitle}>
-                  Se o email <Text style={styles.emailHighlight}>{email}</Text> estiver cadastrado, você receberá um código de recuperação.
+                  Enviamos um link de recuperação para <Text style={styles.emailHighlight}>{email}</Text>
                 </Text>
 
                 <View style={styles.instructionsContainer}>
                   <Text style={styles.instructionsTitle}>Próximos passos:</Text>
-                  <Text style={styles.instructionsText}>1. Verifique sua caixa de entrada</Text>
-                  <Text style={styles.instructionsText}>2. Copie o código recebido</Text>
-                  <Text style={styles.instructionsText}>3. Clique no botão abaixo para continuar</Text>
+                  <Text style={styles.instructionsText}>1. Verifique sua caixa de entrada (e spam)</Text>
+                  <Text style={styles.instructionsText}>2. Clique no link recebido por email</Text>
+                  <Text style={styles.instructionsText}>3. Crie sua nova senha</Text>
+                  <Text style={styles.instructionsText}>4. Volte ao app e faça login</Text>
                 </View>
 
                 <TouchableOpacity 
                   style={styles.button}
-                  onPress={handleGoToResetPassword}
+                  onPress={() => navigation.navigate('Login')}
                 >
                   <LinearGradient
                     colors={['#22c55e', '#16a34a']}
@@ -255,7 +252,7 @@ export const ForgotPasswordScreen = () => {
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                   >
-                    <Text style={styles.buttonText}>Já tenho o código</Text>
+                    <Text style={styles.buttonText}>Voltar ao login</Text>
                   </LinearGradient>
                 </TouchableOpacity>
 
@@ -266,7 +263,7 @@ export const ForgotPasswordScreen = () => {
                     successScale.setValue(0);
                   }}
                 >
-                  <Text style={styles.resendText}>Reenviar código</Text>
+                  <Text style={styles.resendText}>Reenviar email</Text>
                 </TouchableOpacity>
               </Animated.View>
             )}

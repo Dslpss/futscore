@@ -81,6 +81,12 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: null,
   },
+  // Se true, usuário autentica via Firebase (trocou senha pelo Firebase)
+  // Se false, autentica via MongoDB (senha original)
+  useFirebaseAuth: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 module.exports = mongoose.model("User", userSchema);

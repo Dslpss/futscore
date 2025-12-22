@@ -6,6 +6,7 @@ import axios from 'axios';
 import { useNavigation } from '@react-navigation/native';
 import { Eye, EyeOff } from 'lucide-react-native';
 import { PremiumFeaturesModal } from '../components/PremiumFeaturesModal';
+import { signInWithFirebase, getFirebaseErrorMessage } from '../services/firebase';
 
 export const LoginScreen = () => {
   const [email, setEmail] = useState('');
@@ -24,21 +25,52 @@ export const LoginScreen = () => {
 
     setIsLoading(true);
     try {
+      // Primeiro tenta login normal via API
       const response = await axios.post(`${API_URL}/login`, {
-        email,
+        email: email.toLowerCase().trim(),
         password
       });
 
       const { token, user } = response.data;
       await signIn(token, user);
     } catch (error: any) {
-      console.error(error);
+      console.error('[Login] API error:', error.response?.data || error.message);
+      
+      // Se a API indicar que precisa autenticar via Firebase (senha foi alterada lá)
+      if (error.response?.data?.requireFirebaseAuth) {
+        console.log('[Login] Trying Firebase authentication...');
+        try {
+          // Autenticar via Firebase
+          const firebaseUser = await signInWithFirebase(email, password);
+          const idToken = await firebaseUser.getIdToken();
+          
+          // Tentar login novamente com o token do Firebase
+          // Isso vai sincronizar a senha no MongoDB
+          const syncResponse = await axios.post(`${API_URL}/login`, {
+            email: email.toLowerCase().trim(),
+            password,
+            firebaseToken: idToken
+          });
+
+          const { token, user } = syncResponse.data;
+          await signIn(token, user);
+          console.log('[Login] Password synced and login successful!');
+          return;
+        } catch (firebaseError: any) {
+          console.error('[Login] Firebase auth failed:', firebaseError);
+          const message = getFirebaseErrorMessage(firebaseError.code || 'unknown');
+          Alert.alert('Erro', message);
+          return;
+        }
+      }
+      
+      // Erro normal
       let errorMessage = 'Falha no login';
       
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       } else if (error.message === 'Network Error') {
-        errorMessage = 'Erro de conexão. Verifique se o servidor está rodando e se o IP no AuthContext.tsx está correto.';
+        errorMessage = 'Erro de conexão. Verifique sua internet.';
       } else if (error.message) {
         errorMessage = error.message;
       }
