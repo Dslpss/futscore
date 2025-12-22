@@ -23,7 +23,6 @@ export const ForgotPasswordScreen = () => {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
-  const [useFirebase, setUseFirebase] = useState(true); // Tenta Firebase primeiro
   const navigation = useNavigation<any>();
 
   // Animações
@@ -63,23 +62,28 @@ export const ForgotPasswordScreen = () => {
     const normalizedEmail = email.trim().toLowerCase();
 
     try {
-      // Tentar enviar via Firebase primeiro (mais rápido e confiável)
-      if (useFirebase) {
-        try {
-          await sendPasswordReset(normalizedEmail);
-          console.log('[ForgotPassword] Email sent via Firebase');
-        } catch (firebaseError: any) {
-          // Se usuário não existe no Firebase, tenta via API (pode ser usuário antigo)
-          if (firebaseError.code === 'auth/user-not-found') {
-            console.log('[ForgotPassword] User not in Firebase, trying API...');
-            await axios.post(`${API_URL}/forgot-password`, { email: normalizedEmail });
-          } else {
-            throw firebaseError;
-          }
-        }
-      } else {
-        // Fallback para API
+      // PASSO 1: Chamar API para marcar useFirebaseAuth = true no banco
+      // Isso DEVE acontecer ANTES de enviar o email
+      try {
         await axios.post(`${API_URL}/forgot-password`, { email: normalizedEmail });
+        console.log('[ForgotPassword] API called - user marked for Firebase Auth');
+      } catch (apiError: any) {
+        // Se API der erro de rede, continuar mesmo assim
+        // O importante é que o email seja enviado
+        if (apiError.message !== 'Network Error') {
+          console.log('[ForgotPassword] API warning:', apiError.response?.data?.message || apiError.message);
+        }
+      }
+
+      // PASSO 2: Enviar email de reset via Firebase
+      try {
+        await sendPasswordReset(normalizedEmail);
+        console.log('[ForgotPassword] Email sent via Firebase');
+      } catch (firebaseError: any) {
+        // Se usuário não existe no Firebase, pode ser usuário muito antigo
+        // Mas isso não deveria acontecer já que criamos no Firebase durante login
+        console.error('[ForgotPassword] Firebase error:', firebaseError.code);
+        throw firebaseError;
       }
       
       // Animar sucesso
