@@ -134,6 +134,13 @@ export const LoginScreen = () => {
               </TouchableOpacity>
 
               <TouchableOpacity 
+                style={styles.forgotButton}
+                onPress={() => navigation.navigate('ForgotPassword')}
+              >
+                <Text style={styles.forgotText}>Esqueceu sua senha?</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
                 style={styles.linkButton}
                 onPress={() => navigation.navigate('Register')}
               >
@@ -271,5 +278,14 @@ const styles = StyleSheet.create({
   linkHighlight: {
     color: '#22c55e',
     fontWeight: '600',
+  },
+  forgotButton: {
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  forgotText: {
+    color: '#22c55e',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });

@@ -72,6 +72,15 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  // Campos para recuperação de senha
+  resetPasswordToken: {
+    type: String,
+    default: null,
+  },
+  resetPasswordExpires: {
+    type: Date,
+    default: null,
+  },
 });
 
 module.exports = mongoose.model("User", userSchema);
