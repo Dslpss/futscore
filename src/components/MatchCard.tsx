@@ -26,6 +26,7 @@ import {
 import { BlurView } from "expo-blur";
 import { useFavorites } from "../context/FavoritesContext";
 import { MatchStatsModal } from "./MatchStatsModal";
+import { withNotificationPermission } from "../hooks/useNotificationPermission";
 
 const { width } = Dimensions.get("window");
 
@@ -90,10 +91,21 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
   const isAwayFavorite = isFavoriteTeam(match.teams.away.id);
   const isMatchFavorite = isFavoriteMatch(match.fixture.id);
 
-  // Handler para abrir modal de confirmação
-  const handleToggleFavoriteMatch = (e: any) => {
+  // Handler para abrir modal de confirmação (verifica permissão primeiro)
+  const handleToggleFavoriteMatch = async (e: any) => {
     e.stopPropagation();
-    setNotifyModalVisible(true);
+    
+    // Se está desativando, não precisa verificar permissão
+    if (isMatchFavorite) {
+      setNotifyModalVisible(true);
+      return;
+    }
+    
+    // Verificar permissão antes de ativar notificações
+    await withNotificationPermission(
+      () => setNotifyModalVisible(true),
+      () => console.log('[MatchCard] User denied notification permission')
+    );
   };
 
   // Confirmar toggle de notificação
@@ -109,6 +121,27 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
 
     toggleFavoriteMatch(favoriteMatchData);
     setNotifyModalVisible(false);
+  };
+
+  // Handler para favoritar time (verifica permissão primeiro)
+  const handleToggleFavoriteTeam = async (
+    e: any,
+    teamId: number,
+    teamInfo: { name: string; logo: string; country: string }
+  ) => {
+    e.stopPropagation();
+    
+    // Se está removendo dos favoritos, não precisa verificar permissão
+    if (isFavoriteTeam(teamId)) {
+      toggleFavoriteTeam(teamId, teamInfo);
+      return;
+    }
+    
+    // Verificar permissão antes de adicionar aos favoritos
+    await withNotificationPermission(
+      () => toggleFavoriteTeam(teamId, teamInfo),
+      () => console.log('[MatchCard] User denied notification permission for team')
+    );
   };
 
   // Determine gradient colors based on match state
@@ -191,14 +224,11 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
             {/* Home Team */}
             <View style={styles.teamSection}>
               <TouchableOpacity
-                onPress={(e) => {
-                  e.stopPropagation();
-                  toggleFavoriteTeam(match.teams.home.id, {
-                    name: match.teams.home.name,
-                    logo: match.teams.home.logo,
-                    country: match.league.country || 'Unknown',
-                  });
-                }}
+                onPress={(e) => handleToggleFavoriteTeam(e, match.teams.home.id, {
+                  name: match.teams.home.name,
+                  logo: match.teams.home.logo,
+                  country: match.league.country || 'Unknown',
+                })}
                 style={styles.favoriteButton}>
                 <Star
                   size={14}
@@ -378,14 +408,11 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
             {/* Away Team */}
             <View style={styles.teamSection}>
               <TouchableOpacity
-                onPress={(e) => {
-                  e.stopPropagation();
-                  toggleFavoriteTeam(match.teams.away.id, {
-                    name: match.teams.away.name,
-                    logo: match.teams.away.logo,
-                    country: match.league.country || 'Unknown',
-                  });
-                }}
+                onPress={(e) => handleToggleFavoriteTeam(e, match.teams.away.id, {
+                  name: match.teams.away.name,
+                  logo: match.teams.away.logo,
+                  country: match.league.country || 'Unknown',
+                })}
                 style={styles.favoriteButton}>
                 <Star
                   size={14}
