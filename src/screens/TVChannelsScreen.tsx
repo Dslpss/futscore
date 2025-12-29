@@ -96,13 +96,17 @@ export default function TVChannelsScreen({ navigation }: any) {
       return;
     }
 
-    const query = searchQuery.toLowerCase();
-    const filtered = channels.filter(
-      (channel) =>
-        channel.name.toLowerCase().includes(query) ||
-        channel.groupTitle?.toLowerCase().includes(query) ||
-        channel.country?.toLowerCase().includes(query)
-    );
+    // Divide a busca em palavras e busca cada uma
+    const words = searchQuery.toLowerCase().trim().split(/\s+/);
+    
+    const filtered = channels.filter((channel) => {
+      // Combina todos os campos pesquisáveis
+      const searchText = `${channel.name} ${channel.groupTitle || ''} ${channel.country || ''}`.toLowerCase();
+      
+      // Verifica se TODAS as palavras estão presentes
+      return words.every(word => searchText.includes(word));
+    });
+    
     setFilteredChannels(filtered);
   };
 
