@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { Tv, RefreshCw, Trash2, Eye, EyeOff, TrendingUp } from 'lucide-react';
+import { Tv, RefreshCw, Trash2, Eye, EyeOff, TrendingUp, Upload } from 'lucide-react';
 
 interface Channel {
   _id: string;
@@ -86,6 +86,39 @@ export const ChannelManager = () => {
     }
   };
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setUploading(true);
+      setError('');
+      setSuccess('');
+
+      const content = await file.text();
+      const token = localStorage.getItem('@FutScoreAdmin:token');
+      
+      const response = await axios.post('/api/channels/upload', 
+        { m3uContent: content },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setSuccess(`✅ ${response.data.message} - Novos: ${response.data.new}, Atualizados: ${response.data.updated}`);
+      await loadChannels();
+      await loadStats();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Erro ao fazer upload do arquivo');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   const handleToggleActive = async (id: string, isActive: boolean) => {
     try {
       const token = localStorage.getItem('@FutScoreAdmin:token');
@@ -124,6 +157,15 @@ export const ChannelManager = () => {
 
   return (
     <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-6">
+      {/* Hidden file input */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileUpload}
+        accept=".m3u,.m3u8,.txt"
+        className="hidden"
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
@@ -136,14 +178,25 @@ export const ChannelManager = () => {
           </div>
         </div>
 
-        <button
-          onClick={handleSync}
-          disabled={syncing}
-          className="flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 font-semibold text-white hover:bg-purple-500 transition-colors disabled:opacity-50"
-        >
-          <RefreshCw size={18} className={syncing ? 'animate-spin' : ''} />
-          {syncing ? 'Sincronizando...' : 'Sincronizar M3U'}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 font-semibold text-white hover:bg-green-500 transition-colors disabled:opacity-50"
+          >
+            <Upload size={18} />
+            {uploading ? 'Enviando...' : 'Upload M3U'}
+          </button>
+
+          <button
+            onClick={handleSync}
+            disabled={syncing}
+            className="flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 font-semibold text-white hover:bg-purple-500 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw size={18} className={syncing ? 'animate-spin' : ''} />
+            {syncing ? 'Sincronizando...' : 'Sincronizar URL'}
+          </button>
+        </div>
       </div>
 
       {/* Stats */}

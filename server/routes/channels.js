@@ -191,6 +191,136 @@ router.post("/sync", authMiddleware, async (req, res) => {
   }
 });
 
+// Upload M3U content directly (for when URL is blocked)
+router.post("/upload", authMiddleware, async (req, res) => {
+  try {
+    console.log(`[Channels] Upload started by ${req.user.email}`);
+    
+    const { m3uContent } = req.body;
+
+    if (!m3uContent || typeof m3uContent !== 'string') {
+      return res.status(400).json({ message: "M3U content is required" });
+    }
+
+    console.log(`[Channels] Processing uploaded content, length: ${m3uContent.length}`);
+
+    // Parse the M3U content directly
+    const lines = m3uContent.split('\n');
+    console.log(`[Channels] Total lines: ${lines.length}`);
+    
+    const channels = [];
+    let currentChannel = {};
+
+    // Sports keywords for filtering
+    const sportsKeywords = [
+      'sport', 'espn', 'fox sports', 'futebol', 'football', 'soccer',
+      'nfl', 'nba', 'nhl', 'mlb', 'ufc', 'fight', 'boxing', 'premiere',
+      'combate', 'sportv', 'band sports', 'esporte', 'champions',
+      'copa', 'liga', 'arena', 'racing', 'tennis', 'golf', 'rugby',
+      'cricket', 'formula', 'f1', 'moto', 'volei', 'basquete',
+      'beinsports', 'sky sports', 'dazn', 'eleven', 'fox deportes',
+      'tnt sports', 'star+', 'paramount', 'peacock', 'nbcsn'
+    ];
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+
+      if (line.startsWith('#EXTINF:')) {
+        // Parse channel metadata
+        currentChannel = {
+          name: '',
+          logo: null,
+          groupTitle: null,
+          country: null,
+          language: null,
+        };
+
+        const logoMatch = line.match(/tvg-logo="([^"]*)"/);
+        if (logoMatch) currentChannel.logo = logoMatch[1];
+
+        const groupMatch = line.match(/group-title="([^"]*)"/);
+        if (groupMatch) currentChannel.groupTitle = groupMatch[1];
+
+        const countryMatch = line.match(/tvg-country="([^"]*)"/);
+        if (countryMatch) currentChannel.country = countryMatch[1];
+
+        const languageMatch = line.match(/tvg-language="([^"]*)"/);
+        if (languageMatch) currentChannel.language = languageMatch[1];
+
+        const nameMatch = line.match(/,(.+)$/);
+        if (nameMatch) currentChannel.name = nameMatch[1].trim();
+      }
+      else if (line && !line.startsWith('#') && currentChannel.name) {
+        currentChannel.url = line;
+        
+        // Check if it's a sports channel
+        const searchText = `${currentChannel.name} ${currentChannel.groupTitle || ''}`.toLowerCase();
+        const isSports = sportsKeywords.some(keyword => searchText.includes(keyword));
+        
+        if (isSports) {
+          channels.push({ ...currentChannel });
+        }
+        
+        currentChannel = {};
+      }
+    }
+
+    console.log(`[Channels] Parsed ${channels.length} sports channels`);
+
+    if (channels.length === 0) {
+      return res.json({ 
+        message: "No sports channels found in uploaded content",
+        synced: 0,
+        total: 0
+      });
+    }
+
+    // Update or create channels
+    let newCount = 0;
+    let updatedCount = 0;
+
+    for (const channelData of channels) {
+      const existing = await Channel.findOne({ url: channelData.url });
+
+      if (existing) {
+        await Channel.findByIdAndUpdate(existing._id, {
+          name: channelData.name,
+          logo: channelData.logo || existing.logo,
+          groupTitle: channelData.groupTitle || existing.groupTitle,
+          country: channelData.country || existing.country,
+          language: channelData.language || existing.language,
+          updatedAt: new Date(),
+        });
+        updatedCount++;
+      } else {
+        await Channel.create({
+          name: channelData.name,
+          url: channelData.url,
+          logo: channelData.logo,
+          category: "sports",
+          groupTitle: channelData.groupTitle,
+          country: channelData.country,
+          language: channelData.language,
+        });
+        newCount++;
+      }
+    }
+
+    console.log(`[Channels] ✅ Upload complete: ${newCount} new, ${updatedCount} updated`);
+
+    res.json({
+      message: "Channels uploaded successfully",
+      synced: newCount + updatedCount,
+      new: newCount,
+      updated: updatedCount,
+      total: channels.length,
+    });
+  } catch (err) {
+    console.error("[Channels] ❌ Upload error:", err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // Get all channels (including inactive) - Admin
 router.get("/admin/all", authMiddleware, async (req, res) => {
   try {
