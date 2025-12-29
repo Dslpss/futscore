@@ -41,7 +41,7 @@ export const ChannelManager = () => {
   const loadChannels = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('adminToken');
+      const token = localStorage.getItem('@FutScoreAdmin:token');
       const response = await axios.get('/api/channels/admin/all', {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -55,7 +55,7 @@ export const ChannelManager = () => {
 
   const loadStats = async () => {
     try {
-      const token = localStorage.getItem('adminToken');
+      const token = localStorage.getItem('@FutScoreAdmin:token');
       const response = await axios.get('/api/channels/admin/stats', {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -71,7 +71,7 @@ export const ChannelManager = () => {
       setError('');
       setSuccess('');
       
-      const token = localStorage.getItem('adminToken');
+      const token = localStorage.getItem('@FutScoreAdmin:token');
       const response = await axios.post('/api/channels/sync', {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -88,7 +88,7 @@ export const ChannelManager = () => {
 
   const handleToggleActive = async (id: string, isActive: boolean) => {
     try {
-      const token = localStorage.getItem('adminToken');
+      const token = localStorage.getItem('@FutScoreAdmin:token');
       await axios.put(`/api/channels/${id}`, 
         { isActive: !isActive },
         { headers: { Authorization: `Bearer ${token}` } }
@@ -104,7 +104,7 @@ export const ChannelManager = () => {
     if (!confirm('Tem certeza que deseja deletar este canal?')) return;
 
     try {
-      const token = localStorage.getItem('adminToken');
+      const token = localStorage.getItem('@FutScoreAdmin:token');
       await axios.delete(`/api/channels/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
