@@ -46,3 +46,4 @@ ios/build/
 ios/.xcode.env.local
 *.ipa
 *.dSYM.zip
+canais.m3u

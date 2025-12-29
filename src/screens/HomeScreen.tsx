@@ -1274,6 +1274,30 @@ export const HomeScreen = ({ navigation }: any) => {
             </LinearGradient>
           </TouchableOpacity>
 
+          {/* TV Channels Button */}
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate("TVChannels")}
+            activeOpacity={0.85}>
+            <LinearGradient
+              colors={["#1e4d5f", "#1a1a2e"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.actionButtonGradient}>
+              <View style={styles.actionButtonIconWrapper}>
+                <LinearGradient
+                  colors={["#06b6d4", "#0891b2"]}
+                  style={styles.actionIconGradient}>
+                  <Text style={styles.actionButtonIcon}>📺</Text>
+                </LinearGradient>
+              </View>
+              <View style={styles.actionButtonTextContainer}>
+                <Text style={styles.actionButtonText}>TV ao Vivo</Text>
+                <Text style={styles.actionButtonSubtext}>Esportes</Text>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => {
@@ -1435,30 +1459,6 @@ export const HomeScreen = ({ navigation }: any) => {
               <View style={styles.actionButtonTextContainer}>
                 <Text style={styles.actionButtonText}>Rádios</Text>
                 <Text style={styles.actionButtonSubtext}>Ao Vivo</Text>
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
-
-          {/* TV Channels Button */}
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => navigation.navigate("TVChannels")}
-            activeOpacity={0.85}>
-            <LinearGradient
-              colors={["#1e4d5f", "#1a1a2e"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.actionButtonGradient}>
-              <View style={styles.actionButtonIconWrapper}>
-                <LinearGradient
-                  colors={["#06b6d4", "#0891b2"]}
-                  style={styles.actionIconGradient}>
-                  <Text style={styles.actionButtonIcon}>📺</Text>
-                </LinearGradient>
-              </View>
-              <View style={styles.actionButtonTextContainer}>
-                <Text style={styles.actionButtonText}>TV ao Vivo</Text>
-                <Text style={styles.actionButtonSubtext}>Esportes</Text>
               </View>
             </LinearGradient>
           </TouchableOpacity>
