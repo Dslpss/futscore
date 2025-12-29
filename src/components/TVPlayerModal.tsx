@@ -12,10 +12,21 @@ import {
 import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as ScreenOrientation from 'expo-screen-orientation';
+import * as NavigationBar from 'expo-navigation-bar';
 import { Channel } from '../types/Channel';
 import { incrementViewCount } from '../services/channelService';
 
 const { width, height } = Dimensions.get('window');
+
+// Opções de formato de tela
+type AspectRatioMode = 'auto' | '16:9' | '4:3' | 'stretch';
+const ASPECT_RATIO_OPTIONS: { key: AspectRatioMode; label: string; ratio?: number }[] = [
+  { key: 'auto', label: 'Auto' },
+  { key: '16:9', label: '16:9', ratio: 16 / 9 },
+  { key: '4:3', label: '4:3', ratio: 4 / 3 },
+  { key: 'stretch', label: 'Esticar' },
+];
 
 interface TVPlayerModalProps {
   visible: boolean;
@@ -33,14 +44,67 @@ export default function TVPlayerModal({
   const [isPlaying, setIsPlaying] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showControls, setShowControls] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [aspectRatioMode, setAspectRatioMode] = useState<AspectRatioMode>('16:9');
+  const [showAspectMenu, setShowAspectMenu] = useState(false);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (visible && channel) {
+      // Start in portrait mode
+      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+      // Show navigation bar
+      NavigationBar.setVisibilityAsync('visible');
       // Increment view count
       incrementViewCount(channel._id);
     }
+    
+    // Cleanup: restore portrait and reset fullscreen when closing
+    return () => {
+      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+      NavigationBar.setVisibilityAsync('visible');
+      setIsFullscreen(false);
+      setShowAspectMenu(false);
+    };
   }, [visible, channel]);
+
+  const toggleFullscreen = async () => {
+    if (isFullscreen) {
+      // Exit fullscreen - go back to portrait
+      await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+      await NavigationBar.setVisibilityAsync('visible');
+      setIsFullscreen(false);
+      setAspectRatioMode('16:9'); // Reset to 16:9 when exiting fullscreen
+    } else {
+      // Enter fullscreen - go landscape and hide nav bar
+      await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+      await NavigationBar.setVisibilityAsync('hidden');
+      setIsFullscreen(true);
+      setAspectRatioMode('stretch'); // Switch to stretch when entering fullscreen
+    }
+    setShowControls(true);
+  };
+
+  const getVideoStyle = () => {
+    const option = ASPECT_RATIO_OPTIONS.find(o => o.key === aspectRatioMode);
+    
+    if (aspectRatioMode === 'stretch') {
+      return { width: '100%' as const, height: '100%' as const };
+    }
+    
+    if (option?.ratio) {
+      return { width: '100%' as const, aspectRatio: option.ratio };
+    }
+    
+    // Auto mode - use contain
+    return { width: '100%' as const, aspectRatio: 16 / 9 };
+  };
+
+  const getResizeMode = () => {
+    if (aspectRatioMode === 'stretch') return ResizeMode.STRETCH;
+    if (aspectRatioMode === 'auto') return ResizeMode.CONTAIN;
+    return ResizeMode.CONTAIN;
+  };
 
   useEffect(() => {
     if (showControls) {
@@ -106,12 +170,24 @@ export default function TVPlayerModal({
   };
 
   const handleClose = async () => {
+    // Stop video
     if (videoRef.current) {
       await videoRef.current.stopAsync();
       await videoRef.current.unloadAsync();
     }
+    
+    // Reset orientation to portrait
+    await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+    
+    // Show navigation bar
+    await NavigationBar.setVisibilityAsync('visible');
+    
+    // Reset states
     setError(null);
     setIsLoading(true);
+    setIsFullscreen(false);
+    setShowAspectMenu(false);
+    
     onClose();
   };
 
@@ -144,8 +220,8 @@ export default function TVPlayerModal({
           <Video
             ref={videoRef}
             source={{ uri: channel.url }}
-            style={styles.video}
-            resizeMode={ResizeMode.CONTAIN}
+            style={[styles.video, getVideoStyle()]}
+            resizeMode={getResizeMode()}
             shouldPlay
             isLooping={false}
             onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
@@ -227,7 +303,67 @@ export default function TVPlayerModal({
                     <Text style={styles.categoryText}>{channel.groupTitle}</Text>
                   </View>
                 )}
+                
+                <View style={styles.bottomActions}>
+                  {/* Aspect Ratio Button */}
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => setShowAspectMenu(!showAspectMenu)}
+                  >
+                    <Ionicons name="resize" size={22} color="#fff" />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={handleReload}
+                  >
+                    <Ionicons name="refresh" size={22} color="#fff" />
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={toggleFullscreen}
+                  >
+                    <Ionicons 
+                      name={isFullscreen ? "contract" : "expand"} 
+                      size={22} 
+                      color="#fff" 
+                    />
+                  </TouchableOpacity>
+                </View>
               </View>
+
+              {/* Aspect Ratio Menu */}
+              {showAspectMenu && (
+                <View style={styles.aspectMenu}>
+                  <Text style={styles.aspectMenuTitle}>Formato de Tela</Text>
+                  <View style={styles.aspectOptions}>
+                    {ASPECT_RATIO_OPTIONS.map((option) => (
+                      <TouchableOpacity
+                        key={option.key}
+                        style={[
+                          styles.aspectOption,
+                          aspectRatioMode === option.key && styles.aspectOptionActive,
+                        ]}
+                        onPress={() => {
+                          setAspectRatioMode(option.key);
+                          setShowAspectMenu(false);
+                          setShowControls(true);
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.aspectOptionText,
+                            aspectRatioMode === option.key && styles.aspectOptionTextActive,
+                          ]}
+                        >
+                          {option.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
             </LinearGradient>
           )}
         </TouchableOpacity>
@@ -245,10 +381,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#000',
   },
   video: {
-    width: width,
-    height: height,
+    width: '100%',
+    aspectRatio: 16 / 9,
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -361,6 +498,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   bottomBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     padding: 20,
     paddingBottom: 32,
   },
@@ -369,11 +509,61 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
-    alignSelf: 'flex-start',
   },
   categoryText: {
     color: '#fff',
     fontSize: 12,
     fontWeight: '600',
+  },
+  bottomActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginLeft: 'auto',
+  },
+  actionButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  aspectMenu: {
+    position: 'absolute',
+    bottom: 80,
+    right: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    borderRadius: 12,
+    padding: 12,
+    minWidth: 150,
+  },
+  aspectMenuTitle: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 8,
+    textAlign: 'center',
+    opacity: 0.7,
+  },
+  aspectOptions: {
+    gap: 4,
+  },
+  aspectOption: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  aspectOptionActive: {
+    backgroundColor: '#22c55e',
+  },
+  aspectOptionText: {
+    color: '#fff',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  aspectOptionTextActive: {
+    fontWeight: '700',
   },
 });

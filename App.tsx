@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { AppState, AppStateStatus } from "react-native";
+import * as ScreenOrientation from "expo-screen-orientation";
 import { MatchProvider } from "./src/context/MatchContext";
 import { FavoritesProvider } from "./src/context/FavoritesContext";
 import { AuthProvider, useAuth } from "./src/context/AuthContext";
@@ -23,6 +24,9 @@ import { View, ActivityIndicator } from "react-native";
 import { forceCheckMatches } from "./src/services/backgroundTask";
 
 const Stack = createNativeStackNavigator();
+
+// Lock app to portrait mode on startup
+ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
 
 function AppNavigation() {
   const { isAuthenticated, loading } = useAuth();
