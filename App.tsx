@@ -17,6 +17,7 @@ import { CalendarScreen } from "./src/screens/CalendarScreen";
 import { VideosScreen } from "./src/screens/VideosScreen";
 import { NewsScreen } from "./src/screens/NewsScreen";
 import { RadiosScreen } from "./src/screens/RadiosScreen";
+import TVChannelsScreen from "./src/screens/TVChannelsScreen";
 import { StatusBar } from "expo-status-bar";
 import { View, ActivityIndicator } from "react-native";
 import { forceCheckMatches } from "./src/services/backgroundTask";
@@ -86,6 +87,7 @@ function AppNavigation() {
             <Stack.Screen name="Videos" component={VideosScreen} />
             <Stack.Screen name="News" component={NewsScreen} />
             <Stack.Screen name="Radios" component={RadiosScreen} />
+            <Stack.Screen name="TVChannels" component={TVChannelsScreen} />
           </Stack.Navigator>
         </MatchProvider>
       </FavoritesProvider>
