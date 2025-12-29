@@ -4,6 +4,7 @@ import { UpdateManager } from "../components/UpdateManager";
 import { UserStats } from "../components/UserStats";
 import { ApkUploader } from "../components/ApkUploader";
 import { UpdateNotificationSender } from "../components/UpdateNotificationSender";
+import { ChannelManager } from "../components/ChannelManager";
 import { LogOut, LayoutDashboard } from "lucide-react";
 
 export const Dashboard = () => {
@@ -41,11 +42,19 @@ export const Dashboard = () => {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            <h2 className="mb-4 text-xl font-bold text-white">
-              Avisos do Sistema
-            </h2>
-            <WarningList />
+          <div className="lg:col-span-2 space-y-6">
+            <div>
+              <h2 className="mb-4 text-xl font-bold text-white">
+                Avisos do Sistema
+              </h2>
+              <WarningList />
+            </div>
+            <div>
+              <h2 className="mb-4 text-xl font-bold text-white">
+                📺 Canais de TV
+              </h2>
+              <ChannelManager />
+            </div>
           </div>
           <div className="space-y-6">
             <div>
