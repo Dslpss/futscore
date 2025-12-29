@@ -61,6 +61,21 @@ export const incrementViewCount = async (id: string): Promise<void> => {
   }
 };
 
+/**
+ * Check if user has access to TV channels
+ */
+export const checkTVAccess = async (token: string): Promise<{ hasAccess: boolean; reason?: string }> => {
+  try {
+    const response = await axios.get(`${CHANNELS_BASE_URL}/check-access`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
+  } catch (error: any) {
+    console.error('[Channel Service] Error checking TV access:', error);
+    return { hasAccess: true }; // Default to true on error to not block users
+  }
+};
+
 // --- ADMIN FUNCTIONS ---
 
 /**

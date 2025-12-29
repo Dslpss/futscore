@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Users, Bell, UserPlus, Star, Shield, TrendingUp, Trash2, Ban, Pause, Play, Crown } from "lucide-react";
+import { Users, Bell, UserPlus, Star, Shield, TrendingUp, Trash2, Ban, Pause, Play, Crown, Tv } from "lucide-react";
 import axios from "axios";
 
 interface UserStatsData {
@@ -20,6 +20,7 @@ interface User {
   createdAt: string;
   hasPushToken: boolean;
   favoriteTeamsCount: number;
+  canAccessTV: boolean;
 }
 
 export const UserStats = () => {
@@ -96,6 +97,18 @@ export const UserStats = () => {
       fetchStats(); // Refresh stats
     } catch (error: any) {
       alert(error.response?.data?.message || "Erro ao alterar status de admin");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleToggleTVAccess = async (userId: string, currentAccess: boolean) => {
+    setActionLoading(userId);
+    try {
+      await axios.put(`/admin/users/${userId}/tv-access`, { canAccessTV: !currentAccess });
+      setUsers(users.map(u => u._id === userId ? { ...u, canAccessTV: !currentAccess } : u));
+    } catch (error: any) {
+      alert(error.response?.data?.message || "Erro ao alterar acesso à TV");
     } finally {
       setActionLoading(null);
     }
@@ -308,6 +321,18 @@ export const UserStats = () => {
                                 <Play className="h-4 w-4" />
                               </button>
                             )}
+                            
+                            {/* Toggle TV Access */}
+                            <button
+                              onClick={() => handleToggleTVAccess(user._id, user.canAccessTV)}
+                              className={`p-1.5 rounded-lg transition-colors ${
+                                user.canAccessTV 
+                                  ? "bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30" 
+                                  : "bg-red-500/20 text-red-400 hover:bg-red-500/30"
+                              }`}
+                              title={user.canAccessTV ? "Bloquear TV" : "Liberar TV"}>
+                              <Tv className="h-4 w-4" />
+                            </button>
                             
                             {/* Toggle Admin */}
                             <button

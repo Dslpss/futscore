@@ -13,10 +13,12 @@ import {
   Animated,
   Dimensions,
   StatusBar,
+  Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { getSportsChannels } from '../services/channelService';
+import { getSportsChannels, checkTVAccess } from '../services/channelService';
+import { useAuth } from '../context/AuthContext';
 import { Channel } from '../types/Channel';
 import TVPlayerModal from '../components/TVPlayerModal';
 
@@ -55,6 +57,7 @@ const LiveBadge = () => {
 };
 
 export default function TVChannelsScreen({ navigation }: any) {
+  const { token } = useAuth();
   const [channels, setChannels] = useState<Channel[]>([]);
   const [filteredChannels, setFilteredChannels] = useState<Channel[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,14 +65,27 @@ export default function TVChannelsScreen({ navigation }: any) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
   const [playerVisible, setPlayerVisible] = useState(false);
+  const [accessBlocked, setAccessBlocked] = useState(false);
 
   useEffect(() => {
-    loadChannels();
+    checkAccess();
   }, []);
 
   useEffect(() => {
     filterChannels();
   }, [searchQuery, channels]);
+
+  const checkAccess = async () => {
+    if (token) {
+      const result = await checkTVAccess(token);
+      if (!result.hasAccess && result.reason === 'tv_blocked') {
+        setAccessBlocked(true);
+        setLoading(false);
+        return;
+      }
+    }
+    loadChannels();
+  };
 
   const loadChannels = async () => {
     try {
@@ -274,6 +290,42 @@ export default function TVChannelsScreen({ navigation }: any) {
       </LinearGradient>
     </View>
   );
+
+  if (accessBlocked) {
+    return (
+      <View style={styles.loadingContainer}>
+        <StatusBar barStyle="light-content" />
+        <LinearGradient
+          colors={['#ef444420', '#ef444405']}
+          style={styles.loadingIconContainer}
+        >
+          <Ionicons name="lock-closed" size={48} color="#ef4444" />
+        </LinearGradient>
+        <Text style={styles.loadingText}>Acesso Bloqueado</Text>
+        <Text style={styles.loadingSubtext}>
+          Você não tem permissão para acessar os canais de TV.
+        </Text>
+        <Text style={[styles.loadingSubtext, { marginTop: 8 }]}>
+          Entre em contato para solicitar acesso:
+        </Text>
+        
+        <TouchableOpacity
+          style={styles.instagramButton}
+          onPress={() => Linking.openURL('https://www.instagram.com/programadorpro_/')}
+        >
+          <Ionicons name="logo-instagram" size={20} color="#fff" />
+          <Text style={styles.instagramButtonText}>@programadorpro_</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.backButtonBlocked}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={styles.backButtonBlockedText}>Voltar</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   if (loading) {
     return (
@@ -589,5 +641,34 @@ const styles = StyleSheet.create({
     color: '#71717a',
     textAlign: 'center',
     paddingHorizontal: 32,
+  },
+  backButtonBlocked: {
+    marginTop: 16,
+    backgroundColor: '#27272a',
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#3f3f46',
+  },
+  backButtonBlockedText: {
+    color: '#e4e4e7',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  instagramButton: {
+    marginTop: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#E1306C',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
+  },
+  instagramButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

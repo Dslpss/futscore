@@ -136,7 +136,7 @@ router.get("/users/stats", authMiddleware, async (req, res) => {
 router.get("/users", authMiddleware, async (req, res) => {
   try {
     const users = await User.find()
-      .select("name email isAdmin status statusUpdatedAt createdAt pushToken favoriteTeams")
+      .select("name email isAdmin status statusUpdatedAt createdAt pushToken favoriteTeams canAccessTV")
       .sort({ createdAt: -1 })
       .limit(100);
 
@@ -151,8 +151,35 @@ router.get("/users", authMiddleware, async (req, res) => {
         createdAt: user.createdAt,
         hasPushToken: !!user.pushToken,
         favoriteTeamsCount: user.favoriteTeams?.length || 0,
+        canAccessTV: user.canAccessTV !== false, // Default true for existing users
       }))
     );
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Toggle TV access for user (Admin)
+router.put("/users/:id/tv-access", authMiddleware, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { canAccessTV } = req.body;
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { canAccessTV },
+      { new: true }
+    ).select("name email canAccessTV");
+
+    if (!user) {
+      return res.status(404).json({ message: "Usuário não encontrado." });
+    }
+
+    console.log(`[Admin] User ${user.email} TV access changed to ${canAccessTV} by ${req.user.email}`);
+    res.json({ 
+      message: canAccessTV ? "Acesso à TV liberado." : "Acesso à TV bloqueado.", 
+      user 
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

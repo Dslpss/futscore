@@ -27,6 +27,51 @@ const authMiddleware = async (req, res, next) => {
 // M3U URL (pode ser movido para variável de ambiente)
 const M3U_URL = "http://tiralit.shop:8880/get.php?username=q8swvtcke46&password=mrjnuhq81dt&type=m3u_plus&output=ts";
 
+// Optional auth middleware (doesn't require admin, just validates token)
+const optionalAuth = async (req, res, next) => {
+  const token = req.header("Authorization")?.replace("Bearer ", "");
+  if (!token) {
+    req.user = null;
+    return next();
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id);
+    req.user = user;
+    next();
+  } catch (err) {
+    req.user = null;
+    next();
+  }
+};
+
+// Check if user has TV access (requires auth)
+router.get("/check-access", async (req, res) => {
+  try {
+    const token = req.header("Authorization")?.replace("Bearer ", "");
+    if (!token) {
+      return res.json({ hasAccess: true }); // No auth = allow access
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id);
+    
+    if (!user) {
+      return res.json({ hasAccess: true }); // User not found = allow (might be new user)
+    }
+
+    if (user.canAccessTV === false) {
+      return res.json({ hasAccess: false, reason: "tv_blocked" });
+    }
+
+    return res.json({ hasAccess: true });
+  } catch (err) {
+    console.error("[Channels] Check access error:", err.message);
+    return res.json({ hasAccess: true }); // On error, allow access
+  }
+});
+
 // --- PUBLIC ROUTES ---
 
 // Get all active channels

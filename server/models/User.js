@@ -87,6 +87,11 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  // Controle de acesso a funcionalidades premium
+  canAccessTV: {
+    type: Boolean,
+    default: true, // Por padrão, todos têm acesso
+  },
 });
 
 module.exports = mongoose.model("User", userSchema);
