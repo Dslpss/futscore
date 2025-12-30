@@ -22,6 +22,7 @@ import TVChannelsScreen from "./src/screens/TVChannelsScreen";
 import { StatusBar } from "expo-status-bar";
 import { View, ActivityIndicator } from "react-native";
 import { forceCheckMatches } from "./src/services/backgroundTask";
+import { VersionBlocker } from "./src/components/VersionBlocker";
 
 const Stack = createNativeStackNavigator();
 
@@ -110,11 +111,13 @@ function AppNavigation() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <NavigationContainer>
-        <StatusBar style="light" />
-        <AppNavigation />
-      </NavigationContainer>
-    </AuthProvider>
+    <VersionBlocker>
+      <AuthProvider>
+        <NavigationContainer>
+          <StatusBar style="light" />
+          <AppNavigation />
+        </NavigationContainer>
+      </AuthProvider>
+    </VersionBlocker>
   );
 }

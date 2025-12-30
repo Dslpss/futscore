@@ -82,6 +82,22 @@ router.get("/version", async (req, res) => {
 
 // --- SYSTEM SETTINGS ---
 
+// Get specific setting (Public for app to check minimum version)
+router.get("/system-settings/:key", async (req, res) => {
+  try {
+    const { key } = req.params;
+    const setting = await SystemSetting.findOne({ key });
+    
+    if (!setting) {
+      return res.json({ key, value: null });
+    }
+    
+    res.json({ key, value: setting.value });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // Get all system settings (Admin)
 router.get("/system-settings", authMiddleware, async (req, res) => {
   try {
