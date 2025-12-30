@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Warning = require("../models/Warning");
 const AppVersion = require("../models/AppVersion");
+const SystemSetting = require("../models/SystemSetting");
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 const { sendPushToAll, expo, Expo } = require("../services/pushNotifications");
@@ -73,6 +74,49 @@ router.get("/version", async (req, res) => {
         forceUpdate: false,
       }
     );
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+
+// --- SYSTEM SETTINGS ---
+
+// Get all system settings (Admin)
+router.get("/system-settings", authMiddleware, async (req, res) => {
+  try {
+    const settings = await SystemSetting.find();
+    // Convert array to object for easier frontend consumption
+    const settingsMap = {};
+    settings.forEach(s => {
+      settingsMap[s.key] = s.value;
+    });
+    res.json(settingsMap);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Update system settings (Admin)
+router.put("/system-settings", authMiddleware, async (req, res) => {
+  try {
+    const updates = req.body; // Expect object like { "channels_maintenance": true }
+    
+    const results = {};
+    
+    for (const [key, value] of Object.entries(updates)) {
+      const setting = await SystemSetting.findOneAndUpdate(
+        { key },
+        { 
+          value, 
+          updatedAt: new Date() 
+        },
+        { upsert: true, new: true }
+      );
+      results[key] = setting.value;
+    }
+
+    res.json(results);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

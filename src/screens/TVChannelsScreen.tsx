@@ -66,6 +66,8 @@ export default function TVChannelsScreen({ navigation }: any) {
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
   const [playerVisible, setPlayerVisible] = useState(false);
   const [accessBlocked, setAccessBlocked] = useState(false);
+  const [blockedReason, setBlockedReason] = useState<string>('');
+  const [blockedMessage, setBlockedMessage] = useState<string>('');
 
   useEffect(() => {
     checkAccess();
@@ -76,15 +78,23 @@ export default function TVChannelsScreen({ navigation }: any) {
   }, [searchQuery, channels]);
 
   const checkAccess = async () => {
-    if (token) {
+    try {
       const result = await checkTVAccess(token);
-      if (!result.hasAccess && result.reason === 'tv_blocked') {
+      
+      if (!result.hasAccess) {
         setAccessBlocked(true);
+        setBlockedReason(result.reason || '');
+        setBlockedMessage(result.message || '');
         setLoading(false);
         return;
       }
+      
+      loadChannels();
+    } catch (error) {
+      // If check fails, try to load channels anyway (fail open unless explicit block)
+      console.error('Check access failed', error);
+      loadChannels();
     }
-    loadChannels();
   };
 
   const loadChannels = async () => {
@@ -292,30 +302,45 @@ export default function TVChannelsScreen({ navigation }: any) {
   );
 
   if (accessBlocked) {
+    const isMaintenance = blockedReason === 'maintenance';
+
     return (
       <View style={styles.loadingContainer}>
         <StatusBar barStyle="light-content" />
         <LinearGradient
-          colors={['#ef444420', '#ef444405']}
+          colors={isMaintenance ? ['#eab30820', '#eab30805'] : ['#ef444420', '#ef444405']}
           style={styles.loadingIconContainer}
         >
-          <Ionicons name="lock-closed" size={48} color="#ef4444" />
+          <Ionicons 
+            name={isMaintenance ? "construct" : "lock-closed"} 
+            size={48} 
+            color={isMaintenance ? "#eab308" : "#ef4444"} 
+          />
         </LinearGradient>
-        <Text style={styles.loadingText}>Acesso Bloqueado</Text>
-        <Text style={styles.loadingSubtext}>
-          Você não tem permissão para acessar os canais de TV.
+        <Text style={styles.loadingText}>
+          {isMaintenance ? "Sistema em Manutenção" : "Acesso Bloqueado"}
         </Text>
-        <Text style={[styles.loadingSubtext, { marginTop: 8 }]}>
-          Entre em contato para solicitar acesso:
+        <Text style={[styles.loadingSubtext, { textAlign: 'center', paddingHorizontal: 32 }]}>
+          {isMaintenance 
+            ? (blockedMessage || "O sistema de canais está em manutenção. Voltaremos em breve.")
+            : "Você não tem permissão para acessar os canais de TV."}
         </Text>
         
-        <TouchableOpacity
-          style={styles.instagramButton}
-          onPress={() => Linking.openURL('https://www.instagram.com/programadorpro_/')}
-        >
-          <Ionicons name="logo-instagram" size={20} color="#fff" />
-          <Text style={styles.instagramButtonText}>@programadorpro_</Text>
-        </TouchableOpacity>
+        {!isMaintenance && (
+          <>
+            <Text style={[styles.loadingSubtext, { marginTop: 8 }]}>
+              Entre em contato para solicitar acesso:
+            </Text>
+            
+            <TouchableOpacity
+              style={styles.instagramButton}
+              onPress={() => Linking.openURL('https://www.instagram.com/programadorpro_/')}
+            >
+              <Ionicons name="logo-instagram" size={20} color="#fff" />
+              <Text style={styles.instagramButtonText}>@programadorpro_</Text>
+            </TouchableOpacity>
+          </>
+        )}
 
         <TouchableOpacity
           style={styles.backButtonBlocked}

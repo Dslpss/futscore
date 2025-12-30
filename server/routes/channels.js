@@ -4,6 +4,7 @@ const Channel = require("../models/Channel");
 const { parseM3U } = require("../services/m3uParser");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const SystemSetting = require("../models/SystemSetting");
 
 // Admin middleware
 const authMiddleware = async (req, res, next) => {
@@ -49,6 +50,16 @@ const optionalAuth = async (req, res, next) => {
 // Check if user has TV access (requires auth)
 router.get("/check-access", async (req, res) => {
   try {
+    // Check maintenance mode first
+    const maintenanceSetting = await SystemSetting.findOne({ key: "channels_maintenance" });
+    if (maintenanceSetting && maintenanceSetting.value === true) {
+      return res.json({ 
+        hasAccess: false, 
+        reason: "maintenance",
+        message: "O sistema de canais está em manutenção. Voltaremos em breve."
+      });
+    }
+
     const token = req.header("Authorization")?.replace("Bearer ", "");
     if (!token) {
       return res.json({ hasAccess: true }); // No auth = allow access

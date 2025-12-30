@@ -64,10 +64,15 @@ export const incrementViewCount = async (id: string): Promise<void> => {
 /**
  * Check if user has access to TV channels
  */
-export const checkTVAccess = async (token: string): Promise<{ hasAccess: boolean; reason?: string }> => {
+export const checkTVAccess = async (token?: string | null): Promise<{ hasAccess: boolean; reason?: string; message?: string }> => {
   try {
+    const headers: any = {};
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+    
     const response = await axios.get(`${CHANNELS_BASE_URL}/check-access`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers
     });
     return response.data;
   } catch (error: any) {
