@@ -1274,26 +1274,40 @@ export const HomeScreen = ({ navigation }: any) => {
             </LinearGradient>
           </TouchableOpacity>
 
-          {/* TV Channels Button */}
+          {/* TV Channels Button - Premium Highlight */}
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => navigation.navigate("TVChannels")}
             activeOpacity={0.85}>
             <LinearGradient
-              colors={["#1e4d5f", "#1a1a2e"]}
+              colors={["#350b0b", "#1a1a2e"]} // Vinho muito escuro para o tema base
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={styles.actionButtonGradient}>
+              style={[styles.actionButtonGradient, styles.tvButtonBorder]}>
+              
+              {/* Badge Flutuante Discreto */}
+              <View style={styles.liveBadgeContainer}>
+                <LinearGradient
+                  colors={["#dc2626", "#991b1b"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.liveBadge}>
+                  <View style={styles.liveDot} />
+                  <Text style={styles.liveBadgeText}>LIVE</Text>
+                </LinearGradient>
+              </View>
+
               <View style={styles.actionButtonIconWrapper}>
                 <LinearGradient
-                  colors={["#06b6d4", "#0891b2"]}
+                  colors={["#f87171", "#dc2626"]} // Gradiente vermelho/salmão mais suave
                   style={styles.actionIconGradient}>
                   <Text style={styles.actionButtonIcon}>📺</Text>
                 </LinearGradient>
               </View>
+              
               <View style={styles.actionButtonTextContainer}>
                 <Text style={styles.actionButtonText}>TV ao Vivo</Text>
-                <Text style={styles.actionButtonSubtext}>Esportes</Text>
+                <Text style={styles.actionButtonSubtext}>Assista Agora</Text>
               </View>
             </LinearGradient>
           </TouchableOpacity>
@@ -2927,5 +2941,37 @@ const styles = StyleSheet.create({
   },
   searchResultFavoriteActive: {
     backgroundColor: "rgba(34, 197, 94, 0.15)",
+  },
+  // TV Button Styles
+  tvButtonBorder: {
+    borderWidth: 1,
+    borderColor: "rgba(239, 68, 68, 0.3)", // Borda vermelha bem sutil
+  },
+  liveBadgeContainer: {
+    position: "absolute",
+    top: 5,
+    right: 5,
+    zIndex: 10,
+  },
+  liveBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 4,
+    gap: 3,
+    backgroundColor: "rgba(220, 38, 38, 0.95)",
+  },
+  liveDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: "#fff",
+  },
+  liveBadgeText: {
+    color: "#fff",
+    fontSize: 7,
+    fontWeight: "900",
+    letterSpacing: 0.2,
   },
 });

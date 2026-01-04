@@ -47,14 +47,37 @@ export default function TVPlayerModal({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [aspectRatioMode, setAspectRatioMode] = useState<AspectRatioMode>('16:9');
   const [showAspectMenu, setShowAspectMenu] = useState(false);
+  const [isReconnecting, setIsReconnecting] = useState(false);
+  const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Auto-reload system refs
+  const bufferingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const stallCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastPositionRef = useRef<number>(0);
+  const stallCountRef = useRef<number>(0);
+  const isBufferingRef = useRef<boolean>(false);
+  
+  // Configuration for auto-reload
+  const MAX_BUFFERING_TIME = 15000; // 15 seconds of buffering triggers reload
+  const STALL_CHECK_INTERVAL = 3000; // Check every 3 seconds
+  const MAX_STALL_COUNT = 6; // 6 consecutive stalls trigger reload (more tolerant)
+  const MAX_RECONNECT_ATTEMPTS = 5; // Maximum auto-reconnect attempts
 
   useEffect(() => {
     if (visible && channel) {
       // Start in portrait mode
       ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
-      // Show navigation bar
+      // Show navigation bar initially
       NavigationBar.setVisibilityAsync('visible');
+      NavigationBar.setBehaviorAsync('overlay-swipe');
+      // Hide status bar initially (player should always be immersive)
+      StatusBar.setHidden(true, 'fade');
+      // Reset reconnect attempts
+      setReconnectAttempts(0);
+      setIsReconnecting(false);
+      stallCountRef.current = 0;
+      lastPositionRef.current = 0;
       // Increment view count
       incrementViewCount(channel._id);
     }
@@ -63,8 +86,19 @@ export default function TVPlayerModal({
     return () => {
       ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
       NavigationBar.setVisibilityAsync('visible');
+      NavigationBar.setBehaviorAsync('inset-touch');
+      StatusBar.setHidden(false, 'fade');
       setIsFullscreen(false);
       setShowAspectMenu(false);
+      // Clear auto-reload timeouts
+      if (bufferingTimeoutRef.current) {
+        clearTimeout(bufferingTimeoutRef.current);
+        bufferingTimeoutRef.current = null;
+      }
+      if (stallCheckIntervalRef.current) {
+        clearInterval(stallCheckIntervalRef.current);
+        stallCheckIntervalRef.current = null;
+      }
     };
   }, [visible, channel]);
 
@@ -73,12 +107,16 @@ export default function TVPlayerModal({
       // Exit fullscreen - go back to portrait
       await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
       await NavigationBar.setVisibilityAsync('visible');
+      await NavigationBar.setBehaviorAsync('overlay-swipe');
+      StatusBar.setHidden(true, 'fade'); // Keep hidden in portrait player mode too
       setIsFullscreen(false);
       setAspectRatioMode('16:9'); // Reset to 16:9 when exiting fullscreen
     } else {
-      // Enter fullscreen - go landscape and hide nav bar
+      // Enter fullscreen - go landscape and hide nav bar + gesture bar completely
       await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+      await NavigationBar.setBehaviorAsync('overlay-swipe');
       await NavigationBar.setVisibilityAsync('hidden');
+      StatusBar.setHidden(true, 'fade');
       setIsFullscreen(true);
       setAspectRatioMode('stretch'); // Switch to stretch when entering fullscreen
     }
@@ -125,16 +163,155 @@ export default function TVPlayerModal({
     };
   }, [showControls]);
 
+  // Auto-reload function - called when stall/buffering is detected
+  const autoReload = async () => {
+    // Prevent multiple simultaneous reloads
+    if (isReconnecting) {
+      console.log('Already reconnecting, skipping...');
+      return;
+    }
+
+    if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+      console.log('Max reconnect attempts reached');
+      setIsReconnecting(false);
+      setError('Conexão perdida. Toque em "Tentar novamente" para reconectar.');
+      return;
+    }
+
+    // Check if videoRef is still valid
+    if (!videoRef.current) {
+      console.log('Video ref is null, skipping reload');
+      return;
+    }
+
+    console.log(`Auto-reload attempt ${reconnectAttempts + 1}/${MAX_RECONNECT_ATTEMPTS}`);
+    setIsReconnecting(true);
+    setReconnectAttempts(prev => prev + 1);
+    stallCountRef.current = 0;
+    lastPositionRef.current = 0;
+    isBufferingRef.current = false;
+
+    // Clear any existing buffering timeout
+    if (bufferingTimeoutRef.current) {
+      clearTimeout(bufferingTimeoutRef.current);
+      bufferingTimeoutRef.current = null;
+    }
+
+    try {
+      // Double check ref is still valid
+      if (!videoRef.current) {
+        setIsReconnecting(false);
+        return;
+      }
+
+      await videoRef.current.unloadAsync();
+      
+      // Longer delay before reloading to prevent rapid loops
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Check again after delay
+      if (!videoRef.current) {
+        setIsReconnecting(false);
+        return;
+      }
+
+      await videoRef.current.loadAsync(
+        { uri: channel.url },
+        { shouldPlay: true },
+        false
+      );
+      
+      // Success - will be confirmed by playback status update
+      console.log('Reload successful, waiting for playback...');
+    } catch (err: any) {
+      console.error('Error auto-reloading video:', err);
+      setIsReconnecting(false);
+      
+      // Only retry if we haven't hit max attempts and ref is still valid
+      if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS && videoRef.current) {
+        setTimeout(() => {
+          autoReload();
+        }, 3000);
+      }
+    }
+  };
+
   const handlePlaybackStatusUpdate = (status: AVPlaybackStatus) => {
     if (status.isLoaded) {
       setIsLoading(false);
       setIsPlaying(status.isPlaying);
+      
+      // If we were reconnecting and now loaded, mark as successful
+      if (isReconnecting && status.isPlaying && !status.isBuffering) {
+        console.log('Reconnection successful!');
+        setIsReconnecting(false);
+        setReconnectAttempts(0);
+        stallCountRef.current = 0;
+      }
+      
+      // Check for buffering state - but only if not already reconnecting
+      const isCurrentlyBuffering = status.isBuffering;
+      
+      if (isCurrentlyBuffering && !isBufferingRef.current && !isReconnecting) {
+        // Started buffering - set timeout for auto-reload
+        isBufferingRef.current = true;
+        console.log('Started buffering...');
+        
+        bufferingTimeoutRef.current = setTimeout(() => {
+          console.log('Buffering timeout reached - auto-reloading');
+          autoReload();
+        }, MAX_BUFFERING_TIME);
+      } else if (!isCurrentlyBuffering && isBufferingRef.current) {
+        // Stopped buffering - clear timeout
+        isBufferingRef.current = false;
+        if (bufferingTimeoutRef.current) {
+          clearTimeout(bufferingTimeoutRef.current);
+          bufferingTimeoutRef.current = null;
+        }
+        // Reset stall count on successful playback resume
+        stallCountRef.current = 0;
+      }
+      
+      // Check for stalled playback - but NOT during buffering or reconnecting
+      if (status.isPlaying && !isCurrentlyBuffering && !isReconnecting && status.positionMillis !== undefined) {
+        const currentPosition = status.positionMillis;
+        
+        // Only count as stall if position exactly same AND we've been playing for a bit
+        if (currentPosition === lastPositionRef.current && currentPosition > 1000) {
+          // Position hasn't changed - might be stalled
+          stallCountRef.current++;
+          
+          // Only log every few stalls to reduce noise
+          if (stallCountRef.current % 2 === 0) {
+            console.log(`Stall detected: ${stallCountRef.current}/${MAX_STALL_COUNT}`);
+          }
+          
+          if (stallCountRef.current >= MAX_STALL_COUNT) {
+            console.log('Max stalls reached - auto-reloading');
+            stallCountRef.current = 0; // Reset before reload to prevent immediate re-trigger
+            autoReload();
+          }
+        } else if (currentPosition !== lastPositionRef.current) {
+          // Position is advancing - reset stall count
+          stallCountRef.current = 0;
+          lastPositionRef.current = currentPosition;
+          // Successful playback - reset reconnect attempts
+          if (reconnectAttempts > 0 && !isCurrentlyBuffering) {
+            setReconnectAttempts(0);
+          }
+        }
+      }
     } else {
       // Handle error state
       if (status.error) {
         console.error('Video error:', status.error);
         setIsLoading(false);
-        setError(`Erro: ${status.error}`);
+        // Auto-reload on error instead of showing error immediately
+        if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS && !isReconnecting) {
+          autoReload();
+        } else {
+          setError(`Erro: ${status.error}`);
+        }
       }
     }
   };
@@ -152,6 +329,16 @@ export default function TVPlayerModal({
   const handleReload = async () => {
     setError(null);
     setIsLoading(true);
+    setIsReconnecting(false);
+    setReconnectAttempts(0);
+    stallCountRef.current = 0;
+    lastPositionRef.current = 0;
+    
+    // Clear buffering timeout
+    if (bufferingTimeoutRef.current) {
+      clearTimeout(bufferingTimeoutRef.current);
+      bufferingTimeoutRef.current = null;
+    }
     
     if (videoRef.current) {
       try {
@@ -179,8 +366,10 @@ export default function TVPlayerModal({
     // Reset orientation to portrait
     await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
     
-    // Show navigation bar
+    // Show navigation bar and status bar
     await NavigationBar.setVisibilityAsync('visible');
+    await NavigationBar.setBehaviorAsync('inset-touch');
+    StatusBar.setHidden(false, 'fade');
     
     // Reset states
     setError(null);
@@ -230,10 +419,21 @@ export default function TVPlayerModal({
           />
 
           {/* Loading Indicator */}
-          {isLoading && !error && (
+          {isLoading && !error && !isReconnecting && (
             <View style={styles.loadingOverlay}>
               <ActivityIndicator size="large" color="#fff" />
               <Text style={styles.loadingText}>Carregando stream...</Text>
+            </View>
+          )}
+
+          {/* Reconnecting Indicator */}
+          {isReconnecting && !error && (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="large" color="#22c55e" />
+              <Text style={styles.reconnectingText}>Reconectando...</Text>
+              <Text style={styles.reconnectingSubtext}>
+                Tentativa {reconnectAttempts}/{MAX_RECONNECT_ATTEMPTS}
+              </Text>
             </View>
           )}
 
@@ -397,6 +597,17 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     marginTop: 16,
+  },
+  reconnectingText: {
+    color: '#22c55e',
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 16,
+  },
+  reconnectingSubtext: {
+    color: '#94a3b8',
+    fontSize: 12,
+    marginTop: 8,
   },
   errorOverlay: {
     ...StyleSheet.absoluteFillObject,
