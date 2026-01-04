@@ -3,6 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { EspnLiveCard } from './EspnLiveCard';
 import { OndeAssistirCard } from './OndeAssistirCard';
 import { NewsSliderCard } from './NewsSliderCard';
+import { LiveChannelsSlider } from './LiveChannelsSlider';
 
 /**
  * Isolated component for TV Cards and News Slider
@@ -11,6 +12,9 @@ import { NewsSliderCard } from './NewsSliderCard';
 const TVCardsSectionContent: React.FC = () => {
   return (
     <View style={styles.container}>
+      {/* Live Channels Transmitting Games */}
+      <LiveChannelsSlider />
+      
       {/* ESPN Live Games */}
       <EspnLiveCard />
       

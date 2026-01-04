@@ -275,7 +275,8 @@ router.post("/upload", authMiddleware, async (req, res) => {
       'copa', 'liga', 'arena', 'racing', 'tennis', 'golf', 'rugby',
       'cricket', 'formula', 'f1', 'moto', 'volei', 'basquete',
       'beinsports', 'sky sports', 'dazn', 'eleven', 'fox deportes',
-      'tnt sports', 'star+', 'paramount', 'peacock', 'nbcsn'
+      'tnt sports', 'star+', 'paramount', 'peacock', 'nbcsn',
+      'disney +', 'disney+', 'goat', 'caze'
     ];
 
     for (let i = 0; i < lines.length; i++) {
@@ -336,6 +337,11 @@ router.post("/upload", authMiddleware, async (req, res) => {
     let updatedCount = 0;
 
     for (const channelData of channels) {
+      // Garantir que language seja sempre string (nunca null - evita conflito com text index)
+      const safeLanguage = channelData.language && typeof channelData.language === 'string' 
+        ? channelData.language 
+        : '';
+      
       const existing = await Channel.findOne({ url: channelData.url });
 
       if (existing) {
@@ -344,7 +350,7 @@ router.post("/upload", authMiddleware, async (req, res) => {
           logo: channelData.logo || existing.logo,
           groupTitle: channelData.groupTitle || existing.groupTitle,
           country: channelData.country || existing.country,
-          language: channelData.language || existing.language,
+          language: safeLanguage || existing.language || '',
           updatedAt: new Date(),
         });
         updatedCount++;
@@ -356,7 +362,7 @@ router.post("/upload", authMiddleware, async (req, res) => {
           category: "sports",
           groupTitle: channelData.groupTitle,
           country: channelData.country,
-          language: channelData.language,
+          language: safeLanguage,
         });
         newCount++;
       }

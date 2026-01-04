@@ -121,11 +121,18 @@ const OndeAssistirCardContent: React.FC = () => {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <View style={styles.badge}>
-              <Tv size={12} color="#fff" />
+          <View style={styles.headerContent}>
+            <View style={styles.headerTitleRow}>
+              <View style={styles.headerIcon}>
+                <Tv size={18} color="#3b82f6" />
+              </View>
+              <View>
+                <View style={styles.sectionBadge}>
+                  <Text style={styles.sectionBadgeText}>PROGRAMAÇÃO</Text>
+                </View>
+                <Text style={styles.title}>Onde Assistir</Text>
+              </View>
             </View>
-            <Text style={styles.headerTitle}>Onde Assistir</Text>
           </View>
         </View>
         <View style={styles.scrollWrapper}>
@@ -142,11 +149,18 @@ const OndeAssistirCardContent: React.FC = () => {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <View style={styles.badge}>
-              <Tv size={12} color="#fff" />
+          <View style={styles.headerContent}>
+            <View style={styles.headerTitleRow}>
+              <View style={styles.headerIcon}>
+                <Tv size={18} color="#3b82f6" />
+              </View>
+              <View>
+                <View style={styles.sectionBadge}>
+                  <Text style={styles.sectionBadgeText}>PROGRAMAÇÃO</Text>
+                </View>
+                <Text style={styles.title}>Onde Assistir</Text>
+              </View>
             </View>
-            <Text style={styles.headerTitle}>Onde Assistir</Text>
           </View>
         </View>
         <View style={styles.scrollWrapper}>
@@ -160,13 +174,20 @@ const OndeAssistirCardContent: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      {/* Header - removed refresh button */}
+      {/* Premium Header */}
       <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <View style={styles.badge}>
-            <Tv size={12} color="#fff" />
+        <View style={styles.headerContent}>
+          <View style={styles.headerTitleRow}>
+            <View style={styles.headerIcon}>
+              <Tv size={18} color="#3b82f6" />
+            </View>
+            <View>
+              <View style={styles.sectionBadge}>
+                <Text style={styles.sectionBadgeText}>PROGRAMAÇÃO</Text>
+              </View>
+              <Text style={styles.title}>Onde Assistir</Text>
+            </View>
           </View>
-          <Text style={styles.headerTitle}>Onde Assistir</Text>
         </View>
       </View>
 
@@ -418,26 +439,48 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   header: {
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 12,
   },
-  headerLeft: {
+  headerTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
   },
-  badge: {
-    backgroundColor: '#22c55e',
-    padding: 6,
-    borderRadius: 8,
+  headerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: 'rgba(59, 130, 246, 0.1)', // Azul para diferenciar
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.2)',
   },
-  headerTitle: {
-    color: '#e4e4e7',
-    fontSize: 14,
-    fontWeight: '700',
+  sectionBadge: {
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+    marginBottom: 2,
+  },
+  sectionBadgeText: {
+    color: '#3b82f6',
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  title: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    letterSpacing: -0.5,
   },
   refreshButton: {
     padding: 8,

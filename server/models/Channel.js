@@ -24,7 +24,8 @@ const channelSchema = new mongoose.Schema({
   },
   language: {
     type: String,
-    default: null,
+    default: "",
+    set: (v) => (v === null || v === undefined ? "" : String(v)),
   },
   groupTitle: {
     type: String,
@@ -54,6 +55,8 @@ const channelSchema = new mongoose.Schema({
 
 // Index for faster queries
 channelSchema.index({ category: 1, isActive: 1 });
-channelSchema.index({ name: "text" });
+// Use simple index instead of text index to avoid language field conflicts
+channelSchema.index({ name: 1 });
 
 module.exports = mongoose.model("Channel", channelSchema);
+

@@ -109,7 +109,8 @@ function isSportsChannel(channel) {
     'copa', 'liga', 'arena', 'racing', 'tennis', 'golf', 'rugby',
     'cricket', 'formula', 'f1', 'moto', 'volei', 'basquete',
     'beinsports', 'sky sports', 'dazn', 'eleven', 'fox deportes',
-    'tnt sports', 'star+', 'paramount', 'peacock', 'nbcsn'
+    'tnt sports', 'star+', 'paramount', 'peacock', 'nbcsn',
+    'disney +', 'disney+', 'goat', 'caze'
   ];
 
   const searchText = `${channel.name} ${channel.groupTitle || ''}`.toLowerCase();
