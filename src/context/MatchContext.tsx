@@ -6,6 +6,7 @@ import React, {
   ReactNode,
   useRef,
 } from "react";
+import { AppState, AppStateStatus } from "react-native";
 import { api } from "../services/api";
 import { Match, League } from "../types";
 import { CONFIG } from "../constants/config";
@@ -105,6 +106,36 @@ export const MatchProvider: React.FC<{ children: ReactNode }> = ({
 
     return () => clearInterval(interval);
   }, [liveMatches.length, loading]); // Recria o intervalo quando o número de jogos ao vivo muda
+
+  // Efeito para RECARREGAR quando o app volta do background
+  useEffect(() => {
+    const appStateRef = { current: AppState.currentState };
+    
+    const handleAppStateChange = (nextAppState: AppStateStatus) => {
+      // App voltou para foreground (estava em background/inactive e agora está active)
+      if (
+        appStateRef.current.match(/inactive|background/) &&
+        nextAppState === "active"
+      ) {
+        console.log("[MatchContext] App returned from background, refreshing matches...");
+        // Refresh matches silently
+        matchService.checkMatchesAndNotify(favoriteTeamsRef.current)
+          .then(({ liveMatches: live, todaysMatches: today }) => {
+            setLiveMatches(live);
+            setTodaysMatches(today);
+            console.log("[MatchContext] Matches refreshed after background return");
+          })
+          .catch(err => console.error("[MatchContext] Error refreshing after background:", err));
+      }
+      appStateRef.current = nextAppState;
+    };
+
+    const subscription = AppState.addEventListener("change", handleAppStateChange);
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
 
   return (
     <MatchContext.Provider

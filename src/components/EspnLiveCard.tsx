@@ -121,8 +121,10 @@ const EspnLiveCardContent: React.FC = () => {
       <View style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <View style={styles.espnBadge}>
-              <Text style={styles.espnText}>ESPN</Text>
+            <View style={styles.headerIcon}>
+              <View style={styles.espnBadge}>
+                <Text style={styles.espnText}>ESPN</Text>
+              </View>
             </View>
             <Text style={styles.headerTitle}>Na ESPN</Text>
           </View>
@@ -142,8 +144,10 @@ const EspnLiveCardContent: React.FC = () => {
       <View style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <View style={styles.espnBadge}>
-              <Text style={styles.espnText}>ESPN</Text>
+            <View style={styles.headerIcon}>
+              <View style={styles.espnBadge}>
+                <Text style={styles.espnText}>ESPN</Text>
+              </View>
             </View>
             <Text style={styles.headerTitle}>Na ESPN</Text>
           </View>
@@ -159,11 +163,13 @@ const EspnLiveCardContent: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      {/* Header - removed refresh button */}
+      {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <View style={styles.espnBadge}>
-            <Text style={styles.espnText}>ESPN</Text>
+          <View style={styles.headerIcon}>
+            <View style={styles.espnBadge}>
+              <Text style={styles.espnText}>ESPN</Text>
+            </View>
           </View>
           <Text style={styles.headerTitle}>Na ESPN</Text>
         </View>
@@ -550,29 +556,39 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     marginBottom: 12,
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
+  },
+  headerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: 'rgba(220, 38, 38, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(220, 38, 38, 0.2)',
   },
   espnBadge: {
     backgroundColor: '#dc2626',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 4,
   },
   espnText: {
     color: '#fff',
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '900',
     letterSpacing: 0.5,
   },
   headerTitle: {
     color: '#e4e4e7',
-    fontSize: 14,
+    fontSize: 18,
     fontWeight: '700',
   },
   refreshButton: {

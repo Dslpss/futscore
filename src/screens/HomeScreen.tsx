@@ -83,6 +83,7 @@ const TeamSearchInput = React.memo(({
   const [localQuery, setLocalQuery] = useState("");
   const [focused, setFocused] = useState(false);
   const animValue = useRef(new Animated.Value(0)).current;
+  const glowAnim = useRef(new Animated.Value(0)).current;
 
   const handleChange = (text: string) => {
     setLocalQuery(text);
@@ -91,113 +92,172 @@ const TeamSearchInput = React.memo(({
 
   const handleFocus = () => {
     setFocused(true);
-    animValue.stopAnimation(() => {
+    Animated.parallel([
       Animated.timing(animValue, {
         toValue: 1,
-        duration: 200,
+        duration: 250,
         useNativeDriver: false,
-      }).start();
-    });
+      }),
+      Animated.timing(glowAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: false,
+      }),
+    ]).start();
   };
 
   const handleBlur = () => {
     setFocused(false);
-    animValue.stopAnimation(() => {
+    Animated.parallel([
       Animated.timing(animValue, {
         toValue: 0,
         duration: 200,
         useNativeDriver: false,
-      }).start();
-    });
+      }),
+      Animated.timing(glowAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: false,
+      }),
+    ]).start();
   };
 
   return (
     <View style={teamSearchStyles.wrapper}>
-      <Animated.View
-        style={[
-          teamSearchStyles.container,
-          {
-            borderColor: animValue.interpolate({
-              inputRange: [0, 1],
-              outputRange: ["rgba(255,255,255,0.05)", "#22c55e"],
-            }),
-          },
-        ]}>
-        <Search size={18} color={focused ? "#22c55e" : "#71717a"} />
-        <TextInput
-          style={teamSearchStyles.input}
-          placeholder="Buscar time para favoritar..."
-          placeholderTextColor="#71717a"
-          value={localQuery}
-          onChangeText={handleChange}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-        />
-        {localQuery.length > 0 && (
-          <TouchableOpacity onPress={() => { setLocalQuery(""); onSearchChange(""); }}>
-            <Ionicons name="close-circle" size={18} color="#71717a" />
-          </TouchableOpacity>
-        )}
-      </Animated.View>
-
-      {/* Search Results Dropdown */}
-      {(searchResults.length > 0 || searchingTeams) && localQuery.length >= 2 && (
-        <View style={teamSearchStyles.resultsContainer}>
-          {searchingTeams ? (
-            <View style={teamSearchStyles.loadingContainer}>
-              <Text style={teamSearchStyles.loadingText}>Buscando times...</Text>
+      {/* Premium Card Container */}
+      <View style={teamSearchStyles.cardContainer}>
+        {/* Background Glow */}
+        <View style={teamSearchStyles.cardGlow} />
+        
+        {/* Header */}
+        <View style={teamSearchStyles.header}>
+          <View style={teamSearchStyles.headerLeft}>
+            <View style={teamSearchStyles.headerIcon}>
+              <LinearGradient
+                colors={["#fbbf24", "#f59e0b"]}
+                style={StyleSheet.absoluteFillObject}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              />
+              <Heart size={14} color="#fff" fill="#fff" />
             </View>
-          ) : (
-            searchResults.map((team) => (
-              <TouchableOpacity
-                key={team.id}
-                style={teamSearchStyles.resultItem}
-                onPress={() => {
-                  toggleFavoriteTeam(team.id, {
-                    name: team.name,
-                    logo: team.logo,
-                    country: team.country,
-                    msnId: team.msnId,
-                  });
-                }}
-                activeOpacity={0.7}
-              >
-                <Image
-                  source={{ uri: team.logo }}
-                  style={teamSearchStyles.resultLogo}
-                  resizeMode="contain"
-                />
-                <View style={teamSearchStyles.resultInfo}>
-                  <Text style={teamSearchStyles.resultName} numberOfLines={1}>
-                    {team.name}
-                  </Text>
-                  <Text style={teamSearchStyles.resultCountry}>{team.country}</Text>
-                </View>
-                <TouchableOpacity
-                  style={[
-                    teamSearchStyles.resultFavorite,
-                    isFavoriteTeam(team.id) && teamSearchStyles.resultFavoriteActive,
-                  ]}
-                  onPress={() => {
-                    toggleFavoriteTeam(team.id, {
-                      name: team.name,
-                      logo: team.logo,
-                      country: team.country,
-                      msnId: team.msnId,
-                    });
-                  }}
-                >
-                  <Heart
-                    size={18}
-                    color={isFavoriteTeam(team.id) ? "#22c55e" : "#71717a"}
-                    fill={isFavoriteTeam(team.id) ? "#22c55e" : "transparent"}
-                  />
-                </TouchableOpacity>
-              </TouchableOpacity>
-            ))
-          )}
+            <View>
+              <Text style={teamSearchStyles.headerTitle}>Adicionar Favorito</Text>
+              <Text style={teamSearchStyles.headerSubtitle}>Busque seu time do coração</Text>
+            </View>
+          </View>
         </View>
-      )}
+
+        {/* Search Input Container */}
+        <Animated.View
+          style={[
+            teamSearchStyles.inputContainer,
+            {
+              borderColor: animValue.interpolate({
+                inputRange: [0, 1],
+                outputRange: ["rgba(255,255,255,0.06)", "#22c55e"],
+              }),
+              shadowOpacity: glowAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, 0.3],
+              }),
+            },
+          ]}>
+          <View style={teamSearchStyles.searchIconWrapper}>
+            <Search size={16} color={focused ? "#22c55e" : "#52525b"} />
+          </View>
+          <TextInput
+            style={teamSearchStyles.input}
+            placeholder="Digite o nome do time..."
+            placeholderTextColor="#52525b"
+            value={localQuery}
+            onChangeText={handleChange}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+          />
+          {localQuery.length > 0 && (
+            <TouchableOpacity 
+              onPress={() => { setLocalQuery(""); onSearchChange(""); }}
+              style={teamSearchStyles.clearButton}
+            >
+              <Ionicons name="close-circle" size={18} color="#52525b" />
+            </TouchableOpacity>
+          )}
+        </Animated.View>
+
+        {/* Search Results */}
+        {(searchResults.length > 0 || searchingTeams) && localQuery.length >= 2 && (
+          <View style={teamSearchStyles.resultsContainer}>
+            {searchingTeams ? (
+              <View style={teamSearchStyles.loadingContainer}>
+                <View style={teamSearchStyles.loadingDot} />
+                <Text style={teamSearchStyles.loadingText}>Buscando times...</Text>
+              </View>
+            ) : (
+              <>
+                <View style={teamSearchStyles.resultsHeader}>
+                  <Text style={teamSearchStyles.resultsCount}>{searchResults.length} time{searchResults.length !== 1 ? 's' : ''} encontrado{searchResults.length !== 1 ? 's' : ''}</Text>
+                </View>
+                {searchResults.map((team, index) => (
+                  <TouchableOpacity
+                    key={team.id}
+                    style={[
+                      teamSearchStyles.resultItem,
+                      index === searchResults.length - 1 && teamSearchStyles.resultItemLast,
+                    ]}
+                    onPress={() => {
+                      toggleFavoriteTeam(team.id, {
+                        name: team.name,
+                        logo: team.logo,
+                        country: team.country,
+                        msnId: team.msnId,
+                      });
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <View style={teamSearchStyles.resultLogoWrapper}>
+                      <Image
+                        source={{ uri: team.logo }}
+                        style={teamSearchStyles.resultLogo}
+                        resizeMode="contain"
+                      />
+                    </View>
+                    <View style={teamSearchStyles.resultInfo}>
+                      <Text style={teamSearchStyles.resultName} numberOfLines={1}>
+                        {team.name}
+                      </Text>
+                      <Text style={teamSearchStyles.resultCountry}>{team.country}</Text>
+                    </View>
+                    <TouchableOpacity
+                      style={[
+                        teamSearchStyles.resultFavorite,
+                        isFavoriteTeam(team.id) && teamSearchStyles.resultFavoriteActive,
+                      ]}
+                      onPress={() => {
+                        toggleFavoriteTeam(team.id, {
+                          name: team.name,
+                          logo: team.logo,
+                          country: team.country,
+                          msnId: team.msnId,
+                        });
+                      }}
+                    >
+                      <Heart
+                        size={16}
+                        color={isFavoriteTeam(team.id) ? "#22c55e" : "#71717a"}
+                        fill={isFavoriteTeam(team.id) ? "#22c55e" : "transparent"}
+                      />
+                      {isFavoriteTeam(team.id) && (
+                        <Text style={teamSearchStyles.favoriteLabel}>Favorito</Text>
+                      )}
+                    </TouchableOpacity>
+                  </TouchableOpacity>
+                ))}
+              </>
+            )}
+          </View>
+        )}
+      </View>
     </View>
   );
 });
@@ -205,39 +265,137 @@ const TeamSearchInput = React.memo(({
 const teamSearchStyles = StyleSheet.create({
   wrapper: {
     marginTop: 16,
-    marginBottom: 8,
+    marginBottom: 12,
   },
-  container: {
+  cardContainer: {
+    backgroundColor: "rgba(24, 24, 27, 0.9)",
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+    overflow: "hidden",
+  },
+  cardGlow: {
+    position: "absolute",
+    top: -50,
+    right: -50,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "rgba(251, 191, 36, 0.06)",
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  headerLeft: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#18181b",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderWidth: 1,
-    gap: 10,
+    gap: 12,
+  },
+  headerIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+    shadowColor: "#fbbf24",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  headerTitle: {
+    color: "#e4e4e7",
+    fontSize: 15,
+    fontWeight: "700",
+    letterSpacing: 0.2,
+  },
+  headerSubtitle: {
+    color: "#71717a",
+    fontSize: 11,
+    fontWeight: "500",
+    marginTop: 1,
+  },
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(39, 39, 42, 0.8)",
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1.5,
+    gap: 8,
+    shadowColor: "#22c55e",
+    shadowOffset: { width: 0, height: 0 },
+    shadowRadius: 12,
+    elevation: 0,
+  },
+  searchIconWrapper: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   input: {
     flex: 1,
     color: "#e4e4e7",
-    fontSize: 15,
+    fontSize: 14,
+    fontWeight: "500",
     padding: 0,
   },
+  clearButton: {
+    padding: 4,
+  },
   resultsContainer: {
-    backgroundColor: "#1f1f23",
-    borderRadius: 12,
-    marginTop: 8,
+    backgroundColor: "rgba(24, 24, 27, 0.95)",
+    borderRadius: 14,
+    marginTop: 12,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
+    borderColor: "rgba(255,255,255,0.08)",
     overflow: "hidden",
   },
+  resultsHeader: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.06)",
+    backgroundColor: "rgba(255,255,255,0.02)",
+  },
+  resultsCount: {
+    color: "#52525b",
+    fontSize: 11,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
   loadingContainer: {
-    padding: 16,
+    padding: 20,
     alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 10,
+  },
+  loadingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#22c55e",
   },
   loadingText: {
     color: "#71717a",
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: "500",
   },
   resultItem: {
     flexDirection: "row",
@@ -245,13 +403,26 @@ const teamSearchStyles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 14,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.05)",
+    borderBottomColor: "rgba(255,255,255,0.04)",
+    backgroundColor: "transparent",
+  },
+  resultItemLast: {
+    borderBottomWidth: 0,
+  },
+  resultLogoWrapper: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
   },
   resultLogo: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.05)",
+    width: 28,
+    height: 28,
+    borderRadius: 14,
   },
   resultInfo: {
     flex: 1,
@@ -261,22 +432,45 @@ const teamSearchStyles = StyleSheet.create({
     color: "#e4e4e7",
     fontSize: 14,
     fontWeight: "600",
+    letterSpacing: 0.1,
   },
   resultCountry: {
     color: "#71717a",
-    fontSize: 12,
+    fontSize: 11,
     marginTop: 2,
+    fontWeight: "500",
   },
   resultFavorite: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.05)",
-    justifyContent: "center",
+    flexDirection: "row",
     alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: "rgba(255,255,255,0.04)",
+    gap: 6,
   },
   resultFavoriteActive: {
-    backgroundColor: "rgba(34, 197, 94, 0.15)",
+    backgroundColor: "rgba(34, 197, 94, 0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(34, 197, 94, 0.25)",
+  },
+  favoriteLabel: {
+    color: "#22c55e",
+    fontSize: 10,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+  },
+  // Legacy - keeping for backwards compatibility
+  container: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#18181b",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderWidth: 1,
+    gap: 10,
   },
 });
 
@@ -1134,38 +1328,49 @@ export const HomeScreen = ({ navigation }: any) => {
         </View>
       </View>
 
-      {/* Date Selector */}
+      {/* Date Selector - Premium Calendar Card */}
       <View style={styles.dateSelectorWrapper}>
         <View style={styles.dateSelectorOuterContainer}>
+          {/* Background Gradient Effects */}
           <LinearGradient
             colors={[
-              "rgba(34,197,94,0.12)",
-              "rgba(22,163,74,0.05)",
-              "transparent",
+              "rgba(34,197,94,0.08)",
+              "rgba(22,163,74,0.03)",
+              "rgba(0,0,0,0)",
             ]}
             style={styles.dateSelectorGradientBg}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
           />
+          <View style={styles.calendarGlowEffect} />
+          
+          {/* Compact Header */}
           <View style={styles.dateSelectorHeader}>
             <View style={styles.dateSelectorTitleRow}>
               <View style={styles.dateSelectorIconWrapper}>
                 <LinearGradient
-                  colors={["#22c55e", "#16a34a"]}
+                  colors={["#4ade80", "#22c55e"]}
                   style={StyleSheet.absoluteFillObject}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                 />
-                <Calendar size={14} color="#fff" />
+                <Calendar size={12} color="#fff" />
               </View>
-              <Text style={styles.dateSelectorTitle}>Selecionar Data</Text>
+              <Text style={styles.dateSelectorTitle}>Calendário</Text>
             </View>
-            <Text style={styles.dateSelectorMonth}>
-              {selectedDate
-                .toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
-                .replace(/^\w/, (c) => c.toUpperCase())}
-            </Text>
+            <View style={styles.monthBadge}>
+              <Text style={styles.dateSelectorMonth}>
+                {selectedDate
+                  .toLocaleDateString("pt-BR", { month: "short" })
+                  .replace(".", "")}
+              </Text>
+              <Text style={styles.yearText}>
+                {selectedDate.getFullYear()}
+              </Text>
+            </View>
           </View>
+          
+          {/* Date Scroll Container */}
           <View style={styles.dateSelectorRow}>
             <ScrollView
               horizontal
@@ -1176,7 +1381,6 @@ export const HomeScreen = ({ navigation }: any) => {
                   date.getDate() === selectedDate.getDate() &&
                   date.getMonth() === selectedDate.getMonth();
                 const isDateToday = isToday(date);
-                // Use local date formatting to avoid timezone shift issues
                 const year = date.getFullYear();
                 const month = String(date.getMonth() + 1).padStart(2, "0");
                 const day = String(date.getDate()).padStart(2, "0");
@@ -1192,16 +1396,18 @@ export const HomeScreen = ({ navigation }: any) => {
                       isDateToday && !isSelected && styles.dateButtonToday,
                     ]}
                     onPress={() => setSelectedDate(date)}
-                    activeOpacity={0.7}>
+                    activeOpacity={0.8}>
                     {isSelected && (
                       <LinearGradient
-                        colors={["#4ade80", "#22c55e"]}
-                        style={StyleSheet.absoluteFillObject}
+                        colors={["#22c55e", "#16a34a"]}
+                        style={[StyleSheet.absoluteFillObject, { borderRadius: 16 }]}
                         start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
+                        end={{ x: 0, y: 1 }}
                       />
                     )}
                     {isSelected && <View style={styles.dateButtonGlow} />}
+                    
+                    {/* Day Label */}
                     <Text
                       style={[
                         styles.dateDayText,
@@ -1215,24 +1421,28 @@ export const HomeScreen = ({ navigation }: any) => {
                             .toUpperCase()
                             .replace(".", "")}
                     </Text>
+                    
+                    {/* Date Number */}
                     <Text
                       style={[
                         styles.dateNumberText,
                         isSelected && styles.dateTextActive,
-                        isDateToday &&
-                          !isSelected &&
-                          styles.dateNumberTextToday,
+                        isDateToday && !isSelected && styles.dateNumberTextToday,
                       ]}>
                       {date.getDate()}
                     </Text>
-                    {hasMatches && !isSelected && (
-                      <View style={styles.matchIndicatorDot}>
-                        <View style={styles.matchIndicatorDotInner} />
-                      </View>
-                    )}
-                    {hasMatches && isSelected && (
-                      <View style={styles.matchIndicatorDotActive}>
-                        <View style={styles.matchIndicatorDotActiveInner} />
+                    
+                    {/* Match Indicator */}
+                    {hasMatches && (
+                      <View style={[
+                        styles.matchIndicatorContainer,
+                        isSelected && styles.matchIndicatorContainerActive,
+                      ]}>
+                        {isSelected ? (
+                          <Text style={styles.matchIndicatorText}>⚽</Text>
+                        ) : (
+                          <View style={styles.matchIndicatorBar} />
+                        )}
                       </View>
                     )}
                   </TouchableOpacity>
@@ -1510,72 +1720,99 @@ export const HomeScreen = ({ navigation }: any) => {
         </ScrollView>
       </View>
 
-      {/* League Selector */}
+      {/* League Selector - Premium Chips */}
       <View style={styles.leagueSelectorWrapper}>
-        <View style={styles.leagueSelectorHeader}>
-          <Text style={styles.leagueSelectorTitle}>Competições</Text>
-          <View style={styles.swipeHint}>
-            <Text style={styles.swipeHintText}>Deslize para ver mais</Text>
-            <Text style={styles.swipeHintArrow}>›</Text>
+        <View style={styles.leagueSelectorCard}>
+          {/* Background Glow */}
+          <View style={styles.leagueSelectorGlow} />
+          
+          {/* Header */}
+          <View style={styles.leagueSelectorHeader}>
+            <View style={styles.leagueTitleRow}>
+              <View style={styles.leagueTitleIcon}>
+                <Text style={{ fontSize: 12 }}>⚽</Text>
+              </View>
+              <Text style={styles.leagueSelectorTitle}>Competições</Text>
+            </View>
+            <View style={styles.filterBadge}>
+              <Text style={styles.filterBadgeText}>
+                {leagues.length} ligas
+              </Text>
+            </View>
           </View>
-        </View>
-        <ScrollView
-          ref={leagueSelectorRef}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.leagueSelectorContainer}
-          onScroll={(e) => {
-            leagueScrollPosition.current = e.nativeEvent.contentOffset.x;
-          }}
-          scrollEventThrottle={16}
-          onContentSizeChange={() => {
-            // Restore scroll position after re-render
-            if (leagueSelectorRef.current && leagueScrollPosition.current > 0) {
-              leagueSelectorRef.current.scrollTo({
-                x: leagueScrollPosition.current,
-                animated: false,
-              });
-            }
-          }}>
-          {leagues.map((league, index) => {
-            const isSelected = selectedLeague === league.code;
-            const isFirst = index === 0;
-            const isLast = index === leagues.length - 1;
-            
-            return (
-              <TouchableOpacity
-                key={league.code}
-                style={[
-                  styles.leagueChip,
-                  isFirst && styles.leagueChipFirst,
-                  isLast && styles.leagueChipLast,
-                  isSelected && styles.leagueChipActive,
-                ]}
-                onPress={() => setSelectedLeague(league.code)}
-                activeOpacity={0.7}>
-                {isSelected && (
-                  <LinearGradient
-                    colors={["#22c55e", "#16a34a"]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={[StyleSheet.absoluteFillObject, { borderRadius: 16 }]}
-                  />
-                )}
-                <View style={styles.leagueChipContent}>
-                  <Text style={styles.leagueChipIcon}>{league.icon}</Text>
-                  <Text
-                    style={[
-                      styles.leagueChipText,
-                      isSelected && styles.leagueChipTextActive,
+
+          {/* Chips ScrollView */}
+          <ScrollView
+            ref={leagueSelectorRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.leagueSelectorContainer}
+            onScroll={(e) => {
+              leagueScrollPosition.current = e.nativeEvent.contentOffset.x;
+            }}
+            scrollEventThrottle={16}
+            onContentSizeChange={() => {
+              if (leagueSelectorRef.current && leagueScrollPosition.current > 0) {
+                leagueSelectorRef.current.scrollTo({
+                  x: leagueScrollPosition.current,
+                  animated: false,
+                });
+              }
+            }}>
+            {leagues.map((league, index) => {
+              const isSelected = selectedLeague === league.code;
+              const isFirst = index === 0;
+              const isLast = index === leagues.length - 1;
+              
+              return (
+                <TouchableOpacity
+                  key={league.code}
+                  style={[
+                    styles.leagueChip,
+                    isFirst && styles.leagueChipFirst,
+                    isLast && styles.leagueChipLast,
+                    isSelected && styles.leagueChipActive,
+                  ]}
+                  onPress={() => setSelectedLeague(league.code)}
+                  activeOpacity={0.8}>
+                  {isSelected && (
+                    <LinearGradient
+                      colors={["#22c55e", "#15803d"]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={[StyleSheet.absoluteFillObject, { borderRadius: 14 }]}
+                    />
+                  )}
+                  
+                  <View style={styles.leagueChipContent}>
+                    {/* Icon Container */}
+                    <View style={[
+                      styles.leagueIconContainer,
+                      isSelected && styles.leagueIconContainerActive,
                     ]}>
-                    {league.name}
-                  </Text>
-                </View>
-                {isSelected && <View style={styles.leagueChipGlow} />}
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+                      <Text style={[
+                        styles.leagueChipIcon,
+                        isSelected && styles.leagueChipIconActive,
+                      ]}>{league.icon}</Text>
+                    </View>
+                    
+                    {/* Text */}
+                    <Text
+                      style={[
+                        styles.leagueChipText,
+                        isSelected && styles.leagueChipTextActive,
+                      ]}>
+                      {league.name}
+                    </Text>
+                  </View>
+                  
+                  {/* Selection Indicator Dot */}
+                  {isSelected && <View style={styles.leagueSelectedDot} />}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
       </View>
 
       {/* System Warnings */}
@@ -2402,22 +2639,21 @@ const styles = StyleSheet.create({
   },
 
   dateSelectorWrapper: {
-    marginBottom: 20,
-    marginHorizontal: -4,
+    marginBottom: 16,
+    marginHorizontal: 0,
   },
   dateSelectorOuterContainer: {
-    backgroundColor: "#18181b",
-    borderRadius: 28,
-    padding: 18,
-    marginHorizontal: 4,
+    backgroundColor: "rgba(24, 24, 27, 0.95)",
+    borderRadius: 24,
+    padding: 16,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
+    borderColor: "rgba(255,255,255,0.06)",
     overflow: "hidden",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.4,
+    shadowRadius: 24,
+    elevation: 12,
   },
   dateSelectorGradientBg: {
     position: "absolute",
@@ -2426,38 +2662,68 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
+  calendarGlowEffect: {
+    position: "absolute",
+    top: -60,
+    right: -60,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "rgba(34, 197, 94, 0.08)",
+  },
   dateSelectorHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
-    paddingHorizontal: 4,
+    marginBottom: 14,
+    paddingHorizontal: 2,
   },
   dateSelectorTitleRow: {
     flexDirection: "row",
     alignItems: "center",
   },
   dateSelectorIconWrapper: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 7,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 10,
+    marginRight: 8,
     overflow: "hidden",
+    shadowColor: "#22c55e",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   dateSelectorTitle: {
-    color: "#ffffff",
-    fontSize: 16,
+    color: "#e4e4e7",
+    fontSize: 14,
     fontWeight: "700",
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
+  },
+  monthBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(34, 197, 94, 0.1)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(34, 197, 94, 0.2)",
+    gap: 4,
   },
   dateSelectorMonth: {
     color: "#4ade80",
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "800",
-    textTransform: "capitalize",
+    textTransform: "uppercase",
     letterSpacing: 0.5,
+  },
+  yearText: {
+    color: "#71717a",
+    fontSize: 12,
+    fontWeight: "600",
   },
   dateSelectorRow: {
     flexDirection: "row",
@@ -2466,62 +2732,92 @@ const styles = StyleSheet.create({
   dateSelectorContainer: {
     paddingHorizontal: 0,
     flexGrow: 1,
+    gap: 8,
   },
   dateButton: {
-    width: 60,
-    height: 76,
-    borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.03)",
+    width: 52,
+    height: 72,
+    borderRadius: 16,
+    backgroundColor: "rgba(39, 39, 42, 0.6)",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 10,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.05)",
+    borderColor: "rgba(255,255,255,0.04)",
     overflow: "hidden",
+    position: "relative",
   },
   dateButtonActive: {
-    backgroundColor: "#22c55e",
-    borderColor: "rgba(74, 222, 128, 0.5)",
+    backgroundColor: "transparent",
+    borderColor: "transparent",
     shadowColor: "#22c55e",
-    shadowOffset: { width: 0, height: 8 },
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.5,
-    shadowRadius: 16,
-    elevation: 12,
+    shadowRadius: 12,
+    elevation: 10,
+    transform: [{ scale: 1.05 }],
   },
   dateButtonToday: {
-    borderColor: "rgba(34,197,94,0.4)",
+    borderColor: "rgba(34,197,94,0.35)",
     borderWidth: 1.5,
+    backgroundColor: "rgba(34,197,94,0.08)",
   },
   dateButtonGlow: {
     position: "absolute",
-    top: -20,
-    left: -20,
-    right: -20,
-    bottom: -20,
-    backgroundColor: "rgba(34,197,94,0.15)",
-    borderRadius: 100,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(34,197,94,0.1)",
+    borderRadius: 16,
   },
   dateDayText: {
-    color: "#71717a",
-    fontSize: 10,
+    color: "#52525b",
+    fontSize: 9,
     fontWeight: "700",
-    marginBottom: 6,
-    letterSpacing: 0.5,
+    marginBottom: 4,
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
   },
   dateDayTextToday: {
-    color: "#22c55e",
+    color: "#4ade80",
+    fontWeight: "800",
   },
   dateNumberText: {
     color: "#a1a1aa",
-    fontSize: 22,
-    fontWeight: "800",
+    fontSize: 20,
+    fontWeight: "700",
+    letterSpacing: -0.5,
   },
   dateNumberTextToday: {
-    color: "#22c55e",
+    color: "#4ade80",
+    fontWeight: "800",
   },
   dateTextActive: {
-    color: "#fff",
+    color: "#ffffff",
+    textShadowColor: "rgba(0,0,0,0.3)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
+  matchIndicatorContainer: {
+    position: "absolute",
+    bottom: 6,
+    width: "100%",
+    alignItems: "center",
+  },
+  matchIndicatorContainerActive: {
+    bottom: 8,
+  },
+  matchIndicatorBar: {
+    width: 16,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: "#22c55e",
+  },
+  matchIndicatorText: {
+    fontSize: 8,
+    opacity: 0.9,
+  },
+  // Legacy styles kept for compatibility
   matchIndicatorDot: {
     position: "absolute",
     bottom: 8,
@@ -2556,21 +2852,71 @@ const styles = StyleSheet.create({
   },
 
   leagueSelectorWrapper: {
-    marginTop: 8,
-    marginBottom: 4,
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  leagueSelectorCard: {
+    backgroundColor: "rgba(24, 24, 27, 0.85)",
+    borderRadius: 20,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+    overflow: "hidden",
+  },
+  leagueSelectorGlow: {
+    position: "absolute",
+    top: -40,
+    left: -40,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: "rgba(34, 197, 94, 0.06)",
   },
   leagueSelectorHeader: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 12,
-    paddingHorizontal: 4,
+    paddingHorizontal: 2,
+  },
+  leagueTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  leagueTitleIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    backgroundColor: "rgba(34, 197, 94, 0.12)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   leagueSelectorTitle: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "700",
+    color: "#e4e4e7",
+    letterSpacing: 0.3,
+  },
+  filterBadge: {
+    backgroundColor: "rgba(63, 63, 70, 0.6)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.06)",
+  },
+  filterBadgeText: {
+    fontSize: 10,
+    fontWeight: "600",
     color: "#71717a",
     textTransform: "uppercase",
-    letterSpacing: 1.5,
+    letterSpacing: 0.5,
   },
   swipeHint: {
     flexDirection: "row",
@@ -2604,17 +2950,18 @@ const styles = StyleSheet.create({
   leagueSelectorContainer: {
     flexDirection: "row",
     gap: 8,
-    paddingRight: 20,
+    paddingRight: 4,
   },
   leagueChip: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 16,
-    backgroundColor: "rgba(24, 24, 27, 0.9)",
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingRight: 14,
+    borderRadius: 14,
+    backgroundColor: "rgba(39, 39, 42, 0.7)",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
+    borderColor: "rgba(255,255,255,0.06)",
     overflow: "hidden",
     position: "relative",
   },
@@ -2625,30 +2972,59 @@ const styles = StyleSheet.create({
     marginRight: 0,
   },
   leagueChipActive: {
-    borderColor: "rgba(34, 197, 94, 0.3)",
+    borderColor: "rgba(34, 197, 94, 0.4)",
     shadowColor: "#22c55e",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 8,
+    transform: [{ scale: 1.02 }],
   },
   leagueChipContent: {
     flexDirection: "row",
     alignItems: "center",
     zIndex: 1,
-    gap: 6,
+    gap: 8,
+  },
+  leagueIconContainer: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  leagueIconContainerActive: {
+    backgroundColor: "rgba(255,255,255,0.2)",
   },
   leagueChipIcon: {
     fontSize: 14,
   },
+  leagueChipIconActive: {
+    // Keep same size for active
+  },
   leagueChipText: {
     color: "#a1a1aa",
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "600",
+    letterSpacing: 0.2,
   },
   leagueChipTextActive: {
-    color: "#fff",
+    color: "#ffffff",
     fontWeight: "700",
+    textShadowColor: "rgba(0,0,0,0.3)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  leagueSelectedDot: {
+    position: "absolute",
+    bottom: 4,
+    left: "50%",
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(255,255,255,0.6)",
+    marginLeft: -2,
   },
   leagueChipGlow: {
     position: "absolute",

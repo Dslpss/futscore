@@ -150,7 +150,7 @@ const NewsSliderCardContent: React.FC = () => {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             />
-            <Newspaper size={14} color="#fff" />
+            <Newspaper size={18} color="#fff" />
           </View>
           <View>
             <Text style={styles.headerTitle}>Notícias</Text>
@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 4,
+    paddingHorizontal: 20,
     marginBottom: 16,
   },
   headerLeft: {
@@ -266,18 +266,18 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   iconWrapper: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
   },
   headerTitle: {
-    color: '#e4e4e7',
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: -0.3,
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    letterSpacing: -0.5,
   },
   headerSubtitle: {
     color: '#71717a',
