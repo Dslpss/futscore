@@ -251,6 +251,7 @@ export const NewsSliderCard: React.FC = React.memo(NewsSliderCardContent);
 
 const styles = StyleSheet.create({
   container: {
+    marginTop: 16,
     marginBottom: 20,
   },
   header: {

@@ -1274,57 +1274,70 @@ export const HomeScreen = ({ navigation }: any) => {
         style={styles.headerGradient}
       />
 
-      <View style={styles.topBar}>
-        <View style={{ flex: 1, marginRight: 16 }}>
-          <Text style={styles.dateText}>
-            {selectedDate
-              .toLocaleDateString("pt-BR", {
-                weekday: "long",
-                day: "numeric",
-                month: "long",
-              })
-              .toUpperCase()}
-          </Text>
-          <View style={styles.titleContainer}>
-            <Text style={styles.titleHighlight}>Fut</Text>
-            <Text style={styles.title}>Score</Text>
-            <View style={styles.liveDotHeader} />
+      {/* Premium Header Card */}
+      <View style={styles.headerCard}>
+        {/* Background Glow Effects */}
+        <View style={styles.headerGlowGreen} />
+        <View style={styles.headerGlowPurple} />
+
+        <View style={styles.topBar}>
+          {/* Logo Section */}
+          <View style={styles.logoSection}>
+            <View style={styles.logoTextContainer}>
+              <View style={styles.titleContainer}>
+                <Text style={styles.titleHighlight}>Fut</Text>
+                <Text style={styles.title}>Score</Text>
+                <View style={styles.liveDotHeader} />
+              </View>
+              <View style={styles.dateBadge}>
+                <Text style={styles.dateText}>
+                  {selectedDate
+                    .toLocaleDateString("pt-BR", {
+                      weekday: "short",
+                      day: "numeric",
+                      month: "short",
+                    })
+                    .toUpperCase()}
+                </Text>
+              </View>
+            </View>
           </View>
-        </View>
 
-        <View style={styles.headerButtonsRow}>
-          <TouchableOpacity
-            style={styles.notificationButton}
-            onPress={() => navigation.navigate("Calendar")}
-            activeOpacity={0.8}>
-            <LinearGradient
-              colors={["#2a2a2a", "#1a1a1a"]}
-              style={styles.notificationGradient}>
-              <Calendar size={18} color="#22c55e" />
-            </LinearGradient>
-          </TouchableOpacity>
+          {/* Action Buttons */}
+          <View style={styles.headerButtonsRow}>
+            <TouchableOpacity
+              style={styles.headerActionButton}
+              onPress={() => navigation.navigate("Calendar")}
+              activeOpacity={0.8}>
+              <LinearGradient
+                colors={["rgba(34, 197, 94, 0.15)", "rgba(34, 197, 94, 0.05)"]}
+                style={styles.headerActionGradient}>
+                <Calendar size={18} color="#22c55e" />
+              </LinearGradient>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.notificationButton}
-            onPress={() => navigation.navigate("NotificationSettings")}
-            activeOpacity={0.8}>
-            <LinearGradient
-              colors={["#2a2a2a", "#1a1a1a"]}
-              style={styles.notificationGradient}>
-              <Bell size={18} color="#a1a1aa" />
-            </LinearGradient>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.headerActionButton}
+              onPress={() => navigation.navigate("NotificationSettings")}
+              activeOpacity={0.8}>
+              <LinearGradient
+                colors={["rgba(255,255,255,0.08)", "rgba(255,255,255,0.03)"]}
+                style={styles.headerActionGradient}>
+                <Bell size={18} color="#a1a1aa" />
+              </LinearGradient>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.profileButton}
-            onPress={() => setShowProfileModal(true)}
-            activeOpacity={0.8}>
-            <LinearGradient
-              colors={["#2a2a2a", "#1a1a1a"]}
-              style={styles.profileGradient}>
-              <User size={18} color="#a1a1aa" />
-            </LinearGradient>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.profileButton}
+              onPress={() => setShowProfileModal(true)}
+              activeOpacity={0.8}>
+              <LinearGradient
+                colors={["#3f3f46", "#27272a"]}
+                style={styles.profileGradient}>
+                <User size={18} color="#e4e4e7" />
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -1479,19 +1492,30 @@ export const HomeScreen = ({ navigation }: any) => {
       {/* ESPN, OndeAssistir, and News Cards - Fully isolated component */}
       <TVCardsSection />
 
-      {/* Action Buttons - Favorites, Standings, and Leagues Explorer */}
-      <View style={styles.actionButtonsContainer}>
-        <View style={styles.actionButtonsHeader}>
-          <Text style={styles.actionButtonsTitle}>Ações Rápidas</Text>
-          <View style={styles.swipeHint}>
-            <Text style={styles.swipeHintText}>Deslize para ver mais</Text>
-            <Text style={styles.swipeHintArrow}>›</Text>
+      {/* Action Buttons - Premium Card Container */}
+      <View style={styles.actionButtonsWrapper}>
+        <View style={styles.actionButtonsCard}>
+          {/* Background Glow Effect */}
+          <View style={styles.actionButtonsGlow} />
+          
+          {/* Header */}
+          <View style={styles.actionButtonsHeader}>
+            <View style={styles.actionTitleRow}>
+              <View style={styles.actionTitleIcon}>
+                <Text style={{ fontSize: 12 }}>⚡</Text>
+              </View>
+              <Text style={styles.actionButtonsTitle}>Ações Rápidas</Text>
+            </View>
+            <View style={styles.actionCountBadge}>
+              <Text style={styles.actionCountText}>8 atalhos</Text>
+            </View>
           </View>
-        </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.actionButtonsContent}>
+
+          {/* Buttons ScrollView */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.actionButtonsContent}>
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => navigation.navigate("TeamSelection")}
@@ -1718,6 +1742,7 @@ export const HomeScreen = ({ navigation }: any) => {
             </LinearGradient>
           </TouchableOpacity>
         </ScrollView>
+        </View>
       </View>
 
       {/* League Selector - Premium Chips */}
@@ -2360,6 +2385,32 @@ const styles = StyleSheet.create({
     minHeight: 420,
     overflow: 'hidden',
   },
+  actionButtonsWrapper: {
+    marginBottom: 20,
+  },
+  actionButtonsCard: {
+    backgroundColor: "rgba(24, 24, 27, 0.85)",
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.06)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+    overflow: "hidden",
+    position: "relative",
+  },
+  actionButtonsGlow: {
+    position: "absolute",
+    top: -30,
+    right: -30,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: "rgba(139, 92, 246, 0.08)",
+  },
   actionButtonsContainer: {
     marginBottom: 16,
   },
@@ -2367,18 +2418,40 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 12,
-    paddingHorizontal: 4,
+    marginBottom: 14,
+  },
+  actionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  actionTitleIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: "rgba(139, 92, 246, 0.15)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   actionButtonsTitle: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: "700",
+    color: "#e4e4e7",
+    letterSpacing: 0.2,
+  },
+  actionCountBadge: {
+    backgroundColor: "rgba(255,255,255,0.06)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  actionCountText: {
     color: "#71717a",
-    textTransform: "uppercase",
-    letterSpacing: 1.5,
+    fontSize: 11,
+    fontWeight: "600",
   },
   actionButtonsContent: {
-    paddingRight: 20,
+    paddingRight: 4,
     gap: 10,
   },
   headerGradient: {
@@ -2393,39 +2466,163 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 28,
+  },
+  headerCard: {
+    backgroundColor: "rgba(24, 24, 27, 0.85)",
+    borderRadius: 24,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.06)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    elevation: 12,
+    overflow: "hidden",
+    position: "relative",
+  },
+  headerGlowGreen: {
+    position: "absolute",
+    top: -30,
+    left: -30,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: "rgba(34, 197, 94, 0.12)",
+  },
+  headerGlowPurple: {
+    position: "absolute",
+    bottom: -40,
+    right: -40,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: "rgba(139, 92, 246, 0.06)",
+  },
+  logoSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  logoContainer: {
+    shadowColor: "#22c55e",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  logoGradient: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  logoIcon: {
+    fontSize: 22,
+  },
+  logoTextContainer: {
+    justifyContent: "center",
+  },
+  dateBadge: {
+    backgroundColor: "rgba(255,255,255,0.06)",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    alignSelf: "flex-start",
+    marginTop: 4,
   },
   dateText: {
-    color: "#e4e4e7",
-    fontSize: 11,
+    color: "#71717a",
+    fontSize: 9,
     fontWeight: "700",
-    // letterSpacing: 1.5, // Removed to prevent truncation
-    marginBottom: 4,
+    letterSpacing: 0.5,
   },
   titleContainer: {
     flexDirection: "row",
     alignItems: "baseline",
   },
   titleHighlight: {
-    fontSize: 32,
+    fontSize: 26,
     fontWeight: "300",
     color: "#fff",
-    letterSpacing: -1,
+    letterSpacing: -0.5,
   },
   title: {
-    fontSize: 32,
+    fontSize: 26,
     fontWeight: "900",
     color: "#fff",
-    letterSpacing: -1,
+    letterSpacing: -0.5,
   },
   liveDotHeader: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    color: "#FFFFFF",
-    fontSize: 13,
-    fontWeight: "700",
-    letterSpacing: 0.3,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#22c55e",
+    marginLeft: 6,
+    shadowColor: "#22c55e",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  headerButtonsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  headerActionButton: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  headerActionGradient: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.06)",
+  },
+  profileButton: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  profileGradient: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+  },
+  headerButtons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  // Legacy notification styles - keeping for backwards compatibility
+  notificationButton: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  notificationGradient: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
   },
   favoritesButtonContainer: {
     alignItems: "center",
@@ -2462,44 +2659,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     letterSpacing: 0.3,
-  },
-  headerButtons: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  headerButtonsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  notificationButton: {
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  notificationGradient: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  profileButton: {
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  profileGradient: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: "center",
-    alignItems: "center",
   },
 
   // Modal styles
