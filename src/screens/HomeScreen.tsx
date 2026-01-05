@@ -770,8 +770,39 @@ export const HomeScreen = ({ navigation }: any) => {
             console.log(`[HomeScreen] Team ${teamId} MSN ID: ${msnId || 'NOT FOUND'} (stored: ${!!fav.msnId})`);
             
             if (msnId) {
-              const msnGames = await msnSportsApi.getTeamLiveSchedule(msnId, 5);
+              let msnGames = await msnSportsApi.getTeamLiveSchedule(msnId, 5);
               console.log(`[HomeScreen] Team ${teamId} MSN games fetched: ${msnGames?.length || 0}`);
+              
+              // If no games found via team schedule, try fetching from league and filtering
+              if (!msnGames || msnGames.length === 0) {
+                // Try to find the league from the msnId
+                const leagueMatch = msnId.match(/Soccer_([^_]+_[^_]+)/);
+                if (leagueMatch) {
+                  const leagueId = `Soccer_${leagueMatch[1]}`;
+                  console.log(`[HomeScreen] Team ${teamId} trying league fallback: ${leagueId}`);
+                  
+                  try {
+                    const leagueGames = await msnSportsApi.getLiveAroundLeague(leagueId, "Soccer");
+                    // Filter games where this team is playing (by team name)
+                    const teamName = fav.name?.toLowerCase() || "";
+                    const teamGames = leagueGames.filter((game: any) => {
+                      const homeName = game.participants?.[0]?.team?.name?.localizedName?.toLowerCase() || 
+                                       game.participants?.[0]?.team?.name?.rawName?.toLowerCase() || "";
+                      const awayName = game.participants?.[1]?.team?.name?.localizedName?.toLowerCase() || 
+                                       game.participants?.[1]?.team?.name?.rawName?.toLowerCase() || "";
+                      return homeName.includes(teamName) || awayName.includes(teamName) ||
+                             teamName.includes(homeName) || teamName.includes(awayName);
+                    });
+                    
+                    if (teamGames.length > 0) {
+                      msnGames = teamGames;
+                      console.log(`[HomeScreen] Team ${teamId} found ${teamGames.length} games via league fallback`);
+                    }
+                  } catch (leagueError) {
+                    console.log(`[HomeScreen] Team ${teamId} league fallback failed:`, leagueError);
+                  }
+                }
+              }
               
               if (msnGames && msnGames.length > 0) {
                 // Find next upcoming game
@@ -1108,8 +1139,8 @@ export const HomeScreen = ({ navigation }: any) => {
         <View style={styles.dateSelectorOuterContainer}>
           <LinearGradient
             colors={[
-              "rgba(34,197,94,0.08)",
-              "rgba(22,163,74,0.03)",
+              "rgba(34,197,94,0.12)",
+              "rgba(22,163,74,0.05)",
               "transparent",
             ]}
             style={styles.dateSelectorGradientBg}
@@ -1164,7 +1195,7 @@ export const HomeScreen = ({ navigation }: any) => {
                     activeOpacity={0.7}>
                     {isSelected && (
                       <LinearGradient
-                        colors={["#22c55e", "#16a34a"]}
+                        colors={["#4ade80", "#22c55e"]}
                         style={StyleSheet.absoluteFillObject}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 1 }}
@@ -2375,18 +2406,18 @@ const styles = StyleSheet.create({
     marginHorizontal: -4,
   },
   dateSelectorOuterContainer: {
-    backgroundColor: "rgba(24,24,27,0.8)",
-    borderRadius: 24,
-    padding: 16,
+    backgroundColor: "#18181b",
+    borderRadius: 28,
+    padding: 18,
     marginHorizontal: 4,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.08)",
     overflow: "hidden",
-    shadowColor: "#22c55e",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
   },
   dateSelectorGradientBg: {
     position: "absolute",
@@ -2416,16 +2447,17 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   dateSelectorTitle: {
-    color: "#e4e4e7",
-    fontSize: 15,
+    color: "#ffffff",
+    fontSize: 16,
     fontWeight: "700",
-    letterSpacing: 0.3,
+    letterSpacing: 0.5,
   },
   dateSelectorMonth: {
-    color: "#22c55e",
-    fontSize: 13,
-    fontWeight: "600",
+    color: "#4ade80",
+    fontSize: 14,
+    fontWeight: "800",
     textTransform: "capitalize",
+    letterSpacing: 0.5,
   },
   dateSelectorRow: {
     flexDirection: "row",
@@ -2436,25 +2468,25 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   dateButton: {
-    width: 54,
-    height: 72,
-    borderRadius: 18,
-    backgroundColor: "rgba(39,39,42,0.6)",
+    width: 60,
+    height: 76,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.03)",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 10,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.06)",
+    borderColor: "rgba(255,255,255,0.05)",
     overflow: "hidden",
   },
   dateButtonActive: {
     backgroundColor: "#22c55e",
-    borderColor: "rgba(34,197,94,0.4)",
+    borderColor: "rgba(74, 222, 128, 0.5)",
     shadowColor: "#22c55e",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 16,
+    elevation: 12,
   },
   dateButtonToday: {
     borderColor: "rgba(34,197,94,0.4)",
@@ -2481,7 +2513,7 @@ const styles = StyleSheet.create({
   },
   dateNumberText: {
     color: "#a1a1aa",
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "800",
   },
   dateNumberTextToday: {

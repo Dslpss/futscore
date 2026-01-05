@@ -191,20 +191,70 @@ const KNOWN_TEAM_MSN_IDS: Record<number, string> = {
   2714: "SportRadar_Soccer_ItalySerieA_2025_Team_2714",
 
   // ============================================
-  // LIGUE 1 (France)
+  // LIGUE 1 (France) - IDs from MSN Sports API
   // ============================================
 
-  // PSG
-  524: "SportRadar_Soccer_FranceLigue1_2025_Team_2842",
-  2842: "SportRadar_Soccer_FranceLigue1_2025_Team_2842",
+  // PSG (Paris Saint-Germain)
+  524: "SportRadar_Soccer_FranceLigue1_2025_Team_1644",
+  1644: "SportRadar_Soccer_FranceLigue1_2025_Team_1644",
 
-  // Marseille
-  516: "SportRadar_Soccer_FranceLigue1_2025_Team_2820",
-  2820: "SportRadar_Soccer_FranceLigue1_2025_Team_2820",
+  // Marseille (Olympique de Marseille)
+  516: "SportRadar_Soccer_FranceLigue1_2025_Team_1641",
+  1641: "SportRadar_Soccer_FranceLigue1_2025_Team_1641",
 
-  // Lyon
-  523: "SportRadar_Soccer_FranceLigue1_2025_Team_2841",
-  2841: "SportRadar_Soccer_FranceLigue1_2025_Team_2841",
+  // Lyon (Olympique Lyonnais)
+  523: "SportRadar_Soccer_FranceLigue1_2025_Team_1649",
+  1649: "SportRadar_Soccer_FranceLigue1_2025_Team_1649",
+
+  // Monaco (AS Monaco)
+  548: "SportRadar_Soccer_FranceLigue1_2025_Team_1653",
+  1653: "SportRadar_Soccer_FranceLigue1_2025_Team_1653",
+
+  // Lille (LOSC Lille)
+  521: "SportRadar_Soccer_FranceLigue1_2025_Team_1643",
+  1643: "SportRadar_Soccer_FranceLigue1_2025_Team_1643",
+
+  // Nice (OGC Nice)
+  522: "SportRadar_Soccer_FranceLigue1_2025_Team_1661",
+  1661: "SportRadar_Soccer_FranceLigue1_2025_Team_1661",
+
+  // Lens (RC Lens)
+  546: "SportRadar_Soccer_FranceLigue1_2025_Team_1648",
+  1648: "SportRadar_Soccer_FranceLigue1_2025_Team_1648",
+
+  // Rennes (Stade Rennais)
+  529: "SportRadar_Soccer_FranceLigue1_2025_Team_1658",
+  1658: "SportRadar_Soccer_FranceLigue1_2025_Team_1658",
+
+  // Toulouse FC
+  1681: "SportRadar_Soccer_FranceLigue1_2025_Team_1681",
+
+  // Strasbourg Alsace
+  1659: "SportRadar_Soccer_FranceLigue1_2025_Team_1659",
+
+  // FC Nantes
+  1647: "SportRadar_Soccer_FranceLigue1_2025_Team_1647",
+
+  // FC Lorient
+  1656: "SportRadar_Soccer_FranceLigue1_2025_Team_1656",
+
+  // Stade Brest 29
+  1715: "SportRadar_Soccer_FranceLigue1_2025_Team_1715",
+
+  // AJ Auxerre
+  1646: "SportRadar_Soccer_FranceLigue1_2025_Team_1646",
+
+  // Le Havre AC
+  1662: "SportRadar_Soccer_FranceLigue1_2025_Team_1662",
+
+  // Angers SCO
+  1684: "SportRadar_Soccer_FranceLigue1_2025_Team_1684",
+
+  // FC Metz
+  1651: "SportRadar_Soccer_FranceLigue1_2025_Team_1651",
+
+  // Paris FC
+  6070: "SportRadar_Soccer_FranceLigue1_2025_Team_6070",
 
   // ============================================
   // PORTUGAL

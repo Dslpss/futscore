@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Image } from 'react-native';
 import { useAuth, API_URL } from '../context/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import axios from 'axios';
@@ -98,7 +98,11 @@ export const LoginScreen = () => {
         >
           <View style={styles.content}>
             <View style={styles.header}>
-              <Text style={styles.logoIcon}>⚽</Text>
+              <Image 
+                source={require('../../assets/logo-transparent.png')} 
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
             </View>
             <View style={styles.header}>
               <Text style={styles.titleHighlight}>Fut</Text>
@@ -215,10 +219,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 8,
   },
-  logoIcon: {
-    fontSize: 48,
-    marginBottom: 8,
-    textAlign: 'center',
+  logoImage: {
+    width: 140,
+    height: 140,
+    marginBottom: 10,
+    alignSelf: 'center',
   },
   titleHighlight: {
     fontSize: 40,
