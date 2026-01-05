@@ -62,13 +62,15 @@ export async function schedulePushNotification(title: string, body: string) {
 export async function registerForPushNotificationsAsync(): Promise<
   string | null
 > {
-  console.log("[Push] ========== INICIANDO registerForPushNotificationsAsync ==========");
-  
+  console.log(
+    "[Push] ========== INICIANDO registerForPushNotificationsAsync =========="
+  );
+
   // Verificar se é dispositivo físico (emuladores não suportam push)
   // Alguns dispositivos podem retornar false incorretamente, então apenas logamos
   console.log("[Push] Device.isDevice:", Device.isDevice);
   console.log("[Push] Platform.OS:", Platform.OS);
-  
+
   if (!Device.isDevice) {
     console.log(
       "[Push] ⚠️ Device.isDevice retornou false - tentando registrar mesmo assim..."
@@ -97,58 +99,100 @@ export async function registerForPushNotificationsAsync(): Promise<
 
   console.log("[Push] ✅ Permissão concedida!");
 
-  // Obter o Expo Push Token
-  try {
-    console.log("[Push] Tentando obter Expo Push Token...");
-    console.log("[Push] Constants.expoConfig:", JSON.stringify(Constants.expoConfig?.extra?.eas, null, 2));
+  // Obter o Expo Push Token com retry
+  const maxRetries = 3;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(
+        `[Push] Tentativa ${attempt}/${maxRetries} - Obtendo Expo Push Token...`
+      );
+      console.log(
+        "[Push] Constants.easConfig:",
+        JSON.stringify(Constants.easConfig, null, 2)
+      );
+      console.log(
+        "[Push] Constants.expoConfig?.extra?.eas:",
+        JSON.stringify(Constants.expoConfig?.extra?.eas, null, 2)
+      );
 
-    // Usar Constants para pegar projectId dinamicamente
-    const projectId =
-      Constants.expoConfig?.extra?.eas?.projectId ??
-      Constants.manifest?.extra?.eas?.projectId ??
-      "f4992830-2819-4f76-aa40-95358ba22784";
+      // Usar Constants para pegar projectId dinamicamente
+      // Em builds EAS (produção), usar Constants.easConfig.projectId
+      // Em desenvolvimento, usar Constants.expoConfig.extra.eas.projectId
+      // Fallback para o projectId hardcoded como última opção
+      const projectId =
+        Constants.easConfig?.projectId ??
+        Constants.expoConfig?.extra?.eas?.projectId ??
+        "f4992830-2819-4f76-aa40-95358ba22784";
 
-    console.log("[Push] ProjectId a ser usado:", projectId);
+      console.log("[Push] ProjectId a ser usado:", projectId);
 
-    const tokenData = await Notifications.getExpoPushTokenAsync({
-      projectId: projectId,
-    });
+      // Adicionar timeout para evitar que fique travado
+      const tokenPromise = Notifications.getExpoPushTokenAsync({
+        projectId: projectId,
+      });
 
-    console.log("[Push] tokenData completo:", JSON.stringify(tokenData, null, 2));
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error("Timeout ao obter push token")),
+          15000
+        )
+      );
 
-    if (!tokenData || !tokenData.data) {
-      console.error("[Push] ❌ Token retornado é inválido:", tokenData);
+      const tokenData = await Promise.race([tokenPromise, timeoutPromise]);
+
+      console.log(
+        "[Push] tokenData completo:",
+        JSON.stringify(tokenData, null, 2)
+      );
+
+      if (!tokenData || !tokenData.data) {
+        console.error("[Push] ❌ Token retornado é inválido:", tokenData);
+        if (attempt < maxRetries) {
+          console.log(`[Push] Aguardando 2s antes de tentar novamente...`);
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+          continue;
+        }
+        return null;
+      }
+
+      console.log("[Push] ✅ Expo Push Token obtido com sucesso!");
+      console.log("[Push] Token completo:", tokenData.data);
+      console.log(
+        "[Push] ========== FIM registerForPushNotificationsAsync =========="
+      );
+      return tokenData.data;
+    } catch (error: any) {
+      console.error(
+        `[Push] ❌ Erro na tentativa ${attempt}:`,
+        error?.message || error
+      );
+      console.error("[Push] Detalhes do erro:", JSON.stringify(error, null, 2));
+      console.error("[Push] Error code:", error?.code);
+
+      if (attempt < maxRetries) {
+        console.log(`[Push] Aguardando 2s antes de tentar novamente...`);
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        continue;
+      }
+
+      // Verificar se é erro de Expo Go
+      if (
+        error?.message?.includes("experienceId") ||
+        error?.message?.includes("projectId")
+      ) {
+        console.error(
+          "[Push] ⚠️ ATENÇÃO: Push tokens não funcionam corretamente no Expo Go."
+        );
+        console.error(
+          "[Push] ⚠️ Use 'npx expo run:android' ou gere um APK para testar push notifications."
+        );
+      }
+
       return null;
     }
-
-    console.log("[Push] ✅ Expo Push Token obtido com sucesso!");
-    console.log("[Push] Token completo:", tokenData.data);
-    console.log("[Push] ========== FIM registerForPushNotificationsAsync ==========");
-    return tokenData.data;
-  } catch (error: any) {
-    console.error(
-      "[Push] ❌ Erro ao obter push token:",
-      error?.message || error
-    );
-    console.error("[Push] Detalhes do erro:", JSON.stringify(error, null, 2));
-    console.error("[Push] Error code:", error?.code);
-    console.error("[Push] Error stack:", error?.stack);
-
-    // Verificar se é erro de Expo Go
-    if (
-      error?.message?.includes("experienceId") ||
-      error?.message?.includes("projectId")
-    ) {
-      console.error(
-        "[Push] ⚠️ ATENÇÃO: Push tokens não funcionam corretamente no Expo Go."
-      );
-      console.error(
-        "[Push] ⚠️ Use 'npx expo run:android' ou gere um APK para testar push notifications."
-      );
-    }
-
-    return null;
   }
+
+  return null;
 }
 
 export async function scheduleMatchStartNotification(match: any) {
