@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+  useCallback,
+} from "react";
 import Constants from "expo-constants";
 import {
   View,
@@ -67,200 +73,236 @@ const { width } = Dimensions.get("window");
 // Separate memoized search input component to prevent keyboard dismissal
 interface TeamSearchInputProps {
   onSearchChange: (query: string) => void;
-  searchResults: Array<{ id: number; name: string; logo: string; country: string; msnId?: string }>;
+  searchResults: Array<{
+    id: number;
+    name: string;
+    logo: string;
+    country: string;
+    msnId?: string;
+  }>;
   searchingTeams: boolean;
   isFavoriteTeam: (id: number) => boolean;
-  toggleFavoriteTeam: (id: number, info: { name: string; logo: string; country: string; msnId?: string }) => void;
+  toggleFavoriteTeam: (
+    id: number,
+    info: { name: string; logo: string; country: string; msnId?: string }
+  ) => void;
 }
 
-const TeamSearchInput = React.memo(({ 
-  onSearchChange, 
-  searchResults, 
-  searchingTeams,
-  isFavoriteTeam,
-  toggleFavoriteTeam,
-}: TeamSearchInputProps) => {
-  const [localQuery, setLocalQuery] = useState("");
-  const [focused, setFocused] = useState(false);
-  const animValue = useRef(new Animated.Value(0)).current;
-  const glowAnim = useRef(new Animated.Value(0)).current;
+const TeamSearchInput = React.memo(
+  ({
+    onSearchChange,
+    searchResults,
+    searchingTeams,
+    isFavoriteTeam,
+    toggleFavoriteTeam,
+  }: TeamSearchInputProps) => {
+    const [localQuery, setLocalQuery] = useState("");
+    const [focused, setFocused] = useState(false);
+    const animValue = useRef(new Animated.Value(0)).current;
+    const glowAnim = useRef(new Animated.Value(0)).current;
 
-  const handleChange = (text: string) => {
-    setLocalQuery(text);
-    onSearchChange(text);
-  };
+    const handleChange = (text: string) => {
+      setLocalQuery(text);
+      onSearchChange(text);
+    };
 
-  const handleFocus = () => {
-    setFocused(true);
-    Animated.parallel([
-      Animated.timing(animValue, {
-        toValue: 1,
-        duration: 250,
-        useNativeDriver: false,
-      }),
-      Animated.timing(glowAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: false,
-      }),
-    ]).start();
-  };
+    const handleFocus = () => {
+      setFocused(true);
+      Animated.parallel([
+        Animated.timing(animValue, {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: false,
+        }),
+        Animated.timing(glowAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: false,
+        }),
+      ]).start();
+    };
 
-  const handleBlur = () => {
-    setFocused(false);
-    Animated.parallel([
-      Animated.timing(animValue, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: false,
-      }),
-      Animated.timing(glowAnim, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: false,
-      }),
-    ]).start();
-  };
+    const handleBlur = () => {
+      setFocused(false);
+      Animated.parallel([
+        Animated.timing(animValue, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: false,
+        }),
+        Animated.timing(glowAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: false,
+        }),
+      ]).start();
+    };
 
-  return (
-    <View style={teamSearchStyles.wrapper}>
-      {/* Premium Card Container */}
-      <View style={teamSearchStyles.cardContainer}>
-        {/* Background Glow */}
-        <View style={teamSearchStyles.cardGlow} />
-        
-        {/* Header */}
-        <View style={teamSearchStyles.header}>
-          <View style={teamSearchStyles.headerLeft}>
-            <View style={teamSearchStyles.headerIcon}>
-              <LinearGradient
-                colors={["#fbbf24", "#f59e0b"]}
-                style={StyleSheet.absoluteFillObject}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              />
-              <Heart size={14} color="#fff" fill="#fff" />
-            </View>
-            <View>
-              <Text style={teamSearchStyles.headerTitle}>Adicionar Favorito</Text>
-              <Text style={teamSearchStyles.headerSubtitle}>Busque seu time do coração</Text>
-            </View>
-          </View>
-        </View>
+    return (
+      <View style={teamSearchStyles.wrapper}>
+        {/* Premium Card Container */}
+        <View style={teamSearchStyles.cardContainer}>
+          {/* Background Glow */}
+          <View style={teamSearchStyles.cardGlow} />
 
-        {/* Search Input Container */}
-        <Animated.View
-          style={[
-            teamSearchStyles.inputContainer,
-            {
-              borderColor: animValue.interpolate({
-                inputRange: [0, 1],
-                outputRange: ["rgba(255,255,255,0.06)", "#22c55e"],
-              }),
-              shadowOpacity: glowAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, 0.3],
-              }),
-            },
-          ]}>
-          <View style={teamSearchStyles.searchIconWrapper}>
-            <Search size={16} color={focused ? "#22c55e" : "#52525b"} />
-          </View>
-          <TextInput
-            style={teamSearchStyles.input}
-            placeholder="Digite o nome do time..."
-            placeholderTextColor="#52525b"
-            value={localQuery}
-            onChangeText={handleChange}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
-          />
-          {localQuery.length > 0 && (
-            <TouchableOpacity 
-              onPress={() => { setLocalQuery(""); onSearchChange(""); }}
-              style={teamSearchStyles.clearButton}
-            >
-              <Ionicons name="close-circle" size={18} color="#52525b" />
-            </TouchableOpacity>
-          )}
-        </Animated.View>
-
-        {/* Search Results */}
-        {(searchResults.length > 0 || searchingTeams) && localQuery.length >= 2 && (
-          <View style={teamSearchStyles.resultsContainer}>
-            {searchingTeams ? (
-              <View style={teamSearchStyles.loadingContainer}>
-                <View style={teamSearchStyles.loadingDot} />
-                <Text style={teamSearchStyles.loadingText}>Buscando times...</Text>
+          {/* Header */}
+          <View style={teamSearchStyles.header}>
+            <View style={teamSearchStyles.headerLeft}>
+              <View style={teamSearchStyles.headerIcon}>
+                <LinearGradient
+                  colors={["#fbbf24", "#f59e0b"]}
+                  style={StyleSheet.absoluteFillObject}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                />
+                <Heart size={14} color="#fff" fill="#fff" />
               </View>
-            ) : (
-              <>
-                <View style={teamSearchStyles.resultsHeader}>
-                  <Text style={teamSearchStyles.resultsCount}>{searchResults.length} time{searchResults.length !== 1 ? 's' : ''} encontrado{searchResults.length !== 1 ? 's' : ''}</Text>
-                </View>
-                {searchResults.map((team, index) => (
-                  <TouchableOpacity
-                    key={team.id}
-                    style={[
-                      teamSearchStyles.resultItem,
-                      index === searchResults.length - 1 && teamSearchStyles.resultItemLast,
-                    ]}
-                    onPress={() => {
-                      toggleFavoriteTeam(team.id, {
-                        name: team.name,
-                        logo: team.logo,
-                        country: team.country,
-                        msnId: team.msnId,
-                      });
-                    }}
-                    activeOpacity={0.7}
-                  >
-                    <View style={teamSearchStyles.resultLogoWrapper}>
-                      <Image
-                        source={{ uri: team.logo }}
-                        style={teamSearchStyles.resultLogo}
-                        resizeMode="contain"
-                      />
-                    </View>
-                    <View style={teamSearchStyles.resultInfo}>
-                      <Text style={teamSearchStyles.resultName} numberOfLines={1}>
-                        {team.name}
-                      </Text>
-                      <Text style={teamSearchStyles.resultCountry}>{team.country}</Text>
-                    </View>
-                    <TouchableOpacity
-                      style={[
-                        teamSearchStyles.resultFavorite,
-                        isFavoriteTeam(team.id) && teamSearchStyles.resultFavoriteActive,
-                      ]}
-                      onPress={() => {
-                        toggleFavoriteTeam(team.id, {
-                          name: team.name,
-                          logo: team.logo,
-                          country: team.country,
-                          msnId: team.msnId,
-                        });
-                      }}
-                    >
-                      <Heart
-                        size={16}
-                        color={isFavoriteTeam(team.id) ? "#22c55e" : "#71717a"}
-                        fill={isFavoriteTeam(team.id) ? "#22c55e" : "transparent"}
-                      />
-                      {isFavoriteTeam(team.id) && (
-                        <Text style={teamSearchStyles.favoriteLabel}>Favorito</Text>
-                      )}
-                    </TouchableOpacity>
-                  </TouchableOpacity>
-                ))}
-              </>
-            )}
+              <View>
+                <Text style={teamSearchStyles.headerTitle}>
+                  Adicionar Favorito
+                </Text>
+                <Text style={teamSearchStyles.headerSubtitle}>
+                  Busque seu time do coração
+                </Text>
+              </View>
+            </View>
           </View>
-        )}
+
+          {/* Search Input Container */}
+          <Animated.View
+            style={[
+              teamSearchStyles.inputContainer,
+              {
+                borderColor: animValue.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ["rgba(255,255,255,0.06)", "#22c55e"],
+                }),
+                shadowOpacity: glowAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 0.3],
+                }),
+              },
+            ]}>
+            <View style={teamSearchStyles.searchIconWrapper}>
+              <Search size={16} color={focused ? "#22c55e" : "#52525b"} />
+            </View>
+            <TextInput
+              style={teamSearchStyles.input}
+              placeholder="Digite o nome do time..."
+              placeholderTextColor="#52525b"
+              value={localQuery}
+              onChangeText={handleChange}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+            />
+            {localQuery.length > 0 && (
+              <TouchableOpacity
+                onPress={() => {
+                  setLocalQuery("");
+                  onSearchChange("");
+                }}
+                style={teamSearchStyles.clearButton}>
+                <Ionicons name="close-circle" size={18} color="#52525b" />
+              </TouchableOpacity>
+            )}
+          </Animated.View>
+
+          {/* Search Results */}
+          {(searchResults.length > 0 || searchingTeams) &&
+            localQuery.length >= 2 && (
+              <View style={teamSearchStyles.resultsContainer}>
+                {searchingTeams ? (
+                  <View style={teamSearchStyles.loadingContainer}>
+                    <View style={teamSearchStyles.loadingDot} />
+                    <Text style={teamSearchStyles.loadingText}>
+                      Buscando times...
+                    </Text>
+                  </View>
+                ) : (
+                  <>
+                    <View style={teamSearchStyles.resultsHeader}>
+                      <Text style={teamSearchStyles.resultsCount}>
+                        {searchResults.length} time
+                        {searchResults.length !== 1 ? "s" : ""} encontrado
+                        {searchResults.length !== 1 ? "s" : ""}
+                      </Text>
+                    </View>
+                    {searchResults.map((team, index) => (
+                      <TouchableOpacity
+                        key={team.id}
+                        style={[
+                          teamSearchStyles.resultItem,
+                          index === searchResults.length - 1 &&
+                            teamSearchStyles.resultItemLast,
+                        ]}
+                        onPress={() => {
+                          toggleFavoriteTeam(team.id, {
+                            name: team.name,
+                            logo: team.logo,
+                            country: team.country,
+                            msnId: team.msnId,
+                          });
+                        }}
+                        activeOpacity={0.7}>
+                        <View style={teamSearchStyles.resultLogoWrapper}>
+                          <Image
+                            source={{ uri: team.logo }}
+                            style={teamSearchStyles.resultLogo}
+                            resizeMode="contain"
+                          />
+                        </View>
+                        <View style={teamSearchStyles.resultInfo}>
+                          <Text
+                            style={teamSearchStyles.resultName}
+                            numberOfLines={1}>
+                            {team.name}
+                          </Text>
+                          <Text style={teamSearchStyles.resultCountry}>
+                            {team.country}
+                          </Text>
+                        </View>
+                        <TouchableOpacity
+                          style={[
+                            teamSearchStyles.resultFavorite,
+                            isFavoriteTeam(team.id) &&
+                              teamSearchStyles.resultFavoriteActive,
+                          ]}
+                          onPress={() => {
+                            toggleFavoriteTeam(team.id, {
+                              name: team.name,
+                              logo: team.logo,
+                              country: team.country,
+                              msnId: team.msnId,
+                            });
+                          }}>
+                          <Heart
+                            size={16}
+                            color={
+                              isFavoriteTeam(team.id) ? "#22c55e" : "#71717a"
+                            }
+                            fill={
+                              isFavoriteTeam(team.id)
+                                ? "#22c55e"
+                                : "transparent"
+                            }
+                          />
+                          {isFavoriteTeam(team.id) && (
+                            <Text style={teamSearchStyles.favoriteLabel}>
+                              Favorito
+                            </Text>
+                          )}
+                        </TouchableOpacity>
+                      </TouchableOpacity>
+                    ))}
+                  </>
+                )}
+              </View>
+            )}
+        </View>
       </View>
-    </View>
-  );
-});
+    );
+  }
+);
 
 const teamSearchStyles = StyleSheet.create({
   wrapper: {
@@ -481,6 +523,19 @@ interface Warning {
   type: "info" | "warning" | "danger";
 }
 
+const WEEKDAYS = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"];
+const MONTHS = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
+
+const getWeekday = (date: Date): string => WEEKDAYS[date.getDay()];
+const getMonthShort = (date: Date): string => MONTHS[date.getMonth()];
+
+const formatHeaderDate = (date: Date): string => {
+  const weekday = getWeekday(date);
+  const day = date.getDate();
+  const month = getMonthShort(date);
+  return `${weekday}, ${day} DE ${month}`;
+};
+
 export const HomeScreen = ({ navigation }: any) => {
   const {
     liveMatches,
@@ -488,7 +543,12 @@ export const HomeScreen = ({ navigation }: any) => {
     loading: contextLoading,
     refreshMatches: contextRefresh,
   } = useMatches();
-  const { favoriteTeams, backendFavorites, toggleFavoriteTeam, isFavoriteTeam } = useFavorites();
+  const {
+    favoriteTeams,
+    backendFavorites,
+    toggleFavoriteTeam,
+    isFavoriteTeam,
+  } = useFavorites();
   const { user, signOut } = useAuth();
   const [selectedLeague, setSelectedLeague] = useState<string>("ALL");
   const [warnings, setWarnings] = useState<Warning[]>([]);
@@ -519,13 +579,15 @@ export const HomeScreen = ({ navigation }: any) => {
   const [teamSearchQuery, setTeamSearchQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
   const searchAnimation = useRef(new Animated.Value(0)).current;
-  const [searchResults, setSearchResults] = useState<Array<{
-    id: number;
-    name: string;
-    logo: string;
-    country: string;
-    msnId?: string;
-  }>>([]);
+  const [searchResults, setSearchResults] = useState<
+    Array<{
+      id: number;
+      name: string;
+      logo: string;
+      country: string;
+      msnId?: string;
+    }>
+  >([]);
   const [searchingTeams, setSearchingTeams] = useState(false);
 
   // Ref for league selector ScrollView to maintain position
@@ -547,8 +609,10 @@ export const HomeScreen = ({ navigation }: any) => {
     // Clear calendar cache to force fresh data
     try {
       const { msnSportsApi } = await import("../services/msnSportsApi");
-      const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
-      
+      const AsyncStorage = (
+        await import("@react-native-async-storage/async-storage")
+      ).default;
+
       // Clear calendar caches for all leagues
       const leagueIds = [
         "Soccer_BrazilBrasileiroSerieA",
@@ -567,17 +631,21 @@ export const HomeScreen = ({ navigation }: any) => {
         "Soccer_BrazilPaulistaSerieA1",
         "Soccer_BrazilGaucho",
       ];
-      
+
       const today = new Date();
-      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-      
+      const todayStr = `${today.getFullYear()}-${String(
+        today.getMonth() + 1
+      ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
       // Clear calendar caches
       for (const leagueId of leagueIds) {
-        await AsyncStorage.removeItem(`msn_sports_cache_calendar_v2_${leagueId}_${todayStr}`);
+        await AsyncStorage.removeItem(
+          `msn_sports_cache_calendar_v2_${leagueId}_${todayStr}`
+        );
       }
-      
+
       console.log("[HomeScreen] Cleared calendar caches, refetching...");
-      
+
       // Refetch calendar with fresh data
       await fetchMatchCalendar();
     } catch (error) {
@@ -595,12 +663,14 @@ export const HomeScreen = ({ navigation }: any) => {
     if (!isToday(selectedDate)) {
       // Clear schedule cache for the selected date to ensure fresh data with date filtering
       const clearAndFetch = async () => {
-        const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
+        const AsyncStorage = (
+          await import("@react-native-async-storage/async-storage")
+        ).default;
         const year = selectedDate.getFullYear();
         const month = String(selectedDate.getMonth() + 1).padStart(2, "0");
         const day = String(selectedDate.getDate()).padStart(2, "0");
         const dateStr = `${year}-${month}-${day}`;
-        
+
         const leagueIds = [
           "Soccer_BrazilBrasileiroSerieA",
           "Soccer_BrazilCopaDoBrasil",
@@ -618,13 +688,15 @@ export const HomeScreen = ({ navigation }: any) => {
           "Soccer_BrazilPaulistaSerieA1",
           "Soccer_BrazilGaucho",
         ];
-        
+
         // Clear schedule cache for selected date
         for (const leagueId of leagueIds) {
-          await AsyncStorage.removeItem(`msn_sports_cache_schedule_v3_${leagueId}_${dateStr}`);
+          await AsyncStorage.removeItem(
+            `msn_sports_cache_schedule_v3_${leagueId}_${dateStr}`
+          );
         }
         console.log(`[HomeScreen] Cleared schedule cache for ${dateStr}`);
-        
+
         fetchMatchesForDate(selectedDate);
       };
       clearAndFetch();
@@ -633,7 +705,9 @@ export const HomeScreen = ({ navigation }: any) => {
 
   const fetchMatchesForDate = async (date: Date) => {
     setLoadingCustom(true);
-    console.log(`[HomeScreen] ========== fetchMatchesForDate STARTED ==========`);
+    console.log(
+      `[HomeScreen] ========== fetchMatchesForDate STARTED ==========`
+    );
     try {
       // Construct date string using local time to avoid timezone shifts
       const year = date.getFullYear();
@@ -672,8 +746,10 @@ export const HomeScreen = ({ navigation }: any) => {
       let msnMatches: Match[] = [];
 
       // Fetch all leagues in parallel for faster loading
-      console.log(`[HomeScreen] Fetching ${msnLeagueIds.length} leagues in parallel for ${dateStr}...`);
-      
+      console.log(
+        `[HomeScreen] Fetching ${msnLeagueIds.length} leagues in parallel for ${dateStr}...`
+      );
+
       const leaguePromises = msnLeagueIds.map(async (leagueId) => {
         try {
           const games = await msnSportsApi.getScheduleByDate(leagueId, dateStr);
@@ -681,13 +757,15 @@ export const HomeScreen = ({ navigation }: any) => {
           // Special logging for Copa do Brasil
           if (leagueId === "Soccer_BrazilCopaDoBrasil") {
             console.log(`[HomeScreen] ⚽ COPA DO BRASIL - Date: ${dateStr}`);
-            console.log(`[HomeScreen] ⚽ COPA DO BRASIL - Games fetched: ${games.length}`);
+            console.log(
+              `[HomeScreen] ⚽ COPA DO BRASIL - Games fetched: ${games.length}`
+            );
           }
 
           const transformedGames = games.map((game: any) =>
             transformMsnGameToMatch({ ...game, seasonId: leagueId })
           );
-          
+
           return transformedGames;
         } catch (error) {
           console.error(
@@ -703,13 +781,15 @@ export const HomeScreen = ({ navigation }: any) => {
         msnMatches = [...msnMatches, ...games];
       });
 
-      console.log(`[HomeScreen] Fetched ${msnMatches.length} total MSN matches for ${dateStr}`);
+      console.log(
+        `[HomeScreen] Fetched ${msnMatches.length} total MSN matches for ${dateStr}`
+      );
 
       // 3. SPECIAL: Fetch FIFA Intercontinental Cup from ESPN (not available in MSN)
       try {
         const { espnApi } = await import("../services/espnApi");
         const espnEvents = await espnApi.getIntercontinentalCupEvents();
-        
+
         if (espnEvents && espnEvents.length > 0) {
           // Filter by date using local time (avoid UTC conversion issues)
           const filtered = espnEvents.filter((event) => {
@@ -720,30 +800,38 @@ export const HomeScreen = ({ navigation }: any) => {
             const eventDateStr = `${year}-${month}-${day}`;
             return eventDateStr === dateStr;
           });
-          
-          console.log(`[HomeScreen] ⚽ ESPN Intercontinental: ${filtered.length}/${espnEvents.length} games for ${dateStr}`);
-          
+
+          console.log(
+            `[HomeScreen] ⚽ ESPN Intercontinental: ${filtered.length}/${espnEvents.length} games for ${dateStr}`
+          );
+
           // Transform ESPN events to Match format
           const intercontinentalMatches: Match[] = filtered.map((event) => {
-            const homeCompetitor = event.competitors?.find((c: any) => c.homeAway === "home");
-            const awayCompetitor = event.competitors?.find((c: any) => c.homeAway === "away");
-            
+            const homeCompetitor = event.competitors?.find(
+              (c: any) => c.homeAway === "home"
+            );
+            const awayCompetitor = event.competitors?.find(
+              (c: any) => c.homeAway === "away"
+            );
+
             let statusShort = "NS";
             let statusLong = "Não Iniciado";
             if (event.status === "in") {
               statusShort = event.period === 1 ? "1H" : "2H";
-              statusLong = event.period === 1 ? "Primeiro Tempo" : "Segundo Tempo";
+              statusLong =
+                event.period === 1 ? "Primeiro Tempo" : "Segundo Tempo";
             } else if (event.status === "post") {
               statusShort = "FT";
               statusLong = "Encerrado";
             }
-            
+
             // Extract scoring summary from ESPN format
             const scoringSummary: Match["scoringSummary"] = [];
             if (homeCompetitor?.scoringSummary) {
               homeCompetitor.scoringSummary.forEach((s: any) => {
                 scoringSummary.push({
-                  player: s.athlete?.shortName || s.athlete?.displayName || "Unknown",
+                  player:
+                    s.athlete?.shortName || s.athlete?.displayName || "Unknown",
                   minute: s.displayValue || "",
                   team: "home" as const,
                 });
@@ -752,52 +840,99 @@ export const HomeScreen = ({ navigation }: any) => {
             if (awayCompetitor?.scoringSummary) {
               awayCompetitor.scoringSummary.forEach((s: any) => {
                 scoringSummary.push({
-                  player: s.athlete?.shortName || s.athlete?.displayName || "Unknown",
+                  player:
+                    s.athlete?.shortName || s.athlete?.displayName || "Unknown",
                   minute: s.displayValue || "",
                   team: "away" as const,
                 });
               });
             }
-            
+
             return {
               fixture: {
                 id: parseInt(event.id) || Math.floor(Math.random() * 1000000),
                 date: event.date,
-                status: { short: statusShort, long: statusLong, elapsed: event.clock ? parseInt(event.clock) : undefined },
-                venue: event.location ? { name: event.location, city: "" } : undefined,
+                status: {
+                  short: statusShort,
+                  long: statusLong,
+                  elapsed: event.clock ? parseInt(event.clock) : undefined,
+                },
+                venue: event.location
+                  ? { name: event.location, city: "" }
+                  : undefined,
               },
-              league: { id: "FIC", name: "Copa Intercontinental", logo: "https://a.espncdn.com/i/leaguelogos/soccer/500/22902.png", country: "Internacional" },
+              league: {
+                id: "FIC",
+                name: "Copa Intercontinental",
+                logo: "https://a.espncdn.com/i/leaguelogos/soccer/500/22902.png",
+                country: "Internacional",
+              },
               teams: {
-                home: { id: parseInt(homeCompetitor?.id || "0"), name: homeCompetitor?.displayName || "Unknown", logo: homeCompetitor?.logo || "", form: homeCompetitor?.form, record: homeCompetitor?.record },
-                away: { id: parseInt(awayCompetitor?.id || "0"), name: awayCompetitor?.displayName || "Unknown", logo: awayCompetitor?.logo || "", form: awayCompetitor?.form, record: awayCompetitor?.record },
+                home: {
+                  id: parseInt(homeCompetitor?.id || "0"),
+                  name: homeCompetitor?.displayName || "Unknown",
+                  logo: homeCompetitor?.logo || "",
+                  form: homeCompetitor?.form,
+                  record: homeCompetitor?.record,
+                },
+                away: {
+                  id: parseInt(awayCompetitor?.id || "0"),
+                  name: awayCompetitor?.displayName || "Unknown",
+                  logo: awayCompetitor?.logo || "",
+                  form: awayCompetitor?.form,
+                  record: awayCompetitor?.record,
+                },
               },
               goals: {
-                home: homeCompetitor?.score ? parseInt(homeCompetitor.score) : null,
-                away: awayCompetitor?.score ? parseInt(awayCompetitor.score) : null,
+                home: homeCompetitor?.score
+                  ? parseInt(homeCompetitor.score)
+                  : null,
+                away: awayCompetitor?.score
+                  ? parseInt(awayCompetitor.score)
+                  : null,
               },
               score: {
                 halftime: { home: null, away: null },
-                fulltime: { home: homeCompetitor?.score ? parseInt(homeCompetitor.score) : null, away: awayCompetitor?.score ? parseInt(awayCompetitor.score) : null },
+                fulltime: {
+                  home: homeCompetitor?.score
+                    ? parseInt(homeCompetitor.score)
+                    : null,
+                  away: awayCompetitor?.score
+                    ? parseInt(awayCompetitor.score)
+                    : null,
+                },
               },
-              scoringSummary: scoringSummary.length > 0 ? scoringSummary : undefined,
+              scoringSummary:
+                scoringSummary.length > 0 ? scoringSummary : undefined,
             };
           });
-          
+
           if (intercontinentalMatches.length > 0) {
             msnMatches = [...msnMatches, ...intercontinentalMatches];
-            console.log(`[HomeScreen] ✓ Copa Intercontinental: ${intercontinentalMatches.length} matches from ESPN`);
+            console.log(
+              `[HomeScreen] ✓ Copa Intercontinental: ${intercontinentalMatches.length} matches from ESPN`
+            );
           }
         }
       } catch (error) {
-        console.log("[HomeScreen] ✗ Copa Intercontinental: ESPN fetch failed", error);
+        console.log(
+          "[HomeScreen] ✗ Copa Intercontinental: ESPN fetch failed",
+          error
+        );
       }
 
       // 4. Combine all matches (no need to filter by date since getScheduleByDate already does that)
       const allMatches = [...footballDataMatches, ...msnMatches];
 
       // Log Copa do Brasil matches before deduplication
-      const copaDoBrasilBeforeDedupe = allMatches.filter(m => m.league.name === "Copa do Brasil" || m.league.id?.toString().includes("CopaDoBrasil"));
-      console.log(`[HomeScreen] ⚽ COPA DO BRASIL in allMatches (before dedupe): ${copaDoBrasilBeforeDedupe.length}`);
+      const copaDoBrasilBeforeDedupe = allMatches.filter(
+        (m) =>
+          m.league.name === "Copa do Brasil" ||
+          m.league.id?.toString().includes("CopaDoBrasil")
+      );
+      console.log(
+        `[HomeScreen] ⚽ COPA DO BRASIL in allMatches (before dedupe): ${copaDoBrasilBeforeDedupe.length}`
+      );
 
       // Remove duplicates based on team names
       const uniqueMatches = allMatches.filter((match, index, self) => {
@@ -811,34 +946,46 @@ export const HomeScreen = ({ navigation }: any) => {
       });
 
       // Log Copa do Brasil matches after deduplication
-      const copaDoBrasilAfterDedupe = uniqueMatches.filter(m => m.league.name === "Copa do Brasil" || m.league.id?.toString().includes("CopaDoBrasil"));
-      console.log(`[HomeScreen] ⚽ COPA DO BRASIL in uniqueMatches (after dedupe): ${copaDoBrasilAfterDedupe.length}`);
+      const copaDoBrasilAfterDedupe = uniqueMatches.filter(
+        (m) =>
+          m.league.name === "Copa do Brasil" ||
+          m.league.id?.toString().includes("CopaDoBrasil")
+      );
+      console.log(
+        `[HomeScreen] ⚽ COPA DO BRASIL in uniqueMatches (after dedupe): ${copaDoBrasilAfterDedupe.length}`
+      );
       if (copaDoBrasilAfterDedupe.length > 0) {
         copaDoBrasilAfterDedupe.forEach((match, idx) => {
-          console.log(`[HomeScreen] ⚽ COPA DO BRASIL Final Match ${idx + 1}:`, {
-            home: match.teams.home.name,
-            away: match.teams.away.name,
-            leagueName: match.league.name,
-      leagueId: match.league.id,
-          });
+          console.log(
+            `[HomeScreen] ⚽ COPA DO BRASIL Final Match ${idx + 1}:`,
+            {
+              home: match.teams.home.name,
+              away: match.teams.away.name,
+              leagueName: match.league.name,
+              leagueId: match.league.id,
+            }
+          );
         });
       }
 
       // Map league logos using MSN_LEAGUE_MAP directly - same as LeaguesExplorer
-      const matchesWithLogos = uniqueMatches.map(match => {
+      const matchesWithLogos = uniqueMatches.map((match) => {
         // Try to find logo from MSN_LEAGUE_MAP using league name
         const leagueName = match.league.name?.toLowerCase() || "";
         let logo = match.league.logo || "";
-        
+
         // Search MSN_LEAGUE_MAP for matching league
         for (const [key, leagueData] of Object.entries(MSN_LEAGUE_MAP)) {
           if (
             leagueData.name.toLowerCase() === leagueName ||
             key.toLowerCase().includes(leagueName.replace(/\s+/g, "")) ||
-            (leagueName.includes("copa do brasil") && key.includes("CopaDoBrasil")) ||
-            (leagueName.includes("brasileir") && key.includes("BrasileiroSerieA")) ||
+            (leagueName.includes("copa do brasil") &&
+              key.includes("CopaDoBrasil")) ||
+            (leagueName.includes("brasileir") &&
+              key.includes("BrasileiroSerieA")) ||
             (leagueName.includes("premier") && key.includes("PremierLeague")) ||
-            (leagueName.includes("champions") && key.includes("ChampionsLeague")) ||
+            (leagueName.includes("champions") &&
+              key.includes("ChampionsLeague")) ||
             (leagueName.includes("europa") && key.includes("EuropaLeague")) ||
             (leagueName.includes("la liga") && key.includes("LaLiga")) ||
             (leagueName.includes("bundesliga") && key.includes("Bundesliga")) ||
@@ -906,18 +1053,28 @@ export const HomeScreen = ({ navigation }: any) => {
   useEffect(() => {
     // Use backend favorites if available (from context, updates automatically)
     if (backendFavorites.length > 0) {
-      console.log(`[HomeScreen] Using ${backendFavorites.length} favorites from context:`, backendFavorites.map(f => f.name));
+      console.log(
+        `[HomeScreen] Using ${backendFavorites.length} favorites from context:`,
+        backendFavorites.map((f) => f.name)
+      );
       fetchNextMatchesForFavorites(backendFavorites);
     } else if (favoriteTeams.length > 0) {
       // Fall back to local context (just IDs, no msnId)
-      const localFavs = favoriteTeams.map(id => ({ id, name: '', logo: '', country: '' }));
+      const localFavs = favoriteTeams.map((id) => ({
+        id,
+        name: "",
+        logo: "",
+        country: "",
+      }));
       fetchNextMatchesForFavorites(localFavs);
     } else {
       setFavoriteNextMatches([]);
     }
   }, [backendFavorites, favoriteTeams, todaysMatches, liveMatches]);
 
-  const fetchNextMatchesForFavorites = async (favorites: Array<{ id: number; name?: string; msnId?: string }>) => {
+  const fetchNextMatchesForFavorites = async (
+    favorites: Array<{ id: number; name?: string; msnId?: string }>
+  ) => {
     if (favorites.length === 0) {
       setFavoriteNextMatches([]);
       return;
@@ -938,8 +1095,12 @@ export const HomeScreen = ({ navigation }: any) => {
       await Promise.all(
         favorites.map(async (fav) => {
           const teamId = fav.id;
-          console.log(`[HomeScreen] Processing favorite team: ${teamId} (${fav.name || 'unknown'})`);
-          
+          console.log(
+            `[HomeScreen] Processing favorite team: ${teamId} (${
+              fav.name || "unknown"
+            })`
+          );
+
           // Check local first
           const localMatch = availableMatches.find(
             (m) => m.teams.home.id === teamId || m.teams.away.id === teamId
@@ -949,7 +1110,7 @@ export const HomeScreen = ({ navigation }: any) => {
             // Check if it's upcoming or live
             const status = localMatch.fixture.status.short;
             const isFinished = ["FT", "AET", "PEN"].includes(status);
-            
+
             if (!isFinished) {
               console.log(`[HomeScreen] Found local match for team ${teamId}`);
               results.push({ teamId, match: localMatch });
@@ -961,78 +1122,117 @@ export const HomeScreen = ({ navigation }: any) => {
           try {
             // Use stored msnId first, then try to infer from mapper
             const msnId = fav.msnId || inferMsnTeamId(teamId);
-            console.log(`[HomeScreen] Team ${teamId} MSN ID: ${msnId || 'NOT FOUND'} (stored: ${!!fav.msnId})`);
-            
+            console.log(
+              `[HomeScreen] Team ${teamId} MSN ID: ${
+                msnId || "NOT FOUND"
+              } (stored: ${!!fav.msnId})`
+            );
+
             if (msnId) {
               let msnGames = await msnSportsApi.getTeamLiveSchedule(msnId, 5);
-              console.log(`[HomeScreen] Team ${teamId} MSN games fetched: ${msnGames?.length || 0}`);
-              
+              console.log(
+                `[HomeScreen] Team ${teamId} MSN games fetched: ${
+                  msnGames?.length || 0
+                }`
+              );
+
               // If no games found via team schedule, try fetching from league and filtering
               if (!msnGames || msnGames.length === 0) {
                 // Try to find the league from the msnId
                 const leagueMatch = msnId.match(/Soccer_([^_]+_[^_]+)/);
                 if (leagueMatch) {
                   const leagueId = `Soccer_${leagueMatch[1]}`;
-                  console.log(`[HomeScreen] Team ${teamId} trying league fallback: ${leagueId}`);
-                  
+                  console.log(
+                    `[HomeScreen] Team ${teamId} trying league fallback: ${leagueId}`
+                  );
+
                   try {
-                    const leagueGames = await msnSportsApi.getLiveAroundLeague(leagueId, "Soccer");
+                    const leagueGames = await msnSportsApi.getLiveAroundLeague(
+                      leagueId,
+                      "Soccer"
+                    );
                     // Filter games where this team is playing (by team name)
                     const teamName = fav.name?.toLowerCase() || "";
                     const teamGames = leagueGames.filter((game: any) => {
-                      const homeName = game.participants?.[0]?.team?.name?.localizedName?.toLowerCase() || 
-                                       game.participants?.[0]?.team?.name?.rawName?.toLowerCase() || "";
-                      const awayName = game.participants?.[1]?.team?.name?.localizedName?.toLowerCase() || 
-                                       game.participants?.[1]?.team?.name?.rawName?.toLowerCase() || "";
-                      return homeName.includes(teamName) || awayName.includes(teamName) ||
-                             teamName.includes(homeName) || teamName.includes(awayName);
+                      const homeName =
+                        game.participants?.[0]?.team?.name?.localizedName?.toLowerCase() ||
+                        game.participants?.[0]?.team?.name?.rawName?.toLowerCase() ||
+                        "";
+                      const awayName =
+                        game.participants?.[1]?.team?.name?.localizedName?.toLowerCase() ||
+                        game.participants?.[1]?.team?.name?.rawName?.toLowerCase() ||
+                        "";
+                      return (
+                        homeName.includes(teamName) ||
+                        awayName.includes(teamName) ||
+                        teamName.includes(homeName) ||
+                        teamName.includes(awayName)
+                      );
                     });
-                    
+
                     if (teamGames.length > 0) {
                       msnGames = teamGames;
-                      console.log(`[HomeScreen] Team ${teamId} found ${teamGames.length} games via league fallback`);
+                      console.log(
+                        `[HomeScreen] Team ${teamId} found ${teamGames.length} games via league fallback`
+                      );
                     }
                   } catch (leagueError) {
-                    console.log(`[HomeScreen] Team ${teamId} league fallback failed:`, leagueError);
+                    console.log(
+                      `[HomeScreen] Team ${teamId} league fallback failed:`,
+                      leagueError
+                    );
                   }
                 }
               }
-              
+
               if (msnGames && msnGames.length > 0) {
                 // Find next upcoming game
                 const upcomingGame = msnGames.find(
-                   (game: any) => game.gameState?.gameStatus === "PreGame"
+                  (game: any) => game.gameState?.gameStatus === "PreGame"
                 );
 
                 if (upcomingGame) {
-                   const match = transformMsnGameToMatch(upcomingGame);
-                   console.log(`[HomeScreen] Team ${teamId} next match: ${match.teams.home.name} vs ${match.teams.away.name}`);
-                   results.push({ teamId, match });
+                  const match = transformMsnGameToMatch(upcomingGame);
+                  console.log(
+                    `[HomeScreen] Team ${teamId} next match: ${match.teams.home.name} vs ${match.teams.away.name}`
+                  );
+                  results.push({ teamId, match });
                 } else {
-                   console.log(`[HomeScreen] Team ${teamId} no upcoming PreGame found`);
+                  console.log(
+                    `[HomeScreen] Team ${teamId} no upcoming PreGame found`
+                  );
                 }
               }
             } else {
-               // Fallback to football-data.org (limited)
-               console.log(`[HomeScreen] Team ${teamId} using football-data.org fallback`);
-               const fallbackData = await api.getTeamUpcomingMatches(teamId, 1);
-               if (fallbackData && fallbackData.length > 0) {
-                 const match = fallbackData[0];
-                 console.log(`[HomeScreen] Team ${teamId} fallback match found`);
-                 results.push({ teamId, match });
-               } else {
-                 console.log(`[HomeScreen] Team ${teamId} no fallback match found`);
-               }
+              // Fallback to football-data.org (limited)
+              console.log(
+                `[HomeScreen] Team ${teamId} using football-data.org fallback`
+              );
+              const fallbackData = await api.getTeamUpcomingMatches(teamId, 1);
+              if (fallbackData && fallbackData.length > 0) {
+                const match = fallbackData[0];
+                console.log(`[HomeScreen] Team ${teamId} fallback match found`);
+                results.push({ teamId, match });
+              } else {
+                console.log(
+                  `[HomeScreen] Team ${teamId} no fallback match found`
+                );
+              }
             }
           } catch (err) {
-            console.log(`[HomeScreen] Error fetching next match for team ${teamId}`, err);
+            console.log(
+              `[HomeScreen] Error fetching next match for team ${teamId}`,
+              err
+            );
           }
         })
       );
 
       // Sort by date soonest first
-      results.sort((a, b) => 
-        new Date(a.match.fixture.date).getTime() - new Date(b.match.fixture.date).getTime()
+      results.sort(
+        (a, b) =>
+          new Date(a.match.fixture.date).getTime() -
+          new Date(b.match.fixture.date).getTime()
       );
 
       setFavoriteNextMatches(results);
@@ -1181,37 +1381,70 @@ export const HomeScreen = ({ navigation }: any) => {
     setSearchingTeams(true);
     try {
       const { msnSportsApi } = await import("../services/msnSportsApi");
-      
+
       const msnLeagues = [
-        { id: "Soccer_BrazilBrasileiroSerieA", sport: "Soccer", country: "Brazil" },
+        {
+          id: "Soccer_BrazilBrasileiroSerieA",
+          sport: "Soccer",
+          country: "Brazil",
+        },
         { id: "Soccer_BrazilCopaDoBrasil", sport: "Soccer", country: "Brazil" },
-        { id: "Soccer_InternationalClubsUEFAChampionsLeague", sport: "Soccer", country: "Europe" },
+        {
+          id: "Soccer_InternationalClubsUEFAChampionsLeague",
+          sport: "Soccer",
+          country: "Europe",
+        },
         { id: "Soccer_SpainLaLiga", sport: "Soccer", country: "Spain" },
-        { id: "Soccer_EnglandPremierLeague", sport: "Soccer", country: "England" },
+        {
+          id: "Soccer_EnglandPremierLeague",
+          sport: "Soccer",
+          country: "England",
+        },
         { id: "Soccer_GermanyBundesliga", sport: "Soccer", country: "Germany" },
         { id: "Soccer_ItalySerieA", sport: "Soccer", country: "Italy" },
         { id: "Soccer_FranceLigue1", sport: "Soccer", country: "France" },
-        { id: "Soccer_PortugalPrimeiraLiga", sport: "Soccer", country: "Portugal" },
+        {
+          id: "Soccer_PortugalPrimeiraLiga",
+          sport: "Soccer",
+          country: "Portugal",
+        },
         { id: "Basketball_NBA", sport: "Basketball", country: "USA" },
         { id: "Soccer_BrazilCarioca", sport: "Soccer", country: "Brazil" },
         { id: "Soccer_BrazilMineiro", sport: "Soccer", country: "Brazil" },
-        { id: "Soccer_BrazilPaulistaSerieA1", sport: "Soccer", country: "Brazil" },
+        {
+          id: "Soccer_BrazilPaulistaSerieA1",
+          sport: "Soccer",
+          country: "Brazil",
+        },
         { id: "Soccer_BrazilGaucho", sport: "Soccer", country: "Brazil" },
       ];
 
-      const teamsMap = new Map<number, { id: number; name: string; logo: string; country: string; msnId?: string }>();
+      const teamsMap = new Map<
+        number,
+        {
+          id: number;
+          name: string;
+          logo: string;
+          country: string;
+          msnId?: string;
+        }
+      >();
       const queryLower = query.toLowerCase();
 
       // Fetch from multiple leagues in parallel
       await Promise.all(
         msnLeagues.map(async (league) => {
           try {
-            const games = await msnSportsApi.getLiveAroundLeague(league.id, league.sport);
+            const games = await msnSportsApi.getLiveAroundLeague(
+              league.id,
+              league.sport
+            );
             games.forEach((game: any) => {
               game.participants?.forEach((participant: any) => {
                 const team = participant.team;
                 if (team && team.id) {
-                  const teamName = team.name?.localizedName || team.name?.rawName || "";
+                  const teamName =
+                    team.name?.localizedName || team.name?.rawName || "";
                   // Filter by query
                   if (teamName.toLowerCase().includes(queryLower)) {
                     const teamId = parseInt(team.id.split("_").pop() || "0");
@@ -1219,7 +1452,9 @@ export const HomeScreen = ({ navigation }: any) => {
                       teamsMap.set(teamId, {
                         id: teamId,
                         name: teamName,
-                        logo: team.image?.id ? `https://www.bing.com/th?id=${team.image.id}&w=80&h=80` : "",
+                        logo: team.image?.id
+                          ? `https://www.bing.com/th?id=${team.image.id}&w=80&h=80`
+                          : "",
                         country: league.country,
                         msnId: team.id,
                       });
@@ -1290,14 +1525,8 @@ export const HomeScreen = ({ navigation }: any) => {
                 <View style={styles.liveDotHeader} />
               </View>
               <View style={styles.dateBadge}>
-                <Text style={styles.dateText}>
-                  {selectedDate
-                    .toLocaleDateString("pt-BR", {
-                      weekday: "short",
-                      day: "numeric",
-                      month: "short",
-                    })
-                    .toUpperCase()}
+                <Text style={styles.dateText} numberOfLines={1}>
+                  {formatHeaderDate(selectedDate)}
                 </Text>
               </View>
             </View>
@@ -1356,7 +1585,7 @@ export const HomeScreen = ({ navigation }: any) => {
             end={{ x: 1, y: 1 }}
           />
           <View style={styles.calendarGlowEffect} />
-          
+
           {/* Compact Header */}
           <View style={styles.dateSelectorHeader}>
             <View style={styles.dateSelectorTitleRow}>
@@ -1373,16 +1602,12 @@ export const HomeScreen = ({ navigation }: any) => {
             </View>
             <View style={styles.monthBadge}>
               <Text style={styles.dateSelectorMonth}>
-                {selectedDate
-                  .toLocaleDateString("pt-BR", { month: "short" })
-                  .replace(".", "")}
+                {getMonthShort(selectedDate)}
               </Text>
-              <Text style={styles.yearText}>
-                {selectedDate.getFullYear()}
-              </Text>
+              <Text style={styles.yearText}>{selectedDate.getFullYear()}</Text>
             </View>
           </View>
-          
+
           {/* Date Scroll Container */}
           <View style={styles.dateSelectorRow}>
             <ScrollView
@@ -1413,13 +1638,16 @@ export const HomeScreen = ({ navigation }: any) => {
                     {isSelected && (
                       <LinearGradient
                         colors={["#22c55e", "#16a34a"]}
-                        style={[StyleSheet.absoluteFillObject, { borderRadius: 16 }]}
+                        style={[
+                          StyleSheet.absoluteFillObject,
+                          { borderRadius: 16 },
+                        ]}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 0, y: 1 }}
                       />
                     )}
                     {isSelected && <View style={styles.dateButtonGlow} />}
-                    
+
                     {/* Day Label */}
                     <Text
                       style={[
@@ -1427,30 +1655,28 @@ export const HomeScreen = ({ navigation }: any) => {
                         isSelected && styles.dateTextActive,
                         isDateToday && !isSelected && styles.dateDayTextToday,
                       ]}>
-                      {isDateToday
-                        ? "HOJE"
-                        : date
-                            .toLocaleDateString("pt-BR", { weekday: "short" })
-                            .toUpperCase()
-                            .replace(".", "")}
+                      {isDateToday ? "HOJE" : getWeekday(date)}
                     </Text>
-                    
+
                     {/* Date Number */}
                     <Text
                       style={[
                         styles.dateNumberText,
                         isSelected && styles.dateTextActive,
-                        isDateToday && !isSelected && styles.dateNumberTextToday,
+                        isDateToday &&
+                          !isSelected &&
+                          styles.dateNumberTextToday,
                       ]}>
                       {date.getDate()}
                     </Text>
-                    
+
                     {/* Match Indicator */}
                     {hasMatches && (
-                      <View style={[
-                        styles.matchIndicatorContainer,
-                        isSelected && styles.matchIndicatorContainerActive,
-                      ]}>
+                      <View
+                        style={[
+                          styles.matchIndicatorContainer,
+                          isSelected && styles.matchIndicatorContainerActive,
+                        ]}>
                         {isSelected ? (
                           <Text style={styles.matchIndicatorText}>⚽</Text>
                         ) : (
@@ -1497,7 +1723,7 @@ export const HomeScreen = ({ navigation }: any) => {
         <View style={styles.actionButtonsCard}>
           {/* Background Glow Effect */}
           <View style={styles.actionButtonsGlow} />
-          
+
           {/* Header */}
           <View style={styles.actionButtonsHeader}>
             <View style={styles.actionTitleRow}>
@@ -1516,232 +1742,232 @@ export const HomeScreen = ({ navigation }: any) => {
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.actionButtonsContent}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => navigation.navigate("TeamSelection")}
-            activeOpacity={0.85}>
-            <LinearGradient
-              colors={["#2d1f4e", "#1a1a2e"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.actionButtonGradient}>
-              <View style={styles.actionButtonIconWrapper}>
-                <LinearGradient
-                  colors={["#fbbf24", "#f59e0b"]}
-                  style={styles.actionIconGradient}>
-                  <Text style={styles.actionButtonIcon}>⭐</Text>
-                </LinearGradient>
-              </View>
-              <View style={styles.actionButtonTextContainer}>
-                <Text style={styles.actionButtonText}>Favoritos</Text>
-                <Text style={styles.actionButtonSubtext}>Seus times</Text>
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigation.navigate("TeamSelection")}
+              activeOpacity={0.85}>
+              <LinearGradient
+                colors={["#2d1f4e", "#1a1a2e"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.actionButtonGradient}>
+                <View style={styles.actionButtonIconWrapper}>
+                  <LinearGradient
+                    colors={["#fbbf24", "#f59e0b"]}
+                    style={styles.actionIconGradient}>
+                    <Text style={styles.actionButtonIcon}>⭐</Text>
+                  </LinearGradient>
+                </View>
+                <View style={styles.actionButtonTextContainer}>
+                  <Text style={styles.actionButtonText}>Favoritos</Text>
+                  <Text style={styles.actionButtonSubtext}>Seus times</Text>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
 
-          {/* TV Channels Button - Premium Highlight */}
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => navigation.navigate("TVChannels")}
-            activeOpacity={0.85}>
-            <LinearGradient
-              colors={["#350b0b", "#1a1a2e"]} // Vinho muito escuro para o tema base
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={[styles.actionButtonGradient, styles.tvButtonBorder]}>
-              
-              {/* Badge Flutuante Discreto */}
-              <View style={styles.liveBadgeContainer}>
-                <LinearGradient
-                  colors={["#dc2626", "#991b1b"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.liveBadge}>
-                  <View style={styles.liveDot} />
-                  <Text style={styles.liveBadgeText}>LIVE</Text>
-                </LinearGradient>
-              </View>
+            {/* TV Channels Button - Premium Highlight */}
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigation.navigate("TVChannels")}
+              activeOpacity={0.85}>
+              <LinearGradient
+                colors={["#350b0b", "#1a1a2e"]} // Vinho muito escuro para o tema base
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[styles.actionButtonGradient, styles.tvButtonBorder]}>
+                {/* Badge Flutuante Discreto */}
+                <View style={styles.liveBadgeContainer}>
+                  <LinearGradient
+                    colors={["#dc2626", "#991b1b"]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.liveBadge}>
+                    <View style={styles.liveDot} />
+                    <Text style={styles.liveBadgeText}>LIVE</Text>
+                  </LinearGradient>
+                </View>
 
-              <View style={styles.actionButtonIconWrapper}>
-                <LinearGradient
-                  colors={["#f87171", "#dc2626"]} // Gradiente vermelho/salmão mais suave
-                  style={styles.actionIconGradient}>
-                  <Text style={styles.actionButtonIcon}>📺</Text>
-                </LinearGradient>
-              </View>
-              
-              <View style={styles.actionButtonTextContainer}>
-                <Text style={styles.actionButtonText}>TV ao Vivo</Text>
-                <Text style={styles.actionButtonSubtext}>Assista Agora</Text>
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
+                <View style={styles.actionButtonIconWrapper}>
+                  <LinearGradient
+                    colors={["#f87171", "#dc2626"]} // Gradiente vermelho/salmão mais suave
+                    style={styles.actionIconGradient}>
+                    <Text style={styles.actionButtonIcon}>📺</Text>
+                  </LinearGradient>
+                </View>
 
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => {
-              const leagueMap: Record<string, string> = {
-                BSA: "Soccer_BrazilBrasileiroSerieA",
-                CDB: "Soccer_BrazilCopaDoBrasil",
-                CL: "Soccer_InternationalClubsUEFAChampionsLeague",
-                EL: "Soccer_UEFAEuropaLeague",
-                PD: "Soccer_SpainLaLiga",
-                PL: "Soccer_EnglandPremierLeague",
-                BL1: "Soccer_GermanyBundesliga",
-                SA: "Soccer_ItalySerieA",
-                FL1: "Soccer_FranceLigue1",
-                PPL: "Soccer_PortugalPrimeiraLiga",
-                NBA: "Basketball_NBA",
-              };
-              
-              const targetLeague = 
-                selectedLeague !== "ALL" && selectedLeague !== "FAV" && selectedLeague !== "FINISHED"
-                  ? leagueMap[selectedLeague] || "Soccer_EnglandPremierLeague"
-                  : "Soccer_EnglandPremierLeague";
+                <View style={styles.actionButtonTextContainer}>
+                  <Text style={styles.actionButtonText}>TV ao Vivo</Text>
+                  <Text style={styles.actionButtonSubtext}>Assista Agora</Text>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
 
-              navigation.navigate("Standings", {
-                leagueId: targetLeague,
-              });
-            }}
-            activeOpacity={0.85}>
-            <LinearGradient
-              colors={["#1e3a5f", "#1a1a2e"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.actionButtonGradient}>
-              <View style={styles.actionButtonIconWrapper}>
-                <LinearGradient
-                  colors={["#3b82f6", "#2563eb"]}
-                  style={styles.actionIconGradient}>
-                  <Text style={styles.actionButtonIcon}>📊</Text>
-                </LinearGradient>
-              </View>
-              <View style={styles.actionButtonTextContainer}>
-                <Text style={styles.actionButtonText}>Tabela</Text>
-                <Text style={styles.actionButtonSubtext}>Classificação</Text>
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => {
+                const leagueMap: Record<string, string> = {
+                  BSA: "Soccer_BrazilBrasileiroSerieA",
+                  CDB: "Soccer_BrazilCopaDoBrasil",
+                  CL: "Soccer_InternationalClubsUEFAChampionsLeague",
+                  EL: "Soccer_UEFAEuropaLeague",
+                  PD: "Soccer_SpainLaLiga",
+                  PL: "Soccer_EnglandPremierLeague",
+                  BL1: "Soccer_GermanyBundesliga",
+                  SA: "Soccer_ItalySerieA",
+                  FL1: "Soccer_FranceLigue1",
+                  PPL: "Soccer_PortugalPrimeiraLiga",
+                  NBA: "Basketball_NBA",
+                };
 
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => navigation.navigate("LeaguesExplorer")}
-            activeOpacity={0.85}>
-            <LinearGradient
-              colors={["#1e4d3a", "#1a1a2e"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.actionButtonGradient}>
-              <View style={styles.actionButtonIconWrapper}>
-                <LinearGradient
-                  colors={["#22c55e", "#16a34a"]}
-                  style={styles.actionIconGradient}>
-                  <Text style={styles.actionButtonIcon}>🏆</Text>
-                </LinearGradient>
-              </View>
-              <View style={styles.actionButtonTextContainer}>
-                <Text style={styles.actionButtonText}>Ligas</Text>
-                <Text style={styles.actionButtonSubtext}>Explorar</Text>
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
+                const targetLeague =
+                  selectedLeague !== "ALL" &&
+                  selectedLeague !== "FAV" &&
+                  selectedLeague !== "FINISHED"
+                    ? leagueMap[selectedLeague] || "Soccer_EnglandPremierLeague"
+                    : "Soccer_EnglandPremierLeague";
 
+                navigation.navigate("Standings", {
+                  leagueId: targetLeague,
+                });
+              }}
+              activeOpacity={0.85}>
+              <LinearGradient
+                colors={["#1e3a5f", "#1a1a2e"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.actionButtonGradient}>
+                <View style={styles.actionButtonIconWrapper}>
+                  <LinearGradient
+                    colors={["#3b82f6", "#2563eb"]}
+                    style={styles.actionIconGradient}>
+                    <Text style={styles.actionButtonIcon}>📊</Text>
+                  </LinearGradient>
+                </View>
+                <View style={styles.actionButtonTextContainer}>
+                  <Text style={styles.actionButtonText}>Tabela</Text>
+                  <Text style={styles.actionButtonSubtext}>Classificação</Text>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => navigation.navigate("Videos")}
-            activeOpacity={0.85}>
-            <LinearGradient
-              colors={["#4a1e4d", "#1a1a2e"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.actionButtonGradient}>
-              <View style={styles.actionButtonIconWrapper}>
-                <LinearGradient
-                  colors={["#ec4899", "#db2777"]}
-                  style={styles.actionIconGradient}>
-                  <Text style={styles.actionButtonIcon}>🎬</Text>
-                </LinearGradient>
-              </View>
-              <View style={styles.actionButtonTextContainer}>
-                <Text style={styles.actionButtonText}>Vídeos</Text>
-                <Text style={styles.actionButtonSubtext}>Highlights</Text>
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigation.navigate("LeaguesExplorer")}
+              activeOpacity={0.85}>
+              <LinearGradient
+                colors={["#1e4d3a", "#1a1a2e"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.actionButtonGradient}>
+                <View style={styles.actionButtonIconWrapper}>
+                  <LinearGradient
+                    colors={["#22c55e", "#16a34a"]}
+                    style={styles.actionIconGradient}>
+                    <Text style={styles.actionButtonIcon}>🏆</Text>
+                  </LinearGradient>
+                </View>
+                <View style={styles.actionButtonTextContainer}>
+                  <Text style={styles.actionButtonText}>Ligas</Text>
+                  <Text style={styles.actionButtonSubtext}>Explorar</Text>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
 
-          {/* World Cup 2026 Button */}
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => setShowWorldCupModal(true)}
-            activeOpacity={0.85}>
-            <LinearGradient
-              colors={["#1a3a4d", "#0f2027"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.actionButtonGradient}>
-              <View style={styles.actionButtonIconWrapper}>
-                <LinearGradient
-                  colors={["#FFD700", "#FFA500"]}
-                  style={styles.actionIconGradient}>
-                  <Text style={styles.actionButtonIcon}>🏆</Text>
-                </LinearGradient>
-              </View>
-              <View style={styles.actionButtonTextContainer}>
-                <Text style={styles.actionButtonText}>Copa 2026</Text>
-                <Text style={styles.actionButtonSubtext}>Calendário</Text>
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigation.navigate("Videos")}
+              activeOpacity={0.85}>
+              <LinearGradient
+                colors={["#4a1e4d", "#1a1a2e"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.actionButtonGradient}>
+                <View style={styles.actionButtonIconWrapper}>
+                  <LinearGradient
+                    colors={["#ec4899", "#db2777"]}
+                    style={styles.actionIconGradient}>
+                    <Text style={styles.actionButtonIcon}>🎬</Text>
+                  </LinearGradient>
+                </View>
+                <View style={styles.actionButtonTextContainer}>
+                  <Text style={styles.actionButtonText}>Vídeos</Text>
+                  <Text style={styles.actionButtonSubtext}>Highlights</Text>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
 
-          {/* News Button */}
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => navigation.navigate("News")}
-            activeOpacity={0.85}>
-            <LinearGradient
-              colors={["#1e3a5f", "#1a1a2e"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.actionButtonGradient}>
-              <View style={styles.actionButtonIconWrapper}>
-                <LinearGradient
-                  colors={["#3b82f6", "#2563eb"]}
-                  style={styles.actionIconGradient}>
-                  <Text style={styles.actionButtonIcon}>📰</Text>
-                </LinearGradient>
-              </View>
-              <View style={styles.actionButtonTextContainer}>
-                <Text style={styles.actionButtonText}>Notícias</Text>
-                <Text style={styles.actionButtonSubtext}>Esportes</Text>
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
+            {/* World Cup 2026 Button */}
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => setShowWorldCupModal(true)}
+              activeOpacity={0.85}>
+              <LinearGradient
+                colors={["#1a3a4d", "#0f2027"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.actionButtonGradient}>
+                <View style={styles.actionButtonIconWrapper}>
+                  <LinearGradient
+                    colors={["#FFD700", "#FFA500"]}
+                    style={styles.actionIconGradient}>
+                    <Text style={styles.actionButtonIcon}>🏆</Text>
+                  </LinearGradient>
+                </View>
+                <View style={styles.actionButtonTextContainer}>
+                  <Text style={styles.actionButtonText}>Copa 2026</Text>
+                  <Text style={styles.actionButtonSubtext}>Calendário</Text>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
 
-          {/* Radios Button */}
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => navigation.navigate("Radios")}
-            activeOpacity={0.85}>
-            <LinearGradient
-              colors={["#3d1e5f", "#1a1a2e"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.actionButtonGradient}>
-              <View style={styles.actionButtonIconWrapper}>
-                <LinearGradient
-                  colors={["#8b5cf6", "#6366f1"]}
-                  style={styles.actionIconGradient}>
-                  <Text style={styles.actionButtonIcon}>📻</Text>
-                </LinearGradient>
-              </View>
-              <View style={styles.actionButtonTextContainer}>
-                <Text style={styles.actionButtonText}>Rádios</Text>
-                <Text style={styles.actionButtonSubtext}>Ao Vivo</Text>
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
-        </ScrollView>
+            {/* News Button */}
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigation.navigate("News")}
+              activeOpacity={0.85}>
+              <LinearGradient
+                colors={["#1e3a5f", "#1a1a2e"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.actionButtonGradient}>
+                <View style={styles.actionButtonIconWrapper}>
+                  <LinearGradient
+                    colors={["#3b82f6", "#2563eb"]}
+                    style={styles.actionIconGradient}>
+                    <Text style={styles.actionButtonIcon}>📰</Text>
+                  </LinearGradient>
+                </View>
+                <View style={styles.actionButtonTextContainer}>
+                  <Text style={styles.actionButtonText}>Notícias</Text>
+                  <Text style={styles.actionButtonSubtext}>Esportes</Text>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            {/* Radios Button */}
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigation.navigate("Radios")}
+              activeOpacity={0.85}>
+              <LinearGradient
+                colors={["#3d1e5f", "#1a1a2e"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.actionButtonGradient}>
+                <View style={styles.actionButtonIconWrapper}>
+                  <LinearGradient
+                    colors={["#8b5cf6", "#6366f1"]}
+                    style={styles.actionIconGradient}>
+                    <Text style={styles.actionButtonIcon}>📻</Text>
+                  </LinearGradient>
+                </View>
+                <View style={styles.actionButtonTextContainer}>
+                  <Text style={styles.actionButtonText}>Rádios</Text>
+                  <Text style={styles.actionButtonSubtext}>Ao Vivo</Text>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+          </ScrollView>
         </View>
       </View>
 
@@ -1750,7 +1976,7 @@ export const HomeScreen = ({ navigation }: any) => {
         <View style={styles.leagueSelectorCard}>
           {/* Background Glow */}
           <View style={styles.leagueSelectorGlow} />
-          
+
           {/* Header */}
           <View style={styles.leagueSelectorHeader}>
             <View style={styles.leagueTitleRow}>
@@ -1760,9 +1986,7 @@ export const HomeScreen = ({ navigation }: any) => {
               <Text style={styles.leagueSelectorTitle}>Competições</Text>
             </View>
             <View style={styles.filterBadge}>
-              <Text style={styles.filterBadgeText}>
-                {leagues.length} ligas
-              </Text>
+              <Text style={styles.filterBadgeText}>{leagues.length} ligas</Text>
             </View>
           </View>
 
@@ -1777,7 +2001,10 @@ export const HomeScreen = ({ navigation }: any) => {
             }}
             scrollEventThrottle={16}
             onContentSizeChange={() => {
-              if (leagueSelectorRef.current && leagueScrollPosition.current > 0) {
+              if (
+                leagueSelectorRef.current &&
+                leagueScrollPosition.current > 0
+              ) {
                 leagueSelectorRef.current.scrollTo({
                   x: leagueScrollPosition.current,
                   animated: false,
@@ -1788,7 +2015,7 @@ export const HomeScreen = ({ navigation }: any) => {
               const isSelected = selectedLeague === league.code;
               const isFirst = index === 0;
               const isLast = index === leagues.length - 1;
-              
+
               return (
                 <TouchableOpacity
                   key={league.code}
@@ -1805,22 +2032,29 @@ export const HomeScreen = ({ navigation }: any) => {
                       colors={["#22c55e", "#15803d"]}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
-                      style={[StyleSheet.absoluteFillObject, { borderRadius: 14 }]}
+                      style={[
+                        StyleSheet.absoluteFillObject,
+                        { borderRadius: 14 },
+                      ]}
                     />
                   )}
-                  
+
                   <View style={styles.leagueChipContent}>
                     {/* Icon Container */}
-                    <View style={[
-                      styles.leagueIconContainer,
-                      isSelected && styles.leagueIconContainerActive,
-                    ]}>
-                      <Text style={[
-                        styles.leagueChipIcon,
-                        isSelected && styles.leagueChipIconActive,
-                      ]}>{league.icon}</Text>
+                    <View
+                      style={[
+                        styles.leagueIconContainer,
+                        isSelected && styles.leagueIconContainerActive,
+                      ]}>
+                      <Text
+                        style={[
+                          styles.leagueChipIcon,
+                          isSelected && styles.leagueChipIconActive,
+                        ]}>
+                        {league.icon}
+                      </Text>
                     </View>
-                    
+
                     {/* Text */}
                     <Text
                       style={[
@@ -1830,7 +2064,7 @@ export const HomeScreen = ({ navigation }: any) => {
                       {league.name}
                     </Text>
                   </View>
-                  
+
                   {/* Selection Indicator Dot */}
                   {isSelected && <View style={styles.leagueSelectedDot} />}
                 </TouchableOpacity>
@@ -1854,14 +2088,17 @@ export const HomeScreen = ({ navigation }: any) => {
 
   // Memoize the header element to prevent FlatList from remounting it
   // Only re-create when essential values change
-  const memoizedHeader = useMemo(() => renderHeader(), [
-    selectedDate,
-    warnings,
-    daysWithMatches,
-    selectedLeague,
-    loadingFavorites,
-    favoriteNextMatches,
-  ]);
+  const memoizedHeader = useMemo(
+    () => renderHeader(),
+    [
+      selectedDate,
+      warnings,
+      daysWithMatches,
+      selectedLeague,
+      loadingFavorites,
+      favoriteNextMatches,
+    ]
+  );
 
   // Filter matches by selected league
   const filteredMatches = (() => {
@@ -1951,8 +2188,9 @@ export const HomeScreen = ({ navigation }: any) => {
     // Include soccer statuses: 1H, 2H, HT, ET (Extra Time), BT (Break Time), P (Penalties)
     // Include basketball statuses: Q1, Q2, Q3, Q4, and OT (Overtime)
     return (
-      ["1H", "2H", "HT", "ET", "BT", "P", "Q1", "Q2", "Q3", "Q4"].includes(status) ||
-      status.startsWith("OT")
+      ["1H", "2H", "HT", "ET", "BT", "P", "Q1", "Q2", "Q3", "Q4"].includes(
+        status
+      ) || status.startsWith("OT")
     );
   });
 
@@ -2383,7 +2621,7 @@ const styles = StyleSheet.create({
   },
   tvCardsContainer: {
     minHeight: 420,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   actionButtonsWrapper: {
     marginBottom: 20,
@@ -2504,6 +2742,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    flex: 1,
   },
   logoContainer: {
     shadowColor: "#22c55e",
@@ -2527,7 +2766,7 @@ const styles = StyleSheet.create({
   },
   dateBadge: {
     backgroundColor: "rgba(255,255,255,0.06)",
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     paddingVertical: 3,
     borderRadius: 6,
     alignSelf: "flex-start",
@@ -2535,7 +2774,7 @@ const styles = StyleSheet.create({
   },
   dateText: {
     color: "#71717a",
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: "700",
     letterSpacing: 0.5,
   },
@@ -2840,6 +3079,7 @@ const styles = StyleSheet.create({
   dateSelectorTitleRow: {
     flexDirection: "row",
     alignItems: "center",
+    flex: 1,
   },
   dateSelectorIconWrapper: {
     width: 24,
@@ -3449,7 +3689,8 @@ const styles = StyleSheet.create({
   },
   fixedSearchWrapper: {
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === "android" ? (StatusBar.currentHeight || 0) + 12 : 12,
+    paddingTop:
+      Platform.OS === "android" ? (StatusBar.currentHeight || 0) + 12 : 12,
     paddingBottom: 12,
     backgroundColor: "#09090b",
   },
