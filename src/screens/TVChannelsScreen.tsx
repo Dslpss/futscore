@@ -21,6 +21,7 @@ import { getSportsChannels, checkTVAccess } from '../services/channelService';
 import { useAuth } from '../context/AuthContext';
 import { Channel } from '../types/Channel';
 import TVPlayerModal from '../components/TVPlayerModal';
+import { PremiumGate } from '../components/PremiumGate';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 48) / 2;
@@ -368,37 +369,40 @@ export default function TVChannelsScreen({ navigation }: any) {
     );
   }
 
+
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
-      {renderHeader()}
+    <PremiumGate navigation={navigation} featureName="TV ao Vivo">
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" />
+        {renderHeader()}
 
-      <FlatList
-        data={filteredChannels}
-        renderItem={renderChannelItem}
-        keyExtractor={(item) => item._id}
-        contentContainerStyle={styles.listContent}
-        numColumns={2}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor="#22c55e"
-            colors={['#22c55e']}
-          />
-        }
-        ListEmptyComponent={renderEmptyState}
-        showsVerticalScrollIndicator={false}
-      />
-
-      {selectedChannel && (
-        <TVPlayerModal
-          visible={playerVisible}
-          channel={selectedChannel}
-          onClose={handleClosePlayer}
+        <FlatList
+          data={filteredChannels}
+          renderItem={renderChannelItem}
+          keyExtractor={(item) => item._id}
+          contentContainerStyle={styles.listContent}
+          numColumns={2}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor="#22c55e"
+              colors={['#22c55e']}
+            />
+          }
+          ListEmptyComponent={renderEmptyState}
+          showsVerticalScrollIndicator={false}
         />
-      )}
-    </View>
+
+        {selectedChannel && (
+          <TVPlayerModal
+            visible={playerVisible}
+            channel={selectedChannel}
+            onClose={handleClosePlayer}
+          />
+        )}
+      </View>
+    </PremiumGate>
   );
 }
 

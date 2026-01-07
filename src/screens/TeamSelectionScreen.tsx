@@ -31,6 +31,7 @@ import { useAuth } from "../context/AuthContext";
 import { useFavorites } from "../context/FavoritesContext";
 import { TeamCard } from "../components/TeamCard";
 import { TeamDetailsModal } from "../components/TeamDetailsModal";
+import { PremiumGate } from "../components/PremiumGate";
 
 const { width } = Dimensions.get("window");
 
@@ -447,8 +448,10 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({
     outputRange: ["rgba(255,255,255,0.05)", "#22c55e"],
   });
 
+
   return (
-    <SafeAreaView style={styles.container}>
+    <PremiumGate navigation={navigation} featureName="Times Favoritos">
+      <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#09090b" />
 
       {/* Header Premium */}
@@ -626,7 +629,8 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({
         onClose={() => setModalVisible(false)}
         team={selectedTeam}
       />
-    </SafeAreaView>
+      </SafeAreaView>
+    </PremiumGate>
   );
 };
 
