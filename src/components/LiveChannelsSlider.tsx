@@ -38,17 +38,21 @@ interface UnifiedGame {
   source: 'olharDigital' | 'espn';
 }
 
-// Map channel names to channel keywords for matching
+// Map EXACT channel names from broadcasts to keywords for matching in our M3U
+// ONLY include channels that we actually have in our app!
 const CHANNEL_KEYWORDS: Record<string, string[]> = {
+  // ESPN - temos no app
   'espn': ['espn'],
   'espn 2': ['espn 2', 'espn2'],
   'espn 3': ['espn 3', 'espn3'],
   'espn 4': ['espn 4', 'espn4'],
   'espn brasil': ['espn brasil', 'espn br'],
   'espn extra': ['espn extra'],
+  // SporTV - temos no app
   'sportv': ['sportv'],
   'sportv 2': ['sportv 2', 'sportv2'],
   'sportv 3': ['sportv 3', 'sportv3'],
+  // Premiere - temos no app
   'premiere': ['premiere'],
   'premiere 2': ['premiere 2', 'premiere2'],
   'premiere 3': ['premiere 3', 'premiere3'],
@@ -57,25 +61,46 @@ const CHANNEL_KEYWORDS: Record<string, string[]> = {
   'premiere 6': ['premiere 6', 'premiere6'],
   'premiere 7': ['premiere 7', 'premiere7'],
   'premiere 8': ['premiere 8', 'premiere8'],
-  'tnt sports': ['tnt'],
-  'tnt sports 2': ['tnt 2', 'tnt2'],
+  // TNT - temos no app
+  'tnt sports': ['tnt sport', 'tnt sports'],
+  'tnt sports 2': ['tnt 2', 'tnt2', 'tnt sports 2'],
+  // Band - temos no app
   'band': ['band sport', 'bandsport'],
+  'bandsports': ['band sport', 'bandsport'],
+  // Globo - temos no app
   'globo': ['globo'],
-  // Disney+ e Star+ - formatos do M3U: "Disney + 1", "Disney + 2", etc.
-  'disney+': ['disney + ', 'disney +', 'disney+', 'disney plus', 'disneyplus'],
-  'star+': ['star+', 'star plus', 'starplus', 'star +'],
+  'tv globo': ['globo'],
+  // Disney+ e Star+ - temos no app
+  'disney+': ['disney +', 'disney+'],
+  'star+': ['star+', 'star +'],
   'disney+ / star+': ['disney +', 'star+'],
-  // Outros
-  'cazétv': ['caze', 'cazé', 'cazetv'],
-  'onefootball': ['onefootball', 'one football'],
-  'youtube': ['youtube'],
-  'nba league pass': ['nba'],
-  'hbo max': ['hbo', 'max'],
-  'dazn': ['dazn'],
-  'paramount+': ['paramount'],
-  'pluto tv': ['pluto'],
-  'canal goat': ['goat'],
+  // CazéTV - temos no app (nome EXATO)
+  'cazétv': ['cazé tv', 'cazetv', 'cazétv'],
+  'cazetv': ['cazé tv', 'cazetv', 'cazétv'],
+  // Canal GOAT - temos no app
+  'canal goat': ['goat', 'canal goat'],
 };
+
+// Canais que NÃO temos no app - usado para filtrar jogos
+const UNAVAILABLE_CHANNELS = [
+  'youtube',
+  'dazn',
+  'paramount+',
+  'paramount plus',
+  'hbo max',
+  'max',
+  'pluto tv',
+  'nba league pass',
+  'onefootball',
+  'one football',
+  'xsports',
+  'x sports',
+  'amazon prime',
+  'prime video',
+  'record',
+  'sbt',
+  'redetv',
+];
 
 export const LiveChannelsSlider: React.FC = () => {
   const [games, setGames] = useState<UnifiedGame[]>([]);
@@ -85,6 +110,60 @@ export const LiveChannelsSlider: React.FC = () => {
   const [showPlayer, setShowPlayer] = useState(false);
   const [showChannelPicker, setShowChannelPicker] = useState(false);
   const [selectedGame, setSelectedGame] = useState<UnifiedGame | null>(null);
+
+  // Helper function to check if we have a channel for the broadcast
+  const hasMatchingChannel = (broadcastChannel: string, availableChannels: Channel[]): boolean => {
+    const searchTerm = broadcastChannel.toLowerCase().trim();
+    
+    // Se o canal está na lista de indisponíveis, retorna false imediatamente
+    if (UNAVAILABLE_CHANNELS.some(unavailable => searchTerm.includes(unavailable))) {
+      return false;
+    }
+    
+    // Caso especial para Disney+/Star+
+    if (searchTerm.includes('disney') || searchTerm.includes('star+')) {
+      return availableChannels.some(ch => {
+        const chName = ch.name.toLowerCase();
+        return chName.includes('disney +') || chName.includes('disney+') || chName.includes('star+');
+      });
+    }
+    
+    // Check keywords map - usar correspondência EXATA da chave
+    for (const [key, keywords] of Object.entries(CHANNEL_KEYWORDS)) {
+      // Verificar se o termo de busca corresponde EXATAMENTE à chave
+      if (searchTerm === key || searchTerm.startsWith(key + ' ') || searchTerm.endsWith(' ' + key)) {
+        const match = availableChannels.some(ch => {
+          const chName = ch.name.toLowerCase();
+          return keywords.some(kw => chName.includes(kw));
+        });
+        if (match) return true;
+      }
+      // Ou se contém alguma keyword específica
+      if (keywords.some(kw => searchTerm === kw || searchTerm.includes(kw))) {
+        const match = availableChannels.some(ch => {
+          const chName = ch.name.toLowerCase();
+          return keywords.some(kw => chName.includes(kw));
+        });
+        if (match) return true;
+      }
+    }
+    
+    // Busca direta mais restritiva - nome do canal deve ter pelo menos 4 caracteres
+    if (searchTerm.length >= 4) {
+      return availableChannels.some(ch => {
+        const chName = ch.name.toLowerCase();
+        // Correspondência mais precisa: o nome do canal deve conter o termo OU vice-versa
+        return chName.includes(searchTerm) || (searchTerm.length > 5 && searchTerm.includes(chName));
+      });
+    }
+    
+    return false;
+  };
+
+  // Check if a game has at least one available channel
+  const gameHasAvailableChannel = (gameChannels: string[], availableChannels: Channel[]): boolean => {
+    return gameChannels.some(channel => hasMatchingChannel(channel, availableChannels));
+  };
 
   // Fetch games from both sources and channels
   useEffect(() => {
@@ -155,7 +234,7 @@ export const LiveChannelsSlider: React.FC = () => {
           });
         
         // Combine and deduplicate (prefer ESPN for duplicates as it has more data)
-        const allGames = [...espnUnified];
+        let allGames = [...espnUnified];
         
         // Add OlharDigital games that aren't already in ESPN
         for (const olharGame of olharUnified) {
@@ -167,6 +246,11 @@ export const LiveChannelsSlider: React.FC = () => {
             allGames.push(olharGame);
           }
         }
+        
+        // ⚡ NOVO: Filtrar apenas jogos que têm canais disponíveis no app
+        allGames = allGames.filter(game => gameHasAvailableChannel(game.channels, channelsData));
+        
+        console.log(`[LiveChannelsSlider] Filtered to ${allGames.length} games with available channels`);
         
         // Sort: live first, then by time
         allGames.sort((a, b) => {
