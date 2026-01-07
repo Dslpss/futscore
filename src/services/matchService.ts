@@ -215,7 +215,6 @@ export const matchService = {
           sport: "Soccer",
           name: "Liga Portugal",
         },
-        { msn: "Basketball_NBA", fd: null, sport: "Basketball", name: "NBA" },
       ];
 
       let allFixtures: Match[] = [];

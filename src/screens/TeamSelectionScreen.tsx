@@ -77,7 +77,6 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({
     { code: "SA", name: "Serie A" },
     { code: "FL1", name: "Ligue 1" },
     { code: "PPL", name: "Liga Portugal" },
-    { code: "NBA", name: "NBA" },
   ];
 
   useEffect(() => {
@@ -165,12 +164,6 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({
           sport: "Soccer",
           name: "EL",
           country: "Europe",
-        },
-        {
-          id: "Basketball_NBA",
-          sport: "Basketball",
-          name: "NBA",
-          country: "USA",
         },
         {
           id: "Soccer_BrazilCarioca",
@@ -265,7 +258,7 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({
     try {
       const leagueCodes =
         selectedLeague === "all"
-          ? ["BSA", "CL", "PD", "PL", "BL1", "SA", "FL1", "PPL", "NBA"]
+          ? ["BSA", "CL", "PD", "PL", "BL1", "SA", "FL1", "PPL"]
           : [selectedLeague];
 
       const results = await api.searchTeams(query, leagueCodes);
@@ -338,7 +331,6 @@ export const TeamSelectionScreen: React.FC<{ navigation: any }> = ({
             sport: "Soccer",
             country: "Europe",
           },
-          NBA: { id: "Basketball_NBA", sport: "Basketball", country: "USA" },
           CAR: {
             id: "Soccer_BrazilCarioca",
             sport: "Soccer",

@@ -75,7 +75,19 @@ const OndeAssistirCardContent: React.FC = () => {
       
       // Safely filter games
       const gamesWithChannels = (data || []).filter(g => 
-        g && Array.isArray(g.channels) && g.channels.length > 0
+        g && Array.isArray(g.channels) && g.channels.length > 0 &&
+        // Filtrar NBA e Basquete
+        !g.sport?.toLowerCase().includes('basketball') &&
+        !g.sport?.toLowerCase().includes('basquete') &&
+        !g.competition?.toLowerCase().includes('nba') &&
+        !g.competition?.toLowerCase().includes('basketball') &&
+        // Filtrar competições Junior/Base não suportadas
+        !g.competition?.toLowerCase().includes('junior') &&
+        !g.competition?.toLowerCase().includes('júnior') &&
+        !g.competition?.toLowerCase().includes('youth') &&
+        !g.competition?.toLowerCase().includes('sub-20') &&
+        !g.competition?.toLowerCase().includes('u20') &&
+        !g.competition?.toLowerCase().includes('copinha')
       );
       
       // Always update data
@@ -231,12 +243,10 @@ interface GameCardProps {
 }
 
 const GameCard: React.FC<GameCardProps> = ({ game, onPress }) => {
-  const isNBA = game.sport === 'Basketball';
-  
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
       <LinearGradient
-        colors={isNBA ? ['#0f172a', '#1e1b4b', '#0f0f1a'] : ['#0f1a0f', '#1a2e1a', '#0f0f1a']}
+        colors={['#0f1a0f', '#1a2e1a', '#0f0f1a']}
         style={styles.gameCard}
       >
         {/* Time */}

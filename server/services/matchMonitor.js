@@ -229,8 +229,6 @@ async function fetchLiveMatches() {
       name: "Campeonato Gaúcho",
       sport: "Soccer",
     },
-    // Basketball
-    { id: "Basketball_NBA", name: "NBA", sport: "Basketball" },
   ];
 
   let allMatches = [];

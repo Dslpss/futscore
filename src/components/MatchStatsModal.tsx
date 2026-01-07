@@ -435,7 +435,6 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
               CL: "Soccer_InternationalClubsUEFAChampionsLeague",
               EL: "Soccer_UEFAEuropaLeague",
               BSA: "Soccer_BrazilBrasileiroSerieA",
-              NBA: "Basketball_NBA",
             };
 
             // Get full league ID from map or use the original if it's already in full format

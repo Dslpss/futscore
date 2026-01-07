@@ -148,8 +148,33 @@ export const espnApi = {
         (event, index, self) => index === self.findIndex(e => e.id === event.id)
       );
 
+      // Filtrar apenas futebol (remover NBA, Basketball, etc.)
+      const soccerEvents = uniqueEvents.filter(event => {
+        const sportSlug = event.sport?.slug?.toLowerCase() || '';
+        const sportName = event.sport?.name?.toLowerCase() || '';
+        const leagueSlug = event.league?.slug?.toLowerCase() || '';
+        const leagueName = event.league?.name?.toLowerCase() || '';
+        
+        const leagueAbbr = event.league?.abbreviation?.toLowerCase() || '';
+        const eventName = event.name?.toLowerCase() || '';
+        
+        // Excluir Basketball/NBA
+        if (sportSlug.includes('basketball') || sportName.includes('basketball') || sportSlug.includes('basquete')) return false;
+        if (leagueSlug.includes('nba') || leagueName.includes('nba') || leagueAbbr.includes('nba')) return false;
+        if (eventName.includes('nba')) return false;
+
+        // Excluir competições Junior/Base
+        if (leagueSlug.includes('junior') || leagueName.includes('junior') || eventName.includes('junior')) return false;
+        if (leagueSlug.includes('youth') || leagueName.includes('youth')) return false;
+        if (leagueSlug.includes('u20') || leagueName.includes('u20')) return false;
+        if (leagueSlug.includes('sub-20') || leagueName.includes('sub-20')) return false;
+        if (leagueSlug.includes('copinha') || leagueName.includes('copinha')) return false;
+        
+        return true;
+      });
+
       // Sort: live games first, then by date
-      uniqueEvents.sort((a, b) => {
+      soccerEvents.sort((a, b) => {
         const aIsLive = a.status === 'in';
         const bIsLive = b.status === 'in';
         if (aIsLive && !bIsLive) return -1;
@@ -157,10 +182,10 @@ export const espnApi = {
         return new Date(a.date).getTime() - new Date(b.date).getTime();
       });
 
-      console.log(`[ESPN API] Found ${uniqueEvents.length} ESPN games with broadcasts`);
+      console.log(`[ESPN API] Found ${soccerEvents.length} ESPN games with broadcasts (soccer only)`);
 
-      await setCachedData(cacheKey, uniqueEvents);
-      return uniqueEvents;
+      await setCachedData(cacheKey, soccerEvents);
+      return soccerEvents;
     } catch (error) {
       console.error('[ESPN API] Error fetching live games:', error);
       return [];

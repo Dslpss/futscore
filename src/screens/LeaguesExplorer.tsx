@@ -40,6 +40,77 @@ export const LeaguesExplorer = ({ navigation }: any) => {
       setLoading(true);
       const data = await msnSportsApi.getPersonalizationStrip();
       
+      // Adiciona ligas que NÃO vêm da API mas são importantes
+      // Brasileirão Série A
+      const hasBrasileiro = data.some(l => l.sportWithLeague === 'Soccer_BrazilBrasileiroSerieA');
+      if (!hasBrasileiro) {
+        data.unshift({
+          id: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2026',
+          sport: 'soccer',
+          sportWithLeague: 'Soccer_BrazilBrasileiroSerieA',
+          name: { rawName: 'Brasileirão Série A', localizedName: 'Brasileirão Série A' },
+          image: { id: 'OSB.DDCIoVn_Dv2xaAEGEFXsOg--.png' },
+          secondaryIds: [],
+          navUrls: { schedule: 'esportes/futebol/brasileirao/calendario', leagueHome: 'esportes/futebol/brasileirao' },
+        } as MsnLeague);
+      }
+
+      // Copa do Brasil
+      const hasCopaDoBrasil = data.some(l => l.sportWithLeague === 'Soccer_BrazilCopaDoBrasil');
+      if (!hasCopaDoBrasil) {
+        data.unshift({
+          id: 'SportRadar_Soccer_BrazilCopaDoBrasil_2026',
+          sport: 'soccer',
+          sportWithLeague: 'Soccer_BrazilCopaDoBrasil',
+          name: { rawName: 'Copa do Brasil', localizedName: 'Copa do Brasil' },
+          image: { id: 'OSB.eU2p2A|8WHaLXvGHBFf8dg--.png' },
+          secondaryIds: [],
+          navUrls: { schedule: 'esportes/futebol/copa_do_brasil/calendario', leagueHome: 'esportes/futebol/copa_do_brasil' },
+        } as MsnLeague);
+      }
+
+      // Champions League
+      const hasChampions = data.some(l => l.sportWithLeague === 'Soccer_InternationalClubsUEFAChampionsLeague');
+      if (!hasChampions) {
+        data.unshift({
+          id: 'SportRadar_Soccer_InternationalClubsUEFAChampionsLeague_2025',
+          sport: 'soccer',
+          sportWithLeague: 'Soccer_InternationalClubsUEFAChampionsLeague',
+          name: { rawName: 'UEFA Champions League', localizedName: 'Champions League' },
+          image: { id: 'OSB.hEhM6WADcDogo9SjjiSqPg--.png' },
+          secondaryIds: [],
+          navUrls: { schedule: 'esportes/futebol/champions_league/calendario', leagueHome: 'esportes/futebol/champions_league' },
+        } as MsnLeague);
+      }
+
+      // Europa League
+      const hasEuropaLeague = data.some(l => l.sportWithLeague === 'Soccer_UEFAEuropaLeague');
+      if (!hasEuropaLeague) {
+        data.unshift({
+          id: 'SportRadar_Soccer_UEFAEuropaLeague_2025',
+          sport: 'soccer',
+          sportWithLeague: 'Soccer_UEFAEuropaLeague',
+          name: { rawName: 'UEFA Europa League', localizedName: 'Europa League' },
+          image: { id: 'OSB._KnLnyVvH59xImdTB_HaIw--.png' },
+          secondaryIds: [],
+          navUrls: { schedule: 'esportes/futebol/europa_league/calendario', leagueHome: 'esportes/futebol/europa_league' },
+        } as MsnLeague);
+      }
+
+      // Copa Intercontinental (Copa do Mundo de Clubes formato antigo)
+      const hasIntercontinental = data.some(l => l.sportWithLeague === 'Soccer_FIFAIntercontinentalCup');
+      if (!hasIntercontinental) {
+        data.push({
+          id: 'SportRadar_Soccer_FIFAIntercontinentalCup_2025',
+          sport: 'soccer',
+          sportWithLeague: 'Soccer_FIFAIntercontinentalCup',
+          name: { rawName: 'FIFA Intercontinental Cup', localizedName: 'Copa Intercontinental' },
+          image: { id: 'OSB.FIC_logo.png' },
+          secondaryIds: [],
+          navUrls: { schedule: 'esportes/futebol/copa_intercontinental/calendario', leagueHome: 'esportes/futebol/copa_intercontinental' },
+        } as MsnLeague);
+      }
+      
       // Adiciona Campeonato Carioca se não estiver na lista
       const hasCarioca = data.some(l => l.sportWithLeague === 'Soccer_BrazilCarioca');
       if (!hasCarioca) {
@@ -132,7 +203,10 @@ export const LeaguesExplorer = ({ navigation }: any) => {
         data.push(gauchoLeague);
       }
       
-      setLeagues(data);
+      // Filtrar NBA (app é só futebol)
+      const filteredData = data.filter(l => !l.sportWithLeague.toLowerCase().includes('basketball') && !l.sportWithLeague.toLowerCase().includes('nba'));
+      
+      setLeagues(filteredData);
     } catch (error) {
       console.error('Error loading leagues:', error);
     } finally {
@@ -146,6 +220,77 @@ export const LeaguesExplorer = ({ navigation }: any) => {
       await msnSportsApi.clearCache();
       const data = await msnSportsApi.getPersonalizationStrip();
       
+      // Adiciona ligas que NÃO vêm da API mas são importantes
+      // Brasileirão Série A
+      const hasBrasileiro = data.some(l => l.sportWithLeague === 'Soccer_BrazilBrasileiroSerieA');
+      if (!hasBrasileiro) {
+        data.unshift({
+          id: 'SportRadar_Soccer_BrazilBrasileiroSerieA_2026',
+          sport: 'soccer',
+          sportWithLeague: 'Soccer_BrazilBrasileiroSerieA',
+          name: { rawName: 'Brasileirão Série A', localizedName: 'Brasileirão Série A' },
+          image: { id: 'OSB.DDCIoVn_Dv2xaAEGEFXsOg--.png' },
+          secondaryIds: [],
+          navUrls: { schedule: 'esportes/futebol/brasileirao/calendario', leagueHome: 'esportes/futebol/brasileirao' },
+        } as MsnLeague);
+      }
+
+      // Copa do Brasil
+      const hasCopaDoBrasil = data.some(l => l.sportWithLeague === 'Soccer_BrazilCopaDoBrasil');
+      if (!hasCopaDoBrasil) {
+        data.unshift({
+          id: 'SportRadar_Soccer_BrazilCopaDoBrasil_2026',
+          sport: 'soccer',
+          sportWithLeague: 'Soccer_BrazilCopaDoBrasil',
+          name: { rawName: 'Copa do Brasil', localizedName: 'Copa do Brasil' },
+          image: { id: 'OSB.eU2p2A|8WHaLXvGHBFf8dg--.png' },
+          secondaryIds: [],
+          navUrls: { schedule: 'esportes/futebol/copa_do_brasil/calendario', leagueHome: 'esportes/futebol/copa_do_brasil' },
+        } as MsnLeague);
+      }
+
+      // Champions League
+      const hasChampions = data.some(l => l.sportWithLeague === 'Soccer_InternationalClubsUEFAChampionsLeague');
+      if (!hasChampions) {
+        data.unshift({
+          id: 'SportRadar_Soccer_InternationalClubsUEFAChampionsLeague_2025',
+          sport: 'soccer',
+          sportWithLeague: 'Soccer_InternationalClubsUEFAChampionsLeague',
+          name: { rawName: 'UEFA Champions League', localizedName: 'Champions League' },
+          image: { id: 'OSB.hEhM6WADcDogo9SjjiSqPg--.png' },
+          secondaryIds: [],
+          navUrls: { schedule: 'esportes/futebol/champions_league/calendario', leagueHome: 'esportes/futebol/champions_league' },
+        } as MsnLeague);
+      }
+
+      // Europa League
+      const hasEuropaLeague = data.some(l => l.sportWithLeague === 'Soccer_UEFAEuropaLeague');
+      if (!hasEuropaLeague) {
+        data.unshift({
+          id: 'SportRadar_Soccer_UEFAEuropaLeague_2025',
+          sport: 'soccer',
+          sportWithLeague: 'Soccer_UEFAEuropaLeague',
+          name: { rawName: 'UEFA Europa League', localizedName: 'Europa League' },
+          image: { id: 'OSB._KnLnyVvH59xImdTB_HaIw--.png' },
+          secondaryIds: [],
+          navUrls: { schedule: 'esportes/futebol/europa_league/calendario', leagueHome: 'esportes/futebol/europa_league' },
+        } as MsnLeague);
+      }
+
+      // Copa Intercontinental
+      const hasIntercontinental = data.some(l => l.sportWithLeague === 'Soccer_FIFAIntercontinentalCup');
+      if (!hasIntercontinental) {
+        data.push({
+          id: 'SportRadar_Soccer_FIFAIntercontinentalCup_2025',
+          sport: 'soccer',
+          sportWithLeague: 'Soccer_FIFAIntercontinentalCup',
+          name: { rawName: 'FIFA Intercontinental Cup', localizedName: 'Copa Intercontinental' },
+          image: { id: 'OSB.FIC_logo.png' },
+          secondaryIds: [],
+          navUrls: { schedule: 'esportes/futebol/copa_intercontinental/calendario', leagueHome: 'esportes/futebol/copa_intercontinental' },
+        } as MsnLeague);
+      }
+      
       // Adiciona Campeonato Carioca se não estiver na lista
       const hasCarioca = data.some(l => l.sportWithLeague === 'Soccer_BrazilCarioca');
       if (!hasCarioca) {
@@ -238,7 +383,10 @@ export const LeaguesExplorer = ({ navigation }: any) => {
         data.push(gauchoLeague);
       }
       
-      setLeagues(data);
+      // Filtrar NBA (app é só futebol)
+      const filteredData = data.filter(l => !l.sportWithLeague.toLowerCase().includes('basketball') && !l.sportWithLeague.toLowerCase().includes('nba'));
+      
+      setLeagues(filteredData);
     } catch (error) {
       console.error('Error refreshing leagues:', error);
     } finally {

@@ -625,7 +625,6 @@ export const HomeScreen = ({ navigation }: any) => {
         "Soccer_FranceLigue1",
         "Soccer_SpainLaLiga",
         "Soccer_PortugalPrimeiraLiga",
-        "Basketball_NBA",
         "Soccer_BrazilCarioca",
         "Soccer_BrazilMineiro",
         "Soccer_BrazilPaulistaSerieA1",
@@ -682,7 +681,6 @@ export const HomeScreen = ({ navigation }: any) => {
           "Soccer_FranceLigue1",
           "Soccer_SpainLaLiga",
           "Soccer_PortugalPrimeiraLiga",
-          "Basketball_NBA",
           "Soccer_BrazilCarioca",
           "Soccer_BrazilMineiro",
           "Soccer_BrazilPaulistaSerieA1",
@@ -736,7 +734,6 @@ export const HomeScreen = ({ navigation }: any) => {
         "Soccer_FranceLigue1",
         "Soccer_SpainLaLiga", // La Liga
         "Soccer_PortugalPrimeiraLiga",
-        "Basketball_NBA",
         "Soccer_BrazilCarioca",
         "Soccer_BrazilMineiro",
         "Soccer_BrazilPaulistaSerieA1",
@@ -1294,7 +1291,6 @@ export const HomeScreen = ({ navigation }: any) => {
         "Soccer_FranceLigue1",
         "Soccer_SpainLaLiga", // La Liga
         "Soccer_PortugalPrimeiraLiga",
-        "Basketball_NBA",
       ];
 
       const allDates = new Set<string>();
@@ -1367,7 +1363,6 @@ export const HomeScreen = ({ navigation }: any) => {
     { code: "SA", name: "Serie A", icon: "🇮🇹" },
     { code: "FL1", name: "Ligue 1", icon: "🇫🇷" },
     { code: "PPL", name: "Portugal", icon: "🇵🇹" },
-    { code: "NBA", name: "NBA", icon: "🏀" },
     { code: "FINISHED", name: "Finalizados", icon: "✅" },
   ];
 
@@ -1408,7 +1403,6 @@ export const HomeScreen = ({ navigation }: any) => {
           sport: "Soccer",
           country: "Portugal",
         },
-        { id: "Basketball_NBA", sport: "Basketball", country: "USA" },
         { id: "Soccer_BrazilCarioca", sport: "Soccer", country: "Brazil" },
         { id: "Soccer_BrazilMineiro", sport: "Soccer", country: "Brazil" },
         {
@@ -1816,7 +1810,6 @@ export const HomeScreen = ({ navigation }: any) => {
                   SA: "Soccer_ItalySerieA",
                   FL1: "Soccer_FranceLigue1",
                   PPL: "Soccer_PortugalPrimeiraLiga",
-                  NBA: "Basketball_NBA",
                 };
 
                 const targetLeague =
@@ -2143,7 +2136,6 @@ export const HomeScreen = ({ navigation }: any) => {
           SA: "ItalySerieA",
           FL1: "FranceLigue1",
           PPL: "PortugalPrimeiraLiga",
-          NBA: "Basketball_NBA",
         };
 
         if (msnMapping[selectedLeague]) {
@@ -2206,7 +2198,6 @@ export const HomeScreen = ({ navigation }: any) => {
     FL1: "Soccer_FranceLigue1",
     PD: "Soccer_SpainLaLiga",
     PPL: "Soccer_PortugalPrimeiraLiga",
-    NBA: "Basketball_NBA",
     CAR: "Soccer_BrazilCarioca",
     // Full IDs (in case match.league.id comes in this format)
     Soccer_BrazilBrasileiroSerieA: "Soccer_BrazilBrasileiroSerieA",
@@ -2219,7 +2210,6 @@ export const HomeScreen = ({ navigation }: any) => {
     Soccer_FranceLigue1: "Soccer_FranceLigue1",
     Soccer_SpainLaLiga: "Soccer_SpainLaLiga",
     Soccer_PortugalPrimeiraLiga: "Soccer_PortugalPrimeiraLiga",
-    Basketball_NBA: "Basketball_NBA",
     Soccer_BrazilCarioca: "Soccer_BrazilCarioca",
     MIN: "Soccer_BrazilMineiro",
     Soccer_BrazilMineiro: "Soccer_BrazilMineiro",

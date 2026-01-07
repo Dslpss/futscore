@@ -76,7 +76,25 @@ const EspnLiveCardContent: React.FC = () => {
       
       if (!isMountedRef.current) return;
       
-      const newEvents = (data || []).slice(0, 10);
+      // Filtrar apenas futebol (remover NBA, Basketball, etc.) - segurança adicional
+      const soccerOnly = (data || []).filter(event => {
+        const sportSlug = event.sport?.slug?.toLowerCase() || '';
+        const sportName = event.sport?.name?.toLowerCase() || '';
+        const leagueSlug = event.league?.slug?.toLowerCase() || '';
+        const leagueName = event.league?.name?.toLowerCase() || '';
+        const eventName = event.name?.toLowerCase() || '';
+        
+        const leagueAbbr = event.league?.abbreviation?.toLowerCase() || '';
+        
+        // Excluir Basketball/NBA
+        if (sportSlug.includes('basketball') || sportName.includes('basketball') || sportSlug.includes('basquete')) return false;
+        if (leagueSlug.includes('nba') || leagueName.includes('nba') || leagueAbbr.includes('nba')) return false;
+        if (eventName.includes('nba')) return false;
+        
+        return true;
+      });
+      
+      const newEvents = soccerOnly.slice(0, 10);
       // Always update, even if empty - this ensures data freshness
       setEvents(newEvents);
       hasLoadedRef.current = true;

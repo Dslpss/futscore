@@ -171,8 +171,6 @@ const LEAGUE_MAPPINGS: Record<string, string[]> = {
   Soccer_UEFAEuropaLeague: [],
   // Liga Portugal
   Soccer_PortugalPrimeiraLiga: ["Benfica", "Porto", "Sporting CP", "Braga"],
-  // NBA
-  Basketball_NBA: [],
   // Campeonato Carioca
   Soccer_BrazilCarioca: [
     "Flamengo",

@@ -56,7 +56,6 @@ export const TeamSearchBar: React.FC<TeamSearchBarProps> = ({ onTeamAdded }) => 
         { id: "Soccer_ItalySerieA", sport: "Soccer", country: "Itália" },
         { id: "Soccer_FranceLigue1", sport: "Soccer", country: "França" },
         { id: "Soccer_PortugalPrimeiraLiga", sport: "Soccer", country: "Portugal" },
-        { id: "Basketball_NBA", sport: "Basketball", country: "EUA" },
       ];
 
       const teamsMap = new Map<number, TeamResult>();

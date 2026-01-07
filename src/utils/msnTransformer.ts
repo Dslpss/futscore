@@ -488,14 +488,6 @@ export const MSN_LEAGUE_MAP: Record<
     imageId: "OSB.eU2p2A|8WHaLXvGHBFf8dg--",
     country: "Brasil",
   },
-  Basketball_NBA: {
-    id: "NBA",
-    sport: "Basketball",
-    name: "NBA",
-    logo: "https://www.bing.com/th?id=OIP.KKy5O2PYIv3vQjFQjLAj2AHaHa&w=100&h=100",
-    imageId: "OIP.KKy5O2PYIv3vQjFQjLAj2AHaHa",
-    country: "EUA",
-  },
   Soccer_FIFAIntercontinentalCup: {
     id: "FIC",
     sport: "Soccer",
@@ -553,7 +545,6 @@ export function getMsnLeagueIds(): string[] {
     "Soccer_ItalySerieA",
     "Soccer_FranceLigue1",
     "Soccer_PortugalPrimeiraLiga",
-    "Basketball_NBA",
     "Soccer_BrazilCarioca",
     "Soccer_BrazilMineiro",
     "Soccer_BrazilPaulistaSerieA1",

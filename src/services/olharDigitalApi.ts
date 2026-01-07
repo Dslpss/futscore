@@ -219,7 +219,6 @@ export const olharDigitalApi = {
     if (channelLower.includes('cazétv') || channelLower.includes('cazetv')) return '#7c3aed';
     if (channelLower.includes('onefootball')) return '#ec4899';
     if (channelLower.includes('goat')) return '#059669';
-    if (channelLower.includes('nba')) return '#0891b2';
     if (channelLower.includes('globo')) return '#dc2626';
     return '#6b7280';
   },

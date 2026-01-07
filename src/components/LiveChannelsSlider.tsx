@@ -184,7 +184,25 @@ export const LiveChannelsSlider: React.FC = () => {
         const olharUnified: UnifiedGame[] = olharGames
           .filter(game => {
             const gameDate = new Date(game.startDate);
-            return gameDate >= twoHoursAgo && gameDate <= twoHoursFromNow && game.channels.length > 0;
+            const competition = game.competition?.toLowerCase() || '';
+            const sport = game.sport?.toLowerCase() || '';
+            
+            // Filtros de exclusão
+            const isBasketball = 
+              sport.includes('basketball') || 
+              sport.includes('basquete') || 
+              competition.includes('nba') || 
+              competition.includes('basketball');
+              
+            const isJunior = 
+              competition.includes('junior') || 
+              competition.includes('júnior') || 
+              competition.includes('youth') || 
+              competition.includes('sub-20') || 
+              competition.includes('u20') || 
+              competition.includes('copinha');
+
+            return gameDate >= twoHoursAgo && gameDate <= twoHoursFromNow && game.channels.length > 0 && !isBasketball && !isJunior;
           })
           .map(game => ({
             id: `olhar-${game.id}`,
@@ -202,7 +220,28 @@ export const LiveChannelsSlider: React.FC = () => {
         const espnUnified: UnifiedGame[] = espnGames
           .filter(event => {
             const eventDate = new Date(event.date);
-            return eventDate >= twoHoursAgo && eventDate <= twoHoursFromNow;
+            const sportSlug = event.sport?.slug?.toLowerCase() || '';
+            const leagueSlug = event.league?.slug?.toLowerCase() || '';
+            const leagueName = event.league?.name?.toLowerCase() || '';
+            const leagueAbbr = event.league?.abbreviation?.toLowerCase() || '';
+            const eventName = event.name?.toLowerCase() || '';
+
+            // Filtros de exclusão
+            const isBasketball = 
+              sportSlug.includes('basketball') || 
+              sportSlug.includes('basquete') ||
+              leagueSlug.includes('nba') || 
+              leagueName.includes('nba') ||
+              leagueAbbr.includes('nba');
+
+            const isJunior = 
+              leagueSlug.includes('junior') || leagueName.includes('junior') || eventName.includes('junior') ||
+              leagueSlug.includes('youth') || leagueName.includes('youth') ||
+              leagueSlug.includes('u20') || leagueName.includes('u20') ||
+              leagueSlug.includes('sub-20') || leagueName.includes('sub-20') ||
+              leagueSlug.includes('copinha') || leagueName.includes('copinha');
+
+            return eventDate >= twoHoursAgo && eventDate <= twoHoursFromNow && !isBasketball && !isJunior;
           })
           .map(event => {
             const homeTeam = event.competitors?.find(c => c.homeAway === 'home');
@@ -350,7 +389,6 @@ export const LiveChannelsSlider: React.FC = () => {
     if (ch.includes('caze') || ch.includes('cazé')) return '#7c3aed';
     if (ch.includes('onefootball')) return '#ec4899';
     if (ch.includes('goat')) return '#059669';
-    if (ch.includes('nba')) return '#0891b2';
     if (ch.includes('globo')) return '#dc2626';
     if (ch.includes('premiere')) return '#22c55e';
     if (ch.includes('tnt')) return '#dc2626';
