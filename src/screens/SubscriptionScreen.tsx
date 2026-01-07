@@ -89,9 +89,12 @@ export const SubscriptionScreen = ({ navigation }: any) => {
   }
 
   // Se já é premium, mostrar status
-  if (isPremium && subscription) {
-    const endDate = new Date(subscription.endDate);
-    const daysRemaining = Math.ceil((endDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  if (isPremium) {
+    const isManual = !subscription;
+    const endDate = subscription ? new Date(subscription.endDate) : null;
+    const daysRemaining = endDate 
+      ? Math.ceil((endDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+      : null;
 
     return (
       <LinearGradient colors={['#09090b', '#18181b']} style={styles.container}>
@@ -113,32 +116,34 @@ export const SubscriptionScreen = ({ navigation }: any) => {
               </View>
             </View>
 
-            <View style={styles.statusRow}>
-              <Text style={styles.statusLabel}>Válido até</Text>
-              <View style={styles.dateContainer}>
-                <Calendar size={16} color="#a1a1aa" />
-                <Text style={styles.dateText}>
-                  {endDate.toLocaleDateString('pt-BR')}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.statusRow}>
-              <Text style={styles.statusLabel}>Dias restantes</Text>
-              <Text style={styles.daysText}>{daysRemaining} dias</Text>
-            </View>
-
-            {subscription.paymentMethod && (
+            {endDate && (
               <View style={styles.statusRow}>
-                <Text style={styles.statusLabel}>Método de pagamento</Text>
-                <View style={styles.paymentMethod}>
-                  <CreditCard size={16} color="#a1a1aa" />
-                  <Text style={styles.paymentText}>
-                    {subscription.paymentMethod.toUpperCase()}
+                <Text style={styles.statusLabel}>Válido até</Text>
+                <View style={styles.dateContainer}>
+                  <Calendar size={16} color="#a1a1aa" />
+                  <Text style={styles.dateText}>
+                    {endDate.toLocaleDateString('pt-BR')}
                   </Text>
                 </View>
               </View>
             )}
+
+            {daysRemaining !== null && (
+              <View style={styles.statusRow}>
+                <Text style={styles.statusLabel}>Dias restantes</Text>
+                <Text style={styles.daysText}>{daysRemaining} dias</Text>
+              </View>
+            )}
+
+            <View style={styles.statusRow}>
+              <Text style={styles.statusLabel}>Método de pagamento</Text>
+              <View style={styles.paymentMethod}>
+                <CreditCard size={16} color="#a1a1aa" />
+                <Text style={styles.paymentText}>
+                  {subscription?.paymentMethod?.toUpperCase() || 'MANUAL'}
+                </Text>
+              </View>
+            </View>
           </View>
 
           <View style={styles.featuresContainer}>
@@ -166,7 +171,7 @@ export const SubscriptionScreen = ({ navigation }: any) => {
                     onPress: () => {
                       const subject = encodeURIComponent('Cancelar Assinatura Premium - FutScore');
                       const body = encodeURIComponent(`Olá,\n\nGostaria de solicitar o cancelamento da minha assinatura Premium.\n\nAtenciosamente.`);
-                      Linking.openURL(`mailto:suporte@futscore.com?subject=${subject}&body=${body}`);
+                      Linking.openURL(`mailto:dennisemannuel93@gmail.com?subject=${subject}&body=${body}`);
                     },
                   },
                 ]
