@@ -10,37 +10,54 @@ const caktoService = require("../services/caktoService");
  */
 router.post("/cakto", async (req, res) => {
   try {
-    console.log("=== WEBHOOK CAKTO RECEBIDO ===");
-    console.log("Headers:", JSON.stringify(req.headers, null, 2));
-    console.log("Body:", JSON.stringify(req.body, null, 2));
-    
-    const signature = req.headers["x-cakto-signature"];
     const payload = req.body;
+    const { secret, event, data } = payload;
 
-    // TEMPORARIAMENTE DESABILITADO - Para debug
-    // if (!caktoService.validateWebhookSignature(payload, signature)) {
-    //   console.error("Webhook Cakto: Assinatura inválida");
-    //   return res.status(401).json({ error: "Invalid signature" });
-    // }
+    console.log(`[Cakto Webhook] Evento recebido: ${event}`);
 
-    console.log("Webhook Cakto processando evento:", payload.event);
+    // Validar secret (a Cakto envia no body, não no header)
+    const expectedSecret = process.env.CAKTO_WEBHOOK_SECRET;
+    
+    if (expectedSecret && secret !== expectedSecret) {
+      console.error("[Cakto Webhook] Secret inválido");
+      return res.status(401).json({ error: "Invalid secret" });
+    }
 
-    const { event, data } = payload;
+    // Mapear eventos da Cakto para nossos handlers
+    // Baseado na documentação real da Cakto
+    const eventMapping = {
+      // Eventos de pagamento/pedido
+      "pedido_aprovado": "payment.approved",
+      "compra_aprovada": "payment.approved",
+      "pagamento_aprovado": "payment.approved",
+      
+      "pedido_recusado": "payment.refused",
+      "compra_recusada": "payment.refused",
+      
+      "pedido_cancelado": "subscription.canceled",
+      "compra_cancelada": "subscription.canceled",
+      
+      "assinatura_renovada": "subscription.renewed",
+      "renovacao_aprovada": "subscription.renewed",
+      
+      // Evento de teste
+      "pix_gerado": "test",
+    };
+
+    const mappedEvent = eventMapping[event] || event;
+    console.log(`[Cakto Webhook] Evento mapeado: ${event} -> ${mappedEvent}`);
 
     // Processar evento baseado no tipo
-    switch (event) {
+    switch (mappedEvent) {
       case "payment.approved":
-      case "order.approved":
         await handlePaymentApproved(data);
         break;
 
       case "payment.refused":
-      case "order.refused":
         await handlePaymentRefused(data);
         break;
 
       case "subscription.canceled":
-      case "order.canceled":
         await handleSubscriptionCanceled(data);
         break;
 
@@ -48,8 +65,12 @@ router.post("/cakto", async (req, res) => {
         await handleSubscriptionRenewed(data);
         break;
 
+      case "test":
+        console.log("[Cakto Webhook] Evento de teste recebido - OK");
+        break;
+
       default:
-        console.log(`Evento não tratado: ${event}`);
+        console.log(`[Cakto Webhook] Evento não mapeado: ${event}`);
     }
 
     // Sempre retornar 200 para a Cakto saber que recebemos
@@ -65,31 +86,45 @@ router.post("/cakto", async (req, res) => {
  */
 async function handlePaymentApproved(data) {
   try {
-    const { order_id, customer_email, amount, payment_method } = data;
+    // Estrutura real da Cakto:
+    // data.id = order ID
+    // data.customer.email = email do cliente
+    // data.amount = valor total
+    // data.subscription.paymentMethod = método de pagamento
+    
+    const orderId = data.id;
+    const customerEmail = data.customer?.email;
+    const amount = data.amount || data.subscription?.amount || 6.0;
+    const paymentMethod = data.subscription?.paymentMethod || data.paymentMethod || "unknown";
 
-    console.log(`Pagamento aprovado - Order: ${order_id}, Cliente: ${customer_email}`);
+    console.log(`[Cakto] Pagamento aprovado - Order: ${orderId}, Cliente: ${customerEmail}`);
 
-    // Buscar ou criar usuário pelo email
-    let user = await User.findOne({ email: customer_email });
+    if (!customerEmail) {
+      console.error("[Cakto] Email do cliente não encontrado no payload");
+      return;
+    }
+
+    // Buscar usuário pelo email
+    let user = await User.findOne({ email: customerEmail.toLowerCase().trim() });
 
     if (!user) {
-      console.warn(`Usuário não encontrado para email: ${customer_email}`);
-      // Criar usuário temporário ou ignorar
+      console.warn(`[Cakto] Usuário não encontrado para email: ${customerEmail}`);
+      // Em produção você pode criar o usuário automaticamente ou enviar notificação
       return;
     }
 
     // Verificar se já existe assinatura para este pedido
-    let subscription = await Subscription.findOne({ caktoOrderId: order_id });
+    let subscription = await Subscription.findOne({ caktoOrderId: orderId });
 
     if (!subscription) {
       // Criar nova assinatura
       subscription = new Subscription({
         userId: user._id,
-        caktoOrderId: order_id,
-        caktoCustomerEmail: customer_email,
+        caktoOrderId: orderId,
+        caktoCustomerEmail: customerEmail,
         status: "active",
-        amount: amount || 6.0,
-        paymentMethod: payment_method,
+        amount: parseFloat(amount),
+        paymentMethod: paymentMethod,
         startDate: new Date(),
         endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 dias
         renewalDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
@@ -97,13 +132,17 @@ async function handlePaymentApproved(data) {
 
       subscription.addEvent("created");
       subscription.addEvent("approved", data);
+      
+      console.log(`[Cakto] Nova assinatura criada: ${subscription._id}`);
     } else {
-      // Atualizar assinatura existente
+      // Renovar assinatura existente
       subscription.status = "active";
       subscription.startDate = new Date();
       subscription.endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
       subscription.renewalDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
       subscription.addEvent("approved", data);
+      
+      console.log(`[Cakto] Assinatura renovada: ${subscription._id}`);
     }
 
     await subscription.save();
@@ -113,9 +152,9 @@ async function handlePaymentApproved(data) {
     user.subscriptionId = subscription._id;
     await user.save();
 
-    console.log(`Premium ativado para usuário: ${user.email}`);
+    console.log(`[Cakto] ✅ Premium ativado para: ${user.email}`);
   } catch (error) {
-    console.error("Erro ao processar pagamento aprovado:", error);
+    console.error("[Cakto] Erro ao processar pagamento aprovado:", error);
     throw error;
   }
 }
@@ -125,19 +164,21 @@ async function handlePaymentApproved(data) {
  */
 async function handlePaymentRefused(data) {
   try {
-    const { order_id, customer_email } = data;
+    const orderId = data.id;
+    const customerEmail = data.customer?.email;
 
-    console.log(`Pagamento recusado - Order: ${order_id}, Cliente: ${customer_email}`);
+    console.log(`[Cakto] Pagamento recusado - Order: ${orderId}, Cliente: ${customerEmail}`);
 
-    const subscription = await Subscription.findOne({ caktoOrderId: order_id });
+    const subscription = await Subscription.findOne({ caktoOrderId: orderId });
 
     if (subscription) {
       subscription.status = "failed";
       subscription.addEvent("refused", data);
       await subscription.save();
+      console.log(`[Cakto] ❌ Assinatura marcada como falha: ${subscription._id}`);
     }
   } catch (error) {
-    console.error("Erro ao processar pagamento recusado:", error);
+    console.error("[Cakto] Erro ao processar pagamento recusado:", error);
   }
 }
 
@@ -146,11 +187,12 @@ async function handlePaymentRefused(data) {
  */
 async function handleSubscriptionCanceled(data) {
   try {
-    const { order_id, customer_email } = data;
+    const orderId = data.id;
+    const customerEmail = data.customer?.email;
 
-    console.log(`Assinatura cancelada - Order: ${order_id}, Cliente: ${customer_email}`);
+    console.log(`[Cakto] Assinatura cancelada - Order: ${orderId}, Cliente: ${customerEmail}`);
 
-    const subscription = await Subscription.findOne({ caktoOrderId: order_id });
+    const subscription = await Subscription.findOne({ caktoOrderId: orderId });
 
     if (subscription) {
       subscription.status = "canceled";
@@ -162,11 +204,11 @@ async function handleSubscriptionCanceled(data) {
       if (user) {
         user.isPremium = false;
         await user.save();
-        console.log(`Premium desativado para usuário: ${user.email}`);
+        console.log(`[Cakto] Premium desativado para: ${user.email}`);
       }
     }
   } catch (error) {
-    console.error("Erro ao processar cancelamento:", error);
+    console.error("[Cakto] Erro ao processar cancelamento:", error);
   }
 }
 
@@ -175,11 +217,12 @@ async function handleSubscriptionCanceled(data) {
  */
 async function handleSubscriptionRenewed(data) {
   try {
-    const { order_id, customer_email } = data;
+    const orderId = data.id;
+    const customerEmail = data.customer?.email;
 
-    console.log(`Assinatura renovada - Order: ${order_id}, Cliente: ${customer_email}`);
+    console.log(`[Cakto] Assinatura renovada - Order: ${orderId}, Cliente: ${customerEmail}`);
 
-    const subscription = await Subscription.findOne({ caktoOrderId: order_id });
+    const subscription = await Subscription.findOne({ caktoOrderId: orderId });
 
     if (subscription) {
       subscription.status = "active";
@@ -188,10 +231,10 @@ async function handleSubscriptionRenewed(data) {
       subscription.addEvent("renewed", data);
       await subscription.save();
 
-      console.log(`Assinatura renovada até: ${subscription.endDate}`);
+      console.log(`[Cakto] 🔄 Assinatura renovada até: ${subscription.endDate}`);
     }
   } catch (error) {
-    console.error("Erro ao processar renovação:", error);
+    console.error("[Cakto] Erro ao processar renovação:", error);
   }
 }
 
