@@ -27,6 +27,8 @@ import { BlurView } from "expo-blur";
 import { useFavorites } from "../context/FavoritesContext";
 import { MatchStatsModal } from "./MatchStatsModal";
 import { withNotificationPermission } from "../hooks/useNotificationPermission";
+import { useSubscription } from "../hooks/useSubscription";
+import { useNavigation } from "@react-navigation/native";
 
 const { width } = Dimensions.get("window");
 
@@ -86,6 +88,8 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
   } = useFavorites();
   const [modalVisible, setModalVisible] = React.useState(false);
   const [notifyModalVisible, setNotifyModalVisible] = React.useState(false);
+  const { isPremium } = useSubscription();
+  const navigation = useNavigation<any>();
 
   const isHomeFavorite = isFavoriteTeam(match.teams.home.id);
   const isAwayFavorite = isFavoriteTeam(match.teams.away.id);
@@ -137,6 +141,12 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
       return;
     }
     
+    // Verificar se é Premium antes de adicionar
+    if (!isPremium) {
+      navigation.navigate("Subscription");
+      return;
+    }
+
     // Verificar permissão antes de adicionar aos favoritos
     await withNotificationPermission(
       () => toggleFavoriteTeam(teamId, teamInfo),

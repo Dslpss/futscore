@@ -22,6 +22,8 @@ import {
 } from "lucide-react-native";
 import { authApi } from "../services/authApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useSubscription } from "../hooks/useSubscription";
+import { Lock } from "lucide-react-native";
 
 const NOTIFICATION_SETTINGS_KEY = "futscore_notification_settings";
 
@@ -41,6 +43,7 @@ export function NotificationSettingsScreen({ navigation }: any) {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const { isPremium } = useSubscription();
 
   useEffect(() => {
     loadSettings();
@@ -87,6 +90,19 @@ export function NotificationSettingsScreen({ navigation }: any) {
     value: boolean
   ) => {
     try {
+      // Verificar Premium
+      if (!isPremium) {
+        if (key === "favoritesOnly" && value === true) {
+          navigation.navigate("Subscription");
+          return;
+        }
+        // Desativar 'todos os jogos' ativa 'apenas favoritos' automaticamente, então bloqueia também
+        if (key === "allMatches" && value === false) {
+          navigation.navigate("Subscription");
+          return;
+        }
+      }
+
       setSaving(true);
 
       let newSettings = { ...settings, [key]: value };
@@ -211,14 +227,18 @@ export function NotificationSettingsScreen({ navigation }: any) {
                 styles.optionButton,
                 settings.favoritesOnly && styles.optionButtonActive,
               ]}
-              onPress={() => updateSetting("favoritesOnly", true)}
+                onPress={() => updateSetting("favoritesOnly", true)}
               disabled={saving}>
               <View style={styles.optionIconContainer}>
-                <Star
-                  size={24}
-                  color={settings.favoritesOnly ? "#fbbf24" : "#71717a"}
-                  fill={settings.favoritesOnly ? "#fbbf24" : "transparent"}
-                />
+                {!isPremium ? (
+                  <Lock size={24} color="#fbbf24" />
+                ) : (
+                  <Star
+                    size={24}
+                    color={settings.favoritesOnly ? "#fbbf24" : "#71717a"}
+                    fill={settings.favoritesOnly ? "#fbbf24" : "transparent"}
+                  />
+                )}
               </View>
               <View style={styles.optionContent}>
                 <Text
@@ -230,6 +250,7 @@ export function NotificationSettingsScreen({ navigation }: any) {
                 </Text>
                 <Text style={styles.optionDescription}>
                   Receba notificações apenas dos seus times favoritos
+                  {!isPremium && <Text style={{color: '#fbbf24'}}> (Premium)</Text>}
                 </Text>
               </View>
               <View
