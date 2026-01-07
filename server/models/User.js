@@ -92,6 +92,37 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true, // Por padrão, todos têm acesso
   },
+  // Sistema de assinatura Cakto
+  isPremium: {
+    type: Boolean,
+    default: false,
+  },
+  subscriptionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Subscription",
+    default: null,
+  },
 });
+
+// Método para verificar se o usuário tem acesso premium ativo
+userSchema.methods.hasPremiumAccess = async function () {
+  if (!this.isPremium || !this.subscriptionId) {
+    return false;
+  }
+
+  // Populate subscription se necessário
+  if (!this.populated("subscriptionId")) {
+    await this.populate("subscriptionId");
+  }
+
+  const subscription = this.subscriptionId;
+  
+  if (!subscription) {
+    return false;
+  }
+
+  // Verificar se a assinatura está ativa e não expirada
+  return subscription.status === "active" && subscription.endDate > new Date();
+};
 
 module.exports = mongoose.model("User", userSchema);

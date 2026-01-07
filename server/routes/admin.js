@@ -488,4 +488,87 @@ router.post("/notifications/broadcast", authMiddleware, async (req, res) => {
   }
 });
 
+// --- SUBSCRIPTIONS ---
+
+// Get subscriptions statistics (Admin)
+router.get("/subscriptions/stats", authMiddleware, async (req, res) => {
+  try {
+    const Subscription = require("../models/Subscription");
+    
+    const totalSubscribers = await Subscription.countDocuments();
+    const activeSubscribers = await Subscription.countDocuments({ status: "active" });
+    
+    // Monthly recurring revenue (MRR)
+    const activeSubscriptions = await Subscription.find({ status: "active" });
+    const monthlyRevenue = activeSubscriptions.reduce((sum, sub) => sum + sub.amount, 0);
+    
+    // New subscriptions this month
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+    
+    const newThisMonth = await Subscription.countDocuments({
+      createdAt: { $gte: startOfMonth },
+    });
+    
+    res.json({
+      totalSubscribers,
+      activeSubscribers,
+      monthlyRevenue,
+      newThisMonth,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Get all subscriptions (Admin)
+router.get("/subscriptions", authMiddleware, async (req, res) => {
+  try {
+    const Subscription = require("../models/Subscription");
+    
+    const subscriptions = await Subscription.find()
+      .populate("userId", "name email")
+      .sort({ createdAt: -1 });
+    
+    res.json(subscriptions);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Toggle subscription status manually (Admin)
+router.put("/subscriptions/:id/status", authMiddleware, async (req, res) => {
+  try {
+    const Subscription = require("../models/Subscription");
+    const { status } = req.body;
+    
+    if (!["active", "canceled", "expired"].includes(status)) {
+      return res.status(400).json({ message: "Status inválido." });
+    }
+    
+    const subscription = await Subscription.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true }
+    ).populate("userId", "name email");
+    
+    if (!subscription) {
+      return res.status(404).json({ message: "Assinatura não encontrada." });
+    }
+    
+    // Update user premium status
+    if (status === "active") {
+      await User.findByIdAndUpdate(subscription.userId._id, { isPremium: true });
+    } else {
+      await User.findByIdAndUpdate(subscription.userId._id, { isPremium: false });
+    }
+    
+    console.log(`[Admin] Subscription status changed to ${status} by ${req.user.email}`);
+    res.json({ message: `Status atualizado para ${status}.`, subscription });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 module.exports = router;

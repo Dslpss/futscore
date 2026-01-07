@@ -27,13 +27,14 @@ mongoose
   })
   .catch((err) => console.error("MongoDB connection error:", err));
 
-// Routes
 app.use("/auth", authRoutes);
 app.use("/admin", require("./routes/admin"));
 app.use("/user", require("./routes/user"));
 app.use("/api/football", require("./routes/football"));
 app.use("/api/channels", require("./routes/channels"));
 app.use("/download", require("./routes/download"));
+app.use("/api/webhooks", require("./routes/webhooks"));
+app.use("/api/subscription", require("./routes/subscription"));
 
 app.get("/", (req, res) => {
   res.send("FutScore API is running");
