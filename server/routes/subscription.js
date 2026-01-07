@@ -10,15 +10,24 @@ const Subscription = require("../models/Subscription");
  */
 router.get("/status", auth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).populate("subscriptionId");
+    const user = await User.findById(req.user.id);
 
     if (!user) {
       return res.status(404).json({ error: "Usuário não encontrado" });
     }
 
-    const subscription = user.subscriptionId;
+    // Se não tem subscriptionId, retornar como não premium
+    if (!user.subscriptionId) {
+      return res.json({
+        isPremium: user.isPremium || false,
+        hasSubscription: false,
+      });
+    }
 
-    // Se não tem assinatura
+    // Buscar assinatura separadamente para evitar erros de populate
+    const subscription = await Subscription.findById(user.subscriptionId);
+
+    // Se assinatura não existe mais no banco
     if (!subscription) {
       return res.json({
         isPremium: false,
@@ -27,12 +36,14 @@ router.get("/status", auth, async (req, res) => {
     }
 
     // Verificar se assinatura está ativa
-    const isActive = subscription.isActive();
+    const isActive = subscription.isActive ? subscription.isActive() : (subscription.status === "active" && subscription.endDate > new Date());
 
     // Se expirou, atualizar status
     if (!isActive && subscription.status === "active") {
       subscription.status = "expired";
-      subscription.addEvent("expired");
+      if (subscription.addEvent) {
+        subscription.addEvent("expired");
+      }
       await subscription.save();
 
       user.isPremium = false;
