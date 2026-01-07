@@ -67,6 +67,8 @@ import {
 } from "../utils/matchHelpers";
 import { inferMsnTeamId } from "../utils/teamIdMapper";
 import { MSN_LEAGUE_MAP } from "../utils/msnTransformer";
+import { useSubscription } from "../hooks/useSubscription";
+import { Crown } from "lucide-react-native";
 
 const { width } = Dimensions.get("window");
 
@@ -550,6 +552,7 @@ export const HomeScreen = ({ navigation }: any) => {
     isFavoriteTeam,
   } = useFavorites();
   const { user, signOut } = useAuth();
+  const { isPremium } = useSubscription();
   const [selectedLeague, setSelectedLeague] = useState<string>("ALL");
   const [warnings, setWarnings] = useState<Warning[]>([]);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
@@ -2501,6 +2504,19 @@ export const HomeScreen = ({ navigation }: any) => {
                   {user?.name || "Usuário"}
                 </Text>
                 <Text style={styles.profileEmail}>{user?.email || ""}</Text>
+                {/* Premium Badge */}
+                <TouchableOpacity
+                  style={[styles.premiumBadge, isPremium ? styles.premiumBadgeActive : styles.premiumBadgeInactive]}
+                  onPress={() => {
+                    setShowProfileModal(false);
+                    navigation.navigate('Subscription');
+                  }}
+                  activeOpacity={0.8}>
+                  <Crown size={14} color={isPremium ? "#fbbf24" : "#71717a"} />
+                  <Text style={[styles.premiumBadgeText, isPremium && styles.premiumBadgeTextActive]}>
+                    {isPremium ? 'Premium' : 'Seja Premium'}
+                  </Text>
+                </TouchableOpacity>
               </View>
 
               <View style={styles.profileModalDivider} />
@@ -3771,5 +3787,31 @@ const styles = StyleSheet.create({
     fontSize: 7,
     fontWeight: "900",
     letterSpacing: 0.2,
+  },
+  premiumBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginTop: 8,
+    gap: 6,
+    borderWidth: 1,
+  },
+  premiumBadgeActive: {
+    backgroundColor: 'rgba(251, 191, 36, 0.1)',
+    borderColor: 'rgba(251, 191, 36, 0.3)',
+  },
+  premiumBadgeInactive: {
+    backgroundColor: 'rgba(113, 113, 122, 0.1)',
+    borderColor: 'rgba(113, 113, 122, 0.3)',
+  },
+  premiumBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#71717a',
+  },
+  premiumBadgeTextActive: {
+    color: '#fbbf24',
   },
 });

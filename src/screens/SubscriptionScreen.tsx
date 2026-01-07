@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   ScrollView,
   Alert,
+  Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Crown, Check, X, Calendar, CreditCard, Sparkles } from 'lucide-react-native';
@@ -150,6 +151,30 @@ export const SubscriptionScreen = ({ navigation }: any) => {
               </View>
             ))}
           </View>
+
+          {/* Botão de Cancelar Assinatura */}
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={() => {
+              Alert.alert(
+                'Cancelar Assinatura',
+                'Para cancelar sua assinatura, entre em contato com nosso suporte. Sua assinatura continuará ativa até a data de expiração.',
+                [
+                  { text: 'Voltar', style: 'cancel' },
+                  {
+                    text: 'Enviar Email',
+                    onPress: () => {
+                      const subject = encodeURIComponent('Cancelar Assinatura Premium - FutScore');
+                      const body = encodeURIComponent(`Olá,\n\nGostaria de solicitar o cancelamento da minha assinatura Premium.\n\nAtenciosamente.`);
+                      Linking.openURL(`mailto:suporte@futscore.com?subject=${subject}&body=${body}`);
+                    },
+                  },
+                ]
+              );
+            }}
+          >
+            <Text style={styles.cancelButtonText}>Cancelar Assinatura</Text>
+          </TouchableOpacity>
         </ScrollView>
       </LinearGradient>
     );
@@ -462,5 +487,19 @@ const styles = StyleSheet.create({
   },
   webView: {
     flex: 1,
+  },
+  cancelButton: {
+    marginTop: 24,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#ef4444',
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    color: '#ef4444',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
