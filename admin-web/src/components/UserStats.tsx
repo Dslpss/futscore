@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Users, Bell, UserPlus, Star, Shield, TrendingUp, Trash2, Ban, Pause, Play, Crown, Tv } from "lucide-react";
+import { Users, Bell, UserPlus, Star, Shield, TrendingUp, Trash2, Ban, Pause, Play, Crown, Tv, Gem } from "lucide-react";
 import axios from "axios";
 
 interface UserStatsData {
@@ -21,6 +21,7 @@ interface User {
   hasPushToken: boolean;
   favoriteTeamsCount: number;
   canAccessTV: boolean;
+  isPremium: boolean;
 }
 
 export const UserStats = () => {
@@ -109,6 +110,18 @@ export const UserStats = () => {
       setUsers(users.map(u => u._id === userId ? { ...u, canAccessTV: !currentAccess } : u));
     } catch (error: any) {
       alert(error.response?.data?.message || "Erro ao alterar acesso à TV");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleTogglePremium = async (userId: string, currentPremium: boolean) => {
+    setActionLoading(userId);
+    try {
+      await axios.put(`/admin/users/${userId}/premium`, { isPremium: !currentPremium });
+      setUsers(users.map(u => u._id === userId ? { ...u, isPremium: !currentPremium } : u));
+    } catch (error: any) {
+      alert(error.response?.data?.message || "Erro ao alterar status Premium");
     } finally {
       setActionLoading(null);
     }
@@ -272,6 +285,9 @@ export const UserStats = () => {
                             {user.isAdmin && (
                               <Shield className="h-3 w-3 text-red-500" />
                             )}
+                            {user.isPremium && (
+                              <Gem className="h-3 w-3 text-yellow-500" />
+                            )}
                           </p>
                           <p className="text-xs text-zinc-500">{user.email}</p>
                         </div>
@@ -335,16 +351,28 @@ export const UserStats = () => {
                             </button>
                             
                             {/* Toggle Admin */}
-                            <button
-                              onClick={() => handleToggleAdmin(user._id, user.isAdmin)}
-                              className={`p-1.5 rounded-lg transition-colors ${
-                                user.isAdmin 
-                                  ? "bg-purple-500/20 text-purple-400 hover:bg-purple-500/30" 
-                                  : "bg-zinc-700 text-zinc-400 hover:bg-zinc-600"
-                              }`}
-                              title={user.isAdmin ? "Remover Admin" : "Tornar Admin"}>
-                              <Crown className="h-4 w-4" />
-                            </button>
+                              <button
+                                onClick={() => handleToggleAdmin(user._id, user.isAdmin)}
+                                className={`p-1.5 rounded-lg transition-colors ${
+                                  user.isAdmin 
+                                    ? "bg-purple-500/20 text-purple-400 hover:bg-purple-500/30" 
+                                    : "bg-zinc-700 text-zinc-400 hover:bg-zinc-600"
+                                }`}
+                                title={user.isAdmin ? "Remover Admin" : "Tornar Admin"}>
+                                <Crown className="h-4 w-4" />
+                              </button>
+
+                              {/* Toggle Premium */}
+                              <button
+                                onClick={() => handleTogglePremium(user._id, user.isPremium)}
+                                className={`p-1.5 rounded-lg transition-colors ${
+                                  user.isPremium 
+                                    ? "bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30" 
+                                    : "bg-zinc-700 text-zinc-400 hover:bg-zinc-600"
+                                }`}
+                                title={user.isPremium ? "Remover Premium" : "Ativar Premium"}>
+                                <Gem className="h-4 w-4" />
+                              </button>
                             
                             {/* Delete */}
                             <button

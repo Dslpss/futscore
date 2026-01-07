@@ -327,6 +327,29 @@ router.put("/users/:id/admin", authMiddleware, async (req, res) => {
   }
 });
 
+// Toggle premium status (Admin)
+router.put("/users/:id/premium", authMiddleware, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { isPremium } = req.body;
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { isPremium },
+      { new: true }
+    ).select("name email isPremium");
+
+    if (!user) {
+      return res.status(404).json({ message: "Usuário não encontrado." });
+    }
+
+    console.log(`[Admin] User ${user.email} premium status changed to ${isPremium} by ${req.user.email}`);
+    res.json({ message: isPremium ? "Premium ativado manualmente." : "Premium desativado.", user });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // --- PUSH NOTIFICATIONS ---
 
 // Send update notification to all users (Admin)
