@@ -10,7 +10,7 @@ const Subscription = require("../models/Subscription");
  */
 router.get("/status", auth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.userId);
 
     if (!user) {
       return res.status(404).json({ error: "Usuário não encontrado" });
@@ -97,7 +97,7 @@ router.get("/checkout-url", auth, async (req, res) => {
  */
 router.get("/history", auth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).populate("subscriptionId");
+    const user = await User.findById(req.userId).populate("subscriptionId");
 
     if (!user || !user.subscriptionId) {
       return res.json({ events: [] });
