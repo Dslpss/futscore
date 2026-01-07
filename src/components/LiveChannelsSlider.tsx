@@ -18,6 +18,9 @@ import { espnApi, EspnEvent } from '../services/espnApi';
 import { getSportsChannels, getChannels } from '../services/channelService';
 import { Channel } from '../types/Channel';
 import TVPlayerModal from './TVPlayerModal';
+import { useSubscription } from '../hooks/useSubscription';
+import { useNavigation } from '@react-navigation/native';
+import { Lock } from 'lucide-react-native';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.7;
@@ -110,6 +113,8 @@ export const LiveChannelsSlider: React.FC = () => {
   const [showPlayer, setShowPlayer] = useState(false);
   const [showChannelPicker, setShowChannelPicker] = useState(false);
   const [selectedGame, setSelectedGame] = useState<UnifiedGame | null>(null);
+  const { isPremium } = useSubscription();
+  const navigation = useNavigation<any>();
 
   // Helper function to check if we have a channel for the broadcast
   const hasMatchingChannel = (broadcastChannel: string, availableChannels: Channel[]): boolean => {
@@ -344,6 +349,11 @@ export const LiveChannelsSlider: React.FC = () => {
 
   // Handle card press
   const handleCardPress = (game: UnifiedGame) => {
+    if (!isPremium) {
+      navigation.navigate('Subscription');
+      return;
+    }
+
     if (game.channels.length === 1) {
       const channel = findMatchingChannel(game.channels[0]);
       if (channel) {
@@ -519,8 +529,14 @@ export const LiveChannelsSlider: React.FC = () => {
                   
                   {matchedChannel ? (
                     <View style={styles.watchBadge}>
-                      <Ionicons name="play" size={12} color="#fff" />
-                      <Text style={styles.watchText}>Assistir</Text>
+                      {!isPremium ? (
+                        <Lock size={12} color="#fff" />
+                      ) : (
+                        <Ionicons name="play" size={12} color="#fff" />
+                      )}
+                      <Text style={styles.watchText}>
+                        {!isPremium ? 'Premium' : 'Assistir'}
+                      </Text>
                     </View>
                   ) : (
                     <Text style={styles.noChannelHint}>Ver opções</Text>
