@@ -70,15 +70,26 @@ router.get("/status", auth, async (req, res) => {
 
 /**
  * GET /api/subscription/checkout-url
- * Obter URL de checkout da Cakto
+ * Obter URL de checkout da Cakto com email do usuário
  */
 router.get("/checkout-url", auth, async (req, res) => {
   try {
-    const checkoutUrl = process.env.CAKTO_PRODUCT_LINK;
+    const baseCheckoutUrl = process.env.CAKTO_PRODUCT_LINK;
 
-    if (!checkoutUrl) {
+    if (!baseCheckoutUrl) {
       return res.status(500).json({ error: "Link de checkout não configurado" });
     }
+
+    // Buscar email do usuário autenticado
+    const user = await User.findById(req.userId).select('email');
+    
+    if (!user) {
+      return res.status(404).json({ error: "Usuário não encontrado" });
+    }
+
+    // Adicionar email como parâmetro na URL do checkout
+    // Isso garante que o pagamento seja vinculado ao usuário correto
+    const checkoutUrl = `${baseCheckoutUrl}?email=${encodeURIComponent(user.email)}`;
 
     return res.json({
       checkoutUrl,
