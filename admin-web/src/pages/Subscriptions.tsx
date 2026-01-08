@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { SubscriptionStats } from '../components/SubscriptionStats';
-import { Crown, Calendar, CreditCard, Search, Filter, X, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Crown, Calendar, CreditCard, Search, Filter, X, CheckCircle, XCircle, Clock, Gift } from 'lucide-react';
 
 interface Subscription {
   _id: string;
@@ -19,37 +19,74 @@ interface Subscription {
   createdAt: string;
 }
 
+interface UserWithTrial {
+  _id: string;
+  name: string;
+  email: string;
+  isPremium: boolean;
+  trialStatus: 'none' | 'active' | 'expired' | 'used';
+  trialDaysRemaining: number;
+  trialStartDate: string | null;
+  hasSubscription: boolean;
+  createdAt: string;
+}
+
 export const Subscriptions = () => {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [usersWithTrial, setUsersWithTrial] = useState<UserWithTrial[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'active' | 'canceled' | 'expired'>('all');
+  const [filter, setFilter] = useState<'all' | 'active' | 'canceled' | 'expired' | 'trial'| 'trial_expired'>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    fetchSubscriptions();
+    fetchData();
   }, []);
 
-  const fetchSubscriptions = async () => {
+  const fetchData = async () => {
     try {
       const token = localStorage.getItem('adminToken');
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/admin/subscriptions`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setSubscriptions(response.data);
+      const [subsResponse, usersResponse] = await Promise.all([
+        axios.get(`${import.meta.env.VITE_API_URL}/admin/subscriptions`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axios.get(`${import.meta.env.VITE_API_URL}/admin/users`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+      setSubscriptions(subsResponse.data);
+      setUsersWithTrial(usersResponse.data);
     } catch (error) {
-      console.error('Erro ao buscar assinaturas:', error);
+      console.error('Erro ao buscar dados:', error);
     } finally {
       setLoading(false);
     }
   };
 
+  // Filter users on trial
+  const trialUsers = usersWithTrial.filter(u => u.trialStatus === 'active');
+  const trialExpiredUsers = usersWithTrial.filter(u => u.trialStatus === 'expired' || u.trialStatus === 'used');
+
   const filteredSubscriptions = subscriptions.filter((sub) => {
-    const matchesFilter = filter === 'all' || sub.status === filter;
+    const matchesFilter = filter === 'all' || filter === 'trial' || filter === 'trial_expired' || sub.status === filter;
     const matchesSearch =
       sub.userId.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       sub.userId.email.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesFilter && matchesSearch;
   });
+
+  const filteredTrialUsers = filter === 'trial' 
+    ? trialUsers.filter(u => 
+        u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        u.email.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : [];
+
+  const filteredTrialExpiredUsers = filter === 'trial_expired'
+    ? trialExpiredUsers.filter(u =>
+        u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        u.email.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : [];
 
   const getStatusBadge = (status: string) => {
     const badges = {
@@ -81,6 +118,20 @@ export const Subscriptions = () => {
         icon: <Clock size={14} />,
         label: 'Pendente',
       },
+      trial: {
+        bg: 'bg-emerald-500/10',
+        text: 'text-emerald-500',
+        border: 'border-emerald-500/20',
+        icon: <Gift size={14} />,
+        label: 'Trial',
+      },
+      trial_expired: {
+        bg: 'bg-orange-500/10',
+        text: 'text-orange-500',
+        border: 'border-orange-500/20',
+        icon: <Clock size={14} />,
+        label: 'Trial Expirado',
+      },
     };
 
     const badge = badges[status as keyof typeof badges] || badges.pending;
@@ -106,7 +157,7 @@ export const Subscriptions = () => {
             <div>
               <h1 className="text-3xl font-bold text-white">Assinaturas Premium</h1>
               <p className="text-sm text-zinc-400">
-                Gerencie todas as assinaturas do OnFootBall
+                Gerencie assinaturas e trials do OnFootBall
               </p>
             </div>
           </div>
@@ -145,21 +196,90 @@ export const Subscriptions = () => {
               onChange={(e) => setFilter(e.target.value as any)}
               className="rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-2 text-white focus:border-green-500 focus:outline-none"
             >
-              <option value="all">Todas</option>
+              <option value="all">Todas Assinaturas</option>
               <option value="active">Ativas</option>
               <option value="canceled">Canceladas</option>
               <option value="expired">Expiradas</option>
+              <option value="trial">🎁 Em Trial</option>
+              <option value="trial_expired">⏰ Trial Expirado</option>
             </select>
           </div>
         </div>
 
-        {/* Subscriptions Table */}
+        {/* Subscriptions Table or Trial Users */}
         <div className="rounded-lg border border-zinc-800 bg-zinc-900">
           {loading ? (
             <div className="p-12 text-center">
               <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-green-500 border-r-transparent"></div>
-              <p className="mt-4 text-zinc-400">Carregando assinaturas...</p>
+              <p className="mt-4 text-zinc-400">Carregando...</p>
             </div>
+          ) : (filter === 'trial' || filter === 'trial_expired') ? (
+            // Show Trial Users
+            (filter === 'trial' ? filteredTrialUsers : filteredTrialExpiredUsers).length === 0 ? (
+              <div className="p-12 text-center">
+                <Gift className="mx-auto h-12 w-12 text-zinc-600" />
+                <p className="mt-4 text-lg font-medium text-zinc-400">
+                  {filter === 'trial' ? 'Nenhum usuário em trial ativo' : 'Nenhum usuário com trial expirado'}
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-zinc-800 bg-zinc-800/50">
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-zinc-400">
+                        Usuário
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-zinc-400">
+                        Status
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-zinc-400">
+                        {filter === 'trial' ? 'Dias Restantes' : 'Início Trial'}
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-zinc-400">
+                        Cadastro
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(filter === 'trial' ? filteredTrialUsers : filteredTrialExpiredUsers).map((user) => (
+                      <tr
+                        key={user._id}
+                        className="border-b border-zinc-800 transition-colors hover:bg-zinc-800/30"
+                      >
+                        <td className="px-6 py-4">
+                          <div>
+                            <p className="font-medium text-white">{user.name}</p>
+                            <p className="text-sm text-zinc-400">{user.email}</p>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          {getStatusBadge(filter === 'trial' ? 'trial' : 'trial_expired')}
+                        </td>
+                        <td className="px-6 py-4">
+                          {filter === 'trial' ? (
+                            <span className="font-semibold text-emerald-500">
+                              {user.trialDaysRemaining} dias
+                            </span>
+                          ) : (
+                            <div className="flex items-center gap-2 text-sm text-zinc-400">
+                              <Calendar size={14} />
+                              {user.trialStartDate ? new Date(user.trialStartDate).toLocaleDateString('pt-BR') : 'N/A'}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2 text-sm text-zinc-400">
+                            <Calendar size={14} />
+                            {new Date(user.createdAt).toLocaleDateString('pt-BR')}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
           ) : filteredSubscriptions.length === 0 ? (
             <div className="p-12 text-center">
               <Crown className="mx-auto h-12 w-12 text-zinc-600" />
@@ -239,9 +359,14 @@ export const Subscriptions = () => {
         </div>
 
         <div className="mt-6 text-center text-sm text-zinc-400">
-          Exibindo {filteredSubscriptions.length} de {subscriptions.length} assinaturas
+          {(filter === 'trial' || filter === 'trial_expired') 
+            ? `Exibindo ${filter === 'trial' ? filteredTrialUsers.length : filteredTrialExpiredUsers.length} usuários`
+            : `Exibindo ${filteredSubscriptions.length} de ${subscriptions.length} assinaturas`
+          }
+          {' '} • {trialUsers.length} em trial ativo
         </div>
       </div>
     </div>
   );
 };
+

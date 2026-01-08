@@ -196,23 +196,50 @@ router.get("/users/stats", authMiddleware, async (req, res) => {
 router.get("/users", authMiddleware, async (req, res) => {
   try {
     const users = await User.find()
-      .select("name email isAdmin status statusUpdatedAt createdAt pushToken favoriteTeams canAccessTV")
+      .select("name email isAdmin status statusUpdatedAt createdAt pushToken favoriteTeams canAccessTV isPremium trialStartDate trialUsed subscriptionId")
       .sort({ createdAt: -1 })
       .limit(100);
 
     res.json(
-      users.map((user) => ({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        isAdmin: user.isAdmin,
-        status: user.status || "active",
-        statusUpdatedAt: user.statusUpdatedAt,
-        createdAt: user.createdAt,
-        hasPushToken: !!user.pushToken,
-        favoriteTeamsCount: user.favoriteTeams?.length || 0,
-        canAccessTV: user.canAccessTV !== false, // Default true for existing users
-      }))
+      users.map((user) => {
+        // Calculate trial status
+        let trialStatus = 'none';
+        let trialDaysRemaining = 0;
+        
+        if (user.trialStartDate && !user.trialUsed) {
+          const trialEnd = new Date(user.trialStartDate);
+          trialEnd.setDate(trialEnd.getDate() + 7);
+          const now = new Date();
+          
+          if (now < trialEnd) {
+            trialStatus = 'active';
+            trialDaysRemaining = Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          } else {
+            trialStatus = 'expired';
+          }
+        } else if (user.trialUsed) {
+          trialStatus = 'used';
+        }
+        
+        return {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          isAdmin: user.isAdmin,
+          isPremium: user.isPremium || false,
+          status: user.status || "active",
+          statusUpdatedAt: user.statusUpdatedAt,
+          createdAt: user.createdAt,
+          hasPushToken: !!user.pushToken,
+          favoriteTeamsCount: user.favoriteTeams?.length || 0,
+          canAccessTV: user.canAccessTV !== false,
+          // Trial info
+          trialStatus,
+          trialDaysRemaining,
+          trialStartDate: user.trialStartDate,
+          hasSubscription: !!user.subscriptionId,
+        };
+      })
     );
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -534,11 +561,29 @@ router.get("/subscriptions/stats", authMiddleware, async (req, res) => {
       createdAt: { $gte: startOfMonth },
     });
     
+    // Trial stats
+    const usersOnActiveTrial = await User.countDocuments({
+      trialStartDate: { $exists: true, $ne: null },
+      trialUsed: { $ne: true },
+      $expr: {
+        $gt: [
+          { $add: ["$trialStartDate", 7 * 24 * 60 * 60 * 1000] }, // trial end date
+          new Date() // current date
+        ]
+      }
+    });
+    
+    const usersTrialExpired = await User.countDocuments({
+      trialUsed: true
+    });
+    
     res.json({
       totalSubscribers,
       activeSubscribers,
       monthlyRevenue,
       newThisMonth,
+      usersOnActiveTrial,
+      usersTrialExpired,
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
