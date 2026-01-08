@@ -6,6 +6,14 @@ import { CONFIG } from '../constants/config';
 // URL base para APIs (sem /auth no final)
 const API_BASE_URL = CONFIG.BACKEND_URL;
 
+interface TrialStatus {
+  hasTrialAvailable: boolean;
+  isTrialActive: boolean;
+  trialUsed: boolean;
+  trialEndDate: string | null;
+  daysRemaining: number;
+}
+
 interface SubscriptionStatus {
   isPremium: boolean;
   hasSubscription: boolean;
@@ -17,6 +25,7 @@ interface SubscriptionStatus {
     amount: number;
     paymentMethod: string;
   };
+  trial?: TrialStatus;
 }
 
 export const useSubscription = () => {
@@ -26,6 +35,7 @@ export const useSubscription = () => {
   });
   const [loading, setLoading] = useState(true);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+  const [activatingTrial, setActivatingTrial] = useState(false);
 
   const fetchSubscriptionStatus = async () => {
     try {
@@ -78,6 +88,41 @@ export const useSubscription = () => {
     }
   };
 
+  const activateTrial = async (): Promise<{ success: boolean; message: string; trialEndDate?: string }> => {
+    setActivatingTrial(true);
+    try {
+      const token = await AsyncStorage.getItem('@FutScore:token');
+      if (!token) {
+        return { success: false, message: 'Usuário não autenticado' };
+      }
+
+      const response = await axios.post(
+        `${API_BASE_URL}/api/subscription/activate-trial`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      console.log('[Trial] Ativado com sucesso:', response.data);
+      
+      // Atualizar status local
+      await fetchSubscriptionStatus();
+
+      return {
+        success: true,
+        message: response.data.message || 'Trial ativado com sucesso!',
+        trialEndDate: response.data.trialEndDate,
+      };
+    } catch (error: any) {
+      console.error('[Trial] Erro ao ativar:', error?.response?.data || error?.message);
+      return {
+        success: false,
+        message: error?.response?.data?.message || 'Erro ao ativar trial',
+      };
+    } finally {
+      setActivatingTrial(false);
+    }
+  };
+
   const refreshSubscription = async () => {
     setLoading(true);
     await fetchSubscriptionStatus();
@@ -87,6 +132,13 @@ export const useSubscription = () => {
     fetchSubscriptionStatus();
   }, []);
 
+  // Derived values
+  const trial = subscriptionStatus.trial;
+  const hasTrialAvailable = trial?.hasTrialAvailable ?? false;
+  const isTrialActive = trial?.isTrialActive ?? false;
+  const trialDaysRemaining = trial?.daysRemaining ?? 0;
+  const trialEndDate = trial?.trialEndDate ?? null;
+
   return {
     isPremium: subscriptionStatus.isPremium,
     hasSubscription: subscriptionStatus.hasSubscription,
@@ -95,5 +147,13 @@ export const useSubscription = () => {
     checkoutUrl,
     fetchCheckoutUrl,
     refreshSubscription,
+    // Trial
+    hasTrialAvailable,
+    isTrialActive,
+    trialDaysRemaining,
+    trialEndDate,
+    activateTrial,
+    activatingTrial,
   };
 };
+

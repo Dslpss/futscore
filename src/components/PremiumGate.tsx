@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Crown, Lock } from 'lucide-react-native';
+import { Crown, Lock, Gift, Clock } from 'lucide-react-native';
 import { useSubscription } from '../hooks/useSubscription';
+import { PremiumTrialModal } from './PremiumTrialModal';
 
 interface PremiumGateProps {
   children: React.ReactNode;
@@ -11,49 +12,92 @@ interface PremiumGateProps {
 }
 
 export const PremiumGate: React.FC<PremiumGateProps> = ({ children, navigation, featureName }) => {
-  const { isPremium, loading } = useSubscription();
+  const { isPremium, loading, hasTrialAvailable, isTrialActive, trialDaysRemaining, refreshSubscription } = useSubscription();
+  const [showTrialModal, setShowTrialModal] = useState(false);
+
+  // Refresh subscription status when component mounts
+  useEffect(() => {
+    refreshSubscription();
+  }, []);
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#fbbf24" />
+        <ActivityIndicator size="large" color="#22c55e" />
       </View>
     );
   }
 
-  if (!isPremium) {
-    return (
-      <LinearGradient colors={['#09090b', '#18181b']} style={styles.container}>
-        <View style={styles.content}>
-          <LinearGradient
-            colors={['#fbbf2420', '#f59e0b10']}
-            style={styles.iconContainer}
-          >
+  // If user has premium (via subscription or active trial), show content
+  if (isPremium) {
+    return <>{children}</>;
+  }
+
+  // User doesn't have premium - show gate with trial option
+  return (
+    <LinearGradient colors={['#09090b', '#18181b']} style={styles.container}>
+      <View style={styles.content}>
+        <LinearGradient
+          colors={['#22c55e20', '#16a34a10']}
+          style={styles.iconContainer}
+        >
+          {hasTrialAvailable ? (
+            <Gift size={64} color="#22c55e" strokeWidth={2} />
+          ) : (
             <Crown size={64} color="#fbbf24" strokeWidth={2} />
-          </LinearGradient>
+          )}
+        </LinearGradient>
 
-          <Text style={styles.title}>Conteúdo Premium</Text>
-          
-          <Text style={styles.subtitle}>
-            {featureName} é exclusivo para
-assinantes premium
-          </Text>
+        <Text style={styles.title}>
+          {hasTrialAvailable ? 'Experimente Grátis!' : 'Conteúdo Premium'}
+        </Text>
+        
+        <Text style={styles.subtitle}>
+          {hasTrialAvailable 
+            ? `Ative seu trial de 7 dias para acessar ${featureName} e todos os recursos exclusivos`
+            : `${featureName} é exclusivo para assinantes premium`}
+        </Text>
 
-          <View style={styles.benefitsContainer}>
-            <View style={styles.benefitItem}>
-              <Lock size={16} color="#fbbf24" />
-              <Text style={styles.benefitText}>Acesso ilimitado aos canais de TV</Text>
-            </View>
-            <View style={styles.benefitItem}>
-              <Lock size={16} color="#fbbf24" />
-              <Text style={styles.benefitText}>Gerenciar times favoritos</Text>
-            </View>
-            <View style={styles.benefitItem}>
-              <Lock size={16} color="#fbbf24" />
-              <Text style={styles.benefitText}>Notificações personalizadas</Text>
-            </View>
+        {hasTrialAvailable && (
+          <View style={styles.trialHighlight}>
+            <Clock size={18} color="#22c55e" />
+            <Text style={styles.trialHighlightText}>7 dias gratuitos • Sem compromisso</Text>
           </View>
+        )}
 
+        <View style={styles.benefitsContainer}>
+          <View style={styles.benefitItem}>
+            <Lock size={16} color="#22c55e" />
+            <Text style={styles.benefitText}>Acesso ilimitado aos canais de TV</Text>
+          </View>
+          <View style={styles.benefitItem}>
+            <Lock size={16} color="#22c55e" />
+            <Text style={styles.benefitText}>Gerenciar times favoritos</Text>
+          </View>
+          <View style={styles.benefitItem}>
+            <Lock size={16} color="#22c55e" />
+            <Text style={styles.benefitText}>Notificações personalizadas</Text>
+          </View>
+        </View>
+
+        {hasTrialAvailable ? (
+          // Show trial button
+          <TouchableOpacity
+            style={styles.trialButton}
+            onPress={() => setShowTrialModal(true)}
+          >
+            <LinearGradient
+              colors={['#22c55e', '#16a34a']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.upgradeButtonGradient}
+            >
+              <Gift size={20} color="#fff" strokeWidth={2.5} />
+              <Text style={styles.trialButtonText}>Ativar 7 Dias Grátis</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        ) : (
+          // Show subscribe button (trial used)
           <TouchableOpacity
             style={styles.upgradeButton}
             onPress={() => navigation.navigate('Subscription')}
@@ -68,19 +112,37 @@ assinantes premium
               <Text style={styles.upgradeButtonText}>Assinar Premium</Text>
             </LinearGradient>
           </TouchableOpacity>
+        )}
 
+        {hasTrialAvailable && (
           <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
+            style={styles.skipTrialButton}
+            onPress={() => navigation.navigate('Subscription')}
           >
-            <Text style={styles.backButtonText}>Voltar</Text>
+            <Text style={styles.skipTrialText}>Ou assine agora por R$ 6/mês</Text>
           </TouchableOpacity>
-        </View>
-      </LinearGradient>
-    );
-  }
+        )}
 
-  return <>{children}</>;
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={styles.backButtonText}>Voltar</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Trial Modal */}
+      <PremiumTrialModal
+        visible={showTrialModal}
+        onClose={() => setShowTrialModal(false)}
+        onTrialActivated={() => {
+          setShowTrialModal(false);
+          refreshSubscription();
+        }}
+        featureName={featureName}
+      />
+    </LinearGradient>
+  );
 };
 
 const styles = StyleSheet.create({
@@ -106,23 +168,44 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
+    borderWidth: 2,
+    borderColor: 'rgba(34, 197, 94, 0.3)',
   },
   title: {
     fontSize: 28,
     fontWeight: '900',
     color: '#fff',
     marginBottom: 12,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
     color: '#a1a1aa',
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: 20,
     paddingHorizontal: 16,
+    lineHeight: 22,
+  },
+  trialHighlight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 24,
+    gap: 8,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.3)',
+  },
+  trialHighlightText: {
+    color: '#22c55e',
+    fontSize: 14,
+    fontWeight: '600',
   },
   benefitsContainer: {
     width: '100%',
-    marginBottom: 32,
+    marginBottom: 24,
     gap: 12,
   },
   benefitItem: {
@@ -139,6 +222,22 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     color: '#e4e4e7',
+  },
+  trialButton: {
+    width: '100%',
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 12,
+    shadowColor: '#22c55e',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  trialButtonText: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#fff',
   },
   upgradeButton: {
     width: '100%',
@@ -158,6 +257,15 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#000',
   },
+  skipTrialButton: {
+    paddingVertical: 8,
+    marginBottom: 8,
+  },
+  skipTrialText: {
+    color: '#71717a',
+    fontSize: 14,
+    textDecorationLine: 'underline',
+  },
   backButton: {
     paddingVertical: 12,
   },
@@ -167,3 +275,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+

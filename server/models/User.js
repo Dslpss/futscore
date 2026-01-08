@@ -102,10 +102,52 @@ const userSchema = new mongoose.Schema({
     ref: "Subscription",
     default: null,
   },
+  // Sistema de Trial de 7 dias
+  trialStartDate: {
+    type: Date,
+    default: null,
+  },
+  trialUsed: {
+    type: Boolean,
+    default: false,
+  },
 });
+
+// Método para verificar se o trial está ativo
+userSchema.methods.hasActiveTrial = function () {
+  if (!this.trialStartDate || this.trialUsed) {
+    return false;
+  }
+  
+  const now = new Date();
+  const trialEnd = new Date(this.trialStartDate);
+  trialEnd.setDate(trialEnd.getDate() + 7); // 7 dias de trial
+  
+  // Se o trial expirou, marcar como usado
+  if (now >= trialEnd) {
+    this.trialUsed = true;
+    return false;
+  }
+  
+  return true;
+};
+
+// Método para obter data de expiração do trial
+userSchema.methods.getTrialEndDate = function () {
+  if (!this.trialStartDate) return null;
+  
+  const trialEnd = new Date(this.trialStartDate);
+  trialEnd.setDate(trialEnd.getDate() + 7);
+  return trialEnd;
+};
 
 // Método para verificar se o usuário tem acesso premium ativo
 userSchema.methods.hasPremiumAccess = async function () {
+  // Primeiro, verificar trial
+  if (this.hasActiveTrial()) {
+    return true;
+  }
+  
   if (!this.isPremium || !this.subscriptionId) {
     return false;
   }

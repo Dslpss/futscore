@@ -16,11 +16,30 @@ router.get("/status", auth, async (req, res) => {
       return res.status(404).json({ error: "Usuário não encontrado" });
     }
 
-    // Se não tem subscriptionId, retornar como não premium
+    // Verificar trial
+    const isTrialActive = user.hasActiveTrial ? user.hasActiveTrial() : false;
+    const trialEndDate = user.getTrialEndDate ? user.getTrialEndDate() : null;
+    let trialDaysRemaining = 0;
+    
+    if (isTrialActive && trialEndDate) {
+      const now = new Date();
+      const diff = trialEndDate.getTime() - now.getTime();
+      trialDaysRemaining = Math.ceil(diff / (1000 * 60 * 60 * 24));
+    }
+
+    // Se não tem subscriptionId, retornar como não premium (mas pode ter trial)
     if (!user.subscriptionId) {
       return res.json({
-        isPremium: user.isPremium || false,
+        isPremium: user.isPremium || isTrialActive,
         hasSubscription: false,
+        // Trial info
+        trial: {
+          hasTrialAvailable: !user.trialUsed && !user.trialStartDate,
+          isTrialActive,
+          trialUsed: user.trialUsed || false,
+          trialEndDate,
+          daysRemaining: trialDaysRemaining,
+        },
       });
     }
 
@@ -30,8 +49,15 @@ router.get("/status", auth, async (req, res) => {
     // Se assinatura não existe mais no banco
     if (!subscription) {
       return res.json({
-        isPremium: false,
+        isPremium: isTrialActive,
         hasSubscription: false,
+        trial: {
+          hasTrialAvailable: !user.trialUsed && !user.trialStartDate,
+          isTrialActive,
+          trialUsed: user.trialUsed || false,
+          trialEndDate,
+          daysRemaining: trialDaysRemaining,
+        },
       });
     }
 
@@ -51,7 +77,7 @@ router.get("/status", auth, async (req, res) => {
     }
 
     return res.json({
-      isPremium: user.isPremium && isActive,
+      isPremium: (user.isPremium && isActive) || isTrialActive,
       hasSubscription: true,
       subscription: {
         status: subscription.status,
@@ -60,6 +86,13 @@ router.get("/status", auth, async (req, res) => {
         renewalDate: subscription.renewalDate,
         amount: subscription.amount,
         paymentMethod: subscription.paymentMethod,
+      },
+      trial: {
+        hasTrialAvailable: !user.trialUsed && !user.trialStartDate,
+        isTrialActive,
+        trialUsed: user.trialUsed || false,
+        trialEndDate,
+        daysRemaining: trialDaysRemaining,
       },
     });
   } catch (error) {
@@ -120,6 +153,95 @@ router.get("/history", auth, async (req, res) => {
   } catch (error) {
     console.error("Erro ao buscar histórico:", error);
     res.status(500).json({ error: "Erro ao buscar histórico" });
+  }
+});
+
+/**
+ * POST /api/subscription/activate-trial
+ * Ativar trial de 7 dias para o usuário
+ */
+router.post("/activate-trial", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId);
+
+    if (!user) {
+      return res.status(404).json({ error: "Usuário não encontrado" });
+    }
+
+    // Verificar se já usou o trial
+    if (user.trialUsed) {
+      return res.status(400).json({ 
+        error: "Trial já utilizado", 
+        message: "Você já utilizou seu período de teste gratuito. Assine o plano Premium para continuar usando." 
+      });
+    }
+
+    // Verificar se trial já está ativo
+    if (user.trialStartDate && user.hasActiveTrial()) {
+      const trialEndDate = user.getTrialEndDate();
+      return res.status(400).json({ 
+        error: "Trial já ativo",
+        message: "Seu trial já está ativo.",
+        trialEndDate
+      });
+    }
+
+    // Ativar trial
+    user.trialStartDate = new Date();
+    user.trialUsed = false; // Resetar para garantir que está correto
+    await user.save();
+
+    const trialEndDate = user.getTrialEndDate();
+
+    console.log(`[Trial] Ativado para usuário ${user.email} - Expira em: ${trialEndDate}`);
+
+    return res.json({
+      success: true,
+      message: "Trial de 7 dias ativado com sucesso!",
+      trialStartDate: user.trialStartDate,
+      trialEndDate,
+      daysRemaining: 7,
+    });
+  } catch (error) {
+    console.error("Erro ao ativar trial:", error);
+    res.status(500).json({ error: "Erro ao ativar trial" });
+  }
+});
+
+/**
+ * GET /api/subscription/trial-status
+ * Obter status do trial do usuário
+ */
+router.get("/trial-status", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId);
+
+    if (!user) {
+      return res.status(404).json({ error: "Usuário não encontrado" });
+    }
+
+    const isTrialActive = user.hasActiveTrial();
+    const trialEndDate = user.getTrialEndDate();
+    
+    // Calcular dias restantes
+    let daysRemaining = 0;
+    if (isTrialActive && trialEndDate) {
+      const now = new Date();
+      const diff = trialEndDate.getTime() - now.getTime();
+      daysRemaining = Math.ceil(diff / (1000 * 60 * 60 * 24));
+    }
+
+    return res.json({
+      hasTrialAvailable: !user.trialUsed && !user.trialStartDate,
+      isTrialActive,
+      trialUsed: user.trialUsed || false,
+      trialStartDate: user.trialStartDate || null,
+      trialEndDate: trialEndDate || null,
+      daysRemaining,
+    });
+  } catch (error) {
+    console.error("Erro ao buscar status do trial:", error);
+    res.status(500).json({ error: "Erro ao buscar status do trial" });
   }
 });
 
