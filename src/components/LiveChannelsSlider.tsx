@@ -314,20 +314,74 @@ export const LiveChannelsSlider: React.FC = () => {
     fetchData();
   }, []);
 
-  // Find a channel that matches the broadcast name
+  // Find a channel that matches the broadcast name - PRIORIZA CORRESPONDÊNCIA EXATA
   const findMatchingChannel = useCallback((broadcastChannel: string): Channel | null => {
     const searchTerm = broadcastChannel.toLowerCase().trim();
     
-    // Caso especial para Disney+/Star+ - procurar por "disney + 1" etc
+    // 1. PRIMEIRO: Tentar correspondência EXATA do nome
+    const exactMatch = channels.find(ch => {
+      const chName = ch.name.toLowerCase().trim();
+      return chName === searchTerm || 
+             chName === searchTerm.replace('+', ' +') ||
+             chName === searchTerm.replace(' +', '+');
+    });
+    if (exactMatch) return exactMatch;
+    
+    // 2. Caso especial para Disney+/Star+ - procurar canal Disney+ específico
     if (searchTerm.includes('disney') || searchTerm.includes('star+')) {
-      const disneyMatch = channels.find(ch => {
+      // Priorizar o canal que tem número se especificado
+      const disneyExact = channels.find(ch => {
         const chName = ch.name.toLowerCase();
+        if (searchTerm.includes('1')) return chName.includes('disney + 1') || chName.includes('disney+1');
+        if (searchTerm.includes('2')) return chName.includes('disney + 2') || chName.includes('disney+2');
+        // Se não tem número, pegar o primeiro
         return chName.includes('disney +') || chName.includes('disney+');
       });
-      if (disneyMatch) return disneyMatch;
+      if (disneyExact) return disneyExact;
     }
     
-    // Check keywords map
+    // 3. Para canais com número (ESPN 2, SporTV 3, etc), procurar o exato
+    const hasNumber = /\d/.test(searchTerm);
+    if (hasNumber) {
+      const numberMatch = channels.find(ch => {
+        const chName = ch.name.toLowerCase();
+        // Verificar se ambos têm o mesmo número
+        const searchNum = searchTerm.match(/\d+/)?.[0];
+        const chNum = chName.match(/\d+/)?.[0];
+        if (searchNum && chNum && searchNum === chNum) {
+          // Verificar se é o mesmo tipo de canal (ESPN, SporTV, etc)
+          const searchBase = searchTerm.replace(/\d+/g, '').trim();
+          const chBase = chName.replace(/\d+/g, '').trim();
+          return chBase.includes(searchBase) || searchBase.includes(chBase);
+        }
+        return false;
+      });
+      if (numberMatch) return numberMatch;
+    }
+    
+    // 4. Para canais sem número, encontrar o canal BASE (ESPN sem número, não ESPN 2)
+    if (!hasNumber) {
+      for (const [key, keywords] of Object.entries(CHANNEL_KEYWORDS)) {
+        if (searchTerm === key || searchTerm.includes(key)) {
+          // Procurar canal que NÃO tem número
+          const baseMatch = channels.find(ch => {
+            const chName = ch.name.toLowerCase();
+            const hasNum = /\d/.test(chName);
+            return !hasNum && keywords.some(kw => chName.includes(kw));
+          });
+          if (baseMatch) return baseMatch;
+          
+          // Se não encontrou sem número, pegar o primeiro disponível
+          const anyMatch = channels.find(ch => {
+            const chName = ch.name.toLowerCase();
+            return keywords.some(kw => chName.includes(kw));
+          });
+          if (anyMatch) return anyMatch;
+        }
+      }
+    }
+    
+    // 5. Fallback: busca direta com keywords
     for (const [key, keywords] of Object.entries(CHANNEL_KEYWORDS)) {
       if (searchTerm.includes(key) || keywords.some(kw => searchTerm.includes(kw))) {
         const match = channels.find(ch => {
@@ -338,7 +392,7 @@ export const LiveChannelsSlider: React.FC = () => {
       }
     }
     
-    // Direct search
+    // 6. Último recurso: busca direta
     const directMatch = channels.find(ch => {
       const chName = ch.name.toLowerCase();
       return chName.includes(searchTerm) || searchTerm.includes(chName.split(' ')[0]);
