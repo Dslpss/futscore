@@ -6,10 +6,13 @@ import {
   TouchableOpacity,
   Image,
   ScrollView,
+  Dimensions,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Home, Plane } from "lucide-react-native";
+import { Home, Plane, Calendar, ChevronRight } from "lucide-react-native";
 import { Match } from "../types";
+
+const { width } = Dimensions.get('window');
 
 interface NextMatchWidgetProps {
   matches: Array<{ teamId: number; match: Match }>;
@@ -24,11 +27,13 @@ export const NextMatchWidget: React.FC<NextMatchWidgetProps> = ({
     return (
       <View style={styles.emptyContainer}>
         <LinearGradient
-          colors={["rgba(34, 197, 94, 0.05)", "rgba(34, 197, 94, 0.02)"]}
+          colors={["rgba(24, 24, 27, 0.6)", "rgba(24, 24, 27, 0.4)"]}
           style={styles.emptyGradient}>
-          <Text style={styles.emptyIcon}>⚽</Text>
-          <Text style={styles.emptyText}>Adicione times favoritos</Text>
-          <Text style={styles.emptySubText}>para ver os próximos jogos</Text>
+          <View style={styles.emptyIconContainer}>
+            <Calendar size={24} color="#52525b" />
+          </View>
+          <Text style={styles.emptyText}>Sem jogos programados</Text>
+          <Text style={styles.emptySubText}>Adicione times aos favoritos</Text>
         </LinearGradient>
       </View>
     );
@@ -38,23 +43,37 @@ export const NextMatchWidget: React.FC<NextMatchWidgetProps> = ({
     <View style={styles.widgetContainer}>
       <View style={styles.widgetHeader}>
         <View style={styles.headerLeft}>
-          <View style={styles.liveDot} />
-          <Text style={styles.headerTitle}>PRÓXIMOS JOGOS</Text>
+          <View style={styles.iconContainer}>
+            <LinearGradient
+              colors={["#22c55e", "#15803d"]}
+              style={StyleSheet.absoluteFill}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            />
+            <Calendar size={14} color="#fff" />
+          </View>
+          <Text style={styles.headerTitle}>SEUS TIMES</Text>
         </View>
-        <Text style={styles.matchCount}>
-          {matches.length} {matches.length === 1 ? "jogo" : "jogos"}
-        </Text>
+        <TouchableOpacity style={styles.seeAllButton}>
+          <Text style={styles.matchCount}>
+            {matches.length} {matches.length === 1 ? "jogo" : "jogos"}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}>
+        contentContainerStyle={styles.scrollContent}
+        snapToInterval={280 + 12} // Card width + gap
+        decelerationRate="fast"
+      >
         {matches.map(({ teamId, match }) => (
           <MatchCard
             key={match.fixture.id}
             match={match}
             onPress={() => onPressMatch?.(match)}
+            isNext={true}
           />
         ))}
       </ScrollView>
@@ -63,11 +82,13 @@ export const NextMatchWidget: React.FC<NextMatchWidgetProps> = ({
 };
 
 // Individual Match Card Component
-const MatchCard: React.FC<{ match: Match; onPress: () => void }> = ({
+const MatchCard: React.FC<{ match: Match; onPress: () => void; isNext?: boolean }> = ({
   match,
   onPress,
+  isNext
 }) => {
   const [timeRemaining, setTimeRemaining] = useState<string>("");
+  const [isLive, setIsLive] = useState(false);
 
   useEffect(() => {
     const updateCountdown = () => {
@@ -76,7 +97,8 @@ const MatchCard: React.FC<{ match: Match; onPress: () => void }> = ({
       const difference = matchTime - now;
 
       if (difference <= 0) {
-        setTimeRemaining("Ao Vivo!");
+        setTimeRemaining("EM ANDAMENTO");
+        setIsLive(true);
         return;
       }
 
@@ -85,19 +107,18 @@ const MatchCard: React.FC<{ match: Match; onPress: () => void }> = ({
         (difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
       );
       const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((difference % (1000 * 60)) / 1000);
 
       if (days > 0) {
-        setTimeRemaining(`${days}d ${hours}h ${minutes}m`);
+        setTimeRemaining(`Faltam ${days}d ${hours}h`);
       } else if (hours > 0) {
-        setTimeRemaining(`${hours}h ${minutes}m ${seconds}s`);
+        setTimeRemaining(`Faltam ${hours}h ${minutes}m`);
       } else {
-        setTimeRemaining(`${minutes}m ${seconds}s`);
+        setTimeRemaining(`Faltam ${minutes}m`);
       }
     };
 
     updateCountdown();
-    const interval = setInterval(updateCountdown, 1000);
+    const interval = setInterval(updateCountdown, 60000); // Update every minute to save resources
 
     return () => clearInterval(interval);
   }, [match]);
@@ -107,6 +128,10 @@ const MatchCard: React.FC<{ match: Match; onPress: () => void }> = ({
     day: "2-digit",
     month: "short",
   });
+  const formattedWeekDay = matchDate.toLocaleDateString("pt-BR", {
+    weekday: "short",
+  }).toUpperCase().replace('.', '');
+  
   const formattedTime = matchDate.toLocaleTimeString("pt-BR", {
     hour: "2-digit",
     minute: "2-digit",
@@ -118,77 +143,80 @@ const MatchCard: React.FC<{ match: Match; onPress: () => void }> = ({
       onPress={onPress}
       activeOpacity={0.9}>
       <LinearGradient
-        colors={["#1a1a2e", "#16213e", "#0f1419"]}
+        colors={["#18181b", "#111113"]} // Dark subtle background
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.gradient}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.leagueBadge}>
-            <Text style={styles.leagueText}>{match.league.name}</Text>
+        style={styles.cardContent}>
+        
+        {/* Glow Effect */}
+        <View style={styles.cardGlow} />
+        <View style={styles.cardBorder} />
+
+        {/* League Header */}
+        <View style={styles.cardHeader}>
+          <View style={styles.leagueContainer}>
+            {match.league.logo && (
+              <Image source={{ uri: match.league.logo }} style={styles.leagueLogo} />
+            )}
+            <Text style={styles.leagueName} numberOfLines={1}>{match.league.name}</Text>
+          </View>
+          
+          <View style={[styles.statusBadge, isLive && styles.statusBadgeLive]}>
+            <View style={[styles.statusDot, isLive && styles.statusDotLive]} />
+            <Text style={[styles.statusText, isLive && styles.statusTextLive]}>
+              {timeRemaining}
+            </Text>
           </View>
         </View>
 
-        {/* Teams Section */}
-        <View style={styles.teamsContainer}>
-          {/* Home Team */}
-          <View style={styles.teamSection}>
-            <View style={styles.teamLogoContainer}>
+        {/* Teams Display */}
+        <View style={styles.teamsWrapper}>
+          {/* Home */}
+          <View style={styles.teamColumn}>
+            <View style={styles.logoWrapper}>
+              <View style={[styles.logoGlow, { backgroundColor: '#22c55e' }]} />
               <Image
                 source={{ uri: match.teams.home.logo }}
                 style={styles.teamLogo}
                 resizeMode="contain"
               />
             </View>
-            <Text style={styles.teamName} numberOfLines={1}>
+            <Text style={styles.teamName} numberOfLines={2}>
               {match.teams.home.name}
             </Text>
-            <View style={styles.homeBadge}>
-              <Home size={8} color="#22c55e" />
-              <Text style={styles.homeBadgeText}>Casa</Text>
+          </View>
+
+          {/* VS/Time Center */}
+          <View style={styles.vsColumn}>
+            <Text style={styles.timeText}>{formattedTime}</Text>
+            <View style={styles.dateBadge}>
+              <Text style={styles.dateBadgeText}>{formattedDate}</Text>
             </View>
           </View>
 
-          {/* VS Divider */}
-          <View style={styles.vsContainer}>
-            <Text style={styles.vsText}>VS</Text>
-          </View>
-
-          {/* Away Team */}
-          <View style={styles.teamSection}>
-            <View style={styles.teamLogoContainer}>
+          {/* Away */}
+          <View style={styles.teamColumn}>
+            <View style={styles.logoWrapper}>
+              <View style={[styles.logoGlow, { backgroundColor: '#3b82f6' }]} />
               <Image
                 source={{ uri: match.teams.away.logo }}
                 style={styles.teamLogo}
                 resizeMode="contain"
               />
             </View>
-            <Text style={styles.teamName} numberOfLines={1}>
+            <Text style={styles.teamName} numberOfLines={2}>
               {match.teams.away.name}
             </Text>
-            <View style={styles.awayBadge}>
-              <Plane size={8} color="#f59e0b" />
-              <Text style={styles.awayBadgeText}>Fora</Text>
-            </View>
           </View>
         </View>
 
-        {/* Countdown & Date */}
-        <View style={styles.footer}>
-          <View style={styles.countdownContainer}>
-            <LinearGradient
-              colors={["rgba(34, 197, 94, 0.2)", "rgba(34, 197, 94, 0.1)"]}
-              style={styles.countdownGradient}>
-              <Text style={styles.countdownIcon}>⏱️</Text>
-              <Text style={styles.countdownText}>{timeRemaining}</Text>
-            </LinearGradient>
-          </View>
-          <View style={styles.dateTimeContainer}>
-            <Text style={styles.dateText}>
-              {formattedDate} • {formattedTime}
-            </Text>
-          </View>
+        {/* Bottom Info */}
+        <View style={styles.cardFooter}>
+           <Text style={styles.stadiumText} numberOfLines={1}>
+             {match.fixture.venue?.name || 'Estádio não definido'}
+           </Text>
         </View>
+
       </LinearGradient>
     </TouchableOpacity>
   );
@@ -197,217 +225,250 @@ const MatchCard: React.FC<{ match: Match; onPress: () => void }> = ({
 const styles = StyleSheet.create({
   // Widget Container
   widgetContainer: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
   widgetHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
-    paddingHorizontal: 4,
-  },
-  matchCount: {
-    color: "#71717a",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  scrollContent: {
-    gap: 12,
-  },
-
-  // Individual Card
-  container: {
-    width: 280,
-    borderRadius: 20,
-    overflow: "hidden",
-    shadowColor: "#22c55e",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  gradient: {
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "rgba(34, 197, 94, 0.2)",
-    borderRadius: 20,
-  },
-
-  // Header
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
     marginBottom: 16,
+    paddingHorizontal: 16,
   },
   headerLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 10,
   },
-  liveDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#22c55e",
-  },
-  headerTitle: {
-    color: "#22c55e",
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 1,
-  },
-  leagueBadge: {
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  leagueText: {
-    color: "#e4e4e7",
-    fontSize: 10,
-    fontWeight: "600",
-  },
-
-  // Teams
-  teamsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  teamSection: {
-    flex: 1,
-    alignItems: "center",
-    gap: 8,
-  },
-  teamLogoContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
+  iconContainer: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    overflow: "hidden",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 2,
-    borderColor: "rgba(34, 197, 94, 0.3)",
+    shadowColor: "#22c55e",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
-  teamLogo: {
+  headerTitle: {
+    color: "#e4e4e7",
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
+  seeAllButton: {
+    backgroundColor: "rgba(255,255,255,0.05)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+  },
+  matchCount: {
+    color: "#a1a1aa",
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+
+  // Card Styles
+  container: {
+    width: 280,
+    height: 170,
+    borderRadius: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  cardContent: {
+    flex: 1,
+    borderRadius: 24,
+    padding: 16,
+    overflow: 'hidden',
+    position: 'relative',
+    justifyContent: 'space-between',
+  },
+  cardBorder: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+  },
+  cardGlow: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 100,
+    backgroundColor: 'rgba(34, 197, 94, 0.03)',
+    borderRadius: 24,
+  },
+
+  // Card Header
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  leagueContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+  },
+  leagueLogo: {
+    width: 16,
+    height: 16,
+    resizeMode: 'contain',
+  },
+  leagueName: {
+    color: '#a1a1aa',
+    fontSize: 11,
+    fontWeight: '500',
+    flex: 1,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  statusBadgeLive: {
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#71717a',
+  },
+  statusDotLive: {
+    backgroundColor: '#22c55e',
+  },
+  statusText: {
+    color: '#71717a',
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+  statusTextLive: {
+    color: '#22c55e',
+  },
+
+  // Teams Area
+  teamsWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  teamColumn: {
+    alignItems: 'center',
+    width: 80,
+    gap: 8,
+  },
+  logoWrapper: {
+    width: 56,
+    height: 56,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  logoGlow: {
+    position: 'absolute',
     width: 40,
     height: 40,
+    borderRadius: 20,
+    opacity: 0.1,
+  },
+  teamLogo: {
+    width: 48,
+    height: 48,
+    resizeMode: "contain",
   },
   teamName: {
     color: "#fff",
-    fontSize: 13,
-    fontWeight: "700",
+    fontSize: 12,
+    fontWeight: "600",
     textAlign: "center",
   },
-  homeBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(34, 197, 94, 0.15)",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-    gap: 3,
+  vsColumn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
   },
-  homeBadgeText: {
-    color: "#22c55e",
-    fontSize: 8,
+  timeText: {
+    color: "#fff",
+    fontSize: 20,
     fontWeight: "700",
-    textTransform: "uppercase",
+    letterSpacing: -0.5,
   },
-  awayBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(245, 158, 11, 0.15)",
-    paddingHorizontal: 6,
+  dateBadge: {
+    backgroundColor: "rgba(255,255,255,0.05)",
+    paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 8,
-    gap: 3,
+    borderRadius: 6,
   },
-  awayBadgeText: {
-    color: "#f59e0b",
-    fontSize: 8,
-    fontWeight: "700",
-    textTransform: "uppercase",
-  },
-
-  // VS
-  vsContainer: {
-    paddingHorizontal: 16,
-  },
-  vsText: {
-    color: "#71717a",
-    fontSize: 14,
-    fontWeight: "800",
-    letterSpacing: 1,
+  dateBadgeText: {
+    color: "#a1a1aa",
+    fontSize: 10,
+    fontWeight: "500",
   },
 
   // Footer
-  footer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingTop: 12,
+  cardFooter: {
+    marginTop: 12,
     borderTopWidth: 1,
-    borderTopColor: "rgba(255, 255, 255, 0.05)",
+    borderTopColor: "rgba(255,255,255,0.05)",
+    paddingTop: 8,
+    alignItems: 'center',
   },
-  countdownContainer: {
-    flex: 1,
-  },
-  countdownGradient: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    gap: 6,
-    alignSelf: "flex-start",
-  },
-  countdownIcon: {
-    fontSize: 14,
-  },
-  countdownText: {
-    color: "#22c55e",
-    fontSize: 13,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-  },
-  dateTimeContainer: {
-    alignItems: "flex-end",
-  },
-  dateText: {
-    color: "#9ca3af",
-    fontSize: 12,
-    fontWeight: "600",
+  stadiumText: {
+    color: "#52525b",
+    fontSize: 10,
+    fontWeight: "500",
   },
 
   // Empty State
   emptyContainer: {
     marginBottom: 20,
-    borderRadius: 20,
-    overflow: "hidden",
+    paddingHorizontal: 16,
   },
   emptyGradient: {
-    padding: 24,
+    padding: 20,
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(34, 197, 94, 0.1)",
     borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
     borderStyle: "dashed",
   },
-  emptyIcon: {
-    fontSize: 32,
-    marginBottom: 8,
+  emptyIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
   },
   emptyText: {
-    color: "#9ca3af",
+    color: "#e4e4e7",
     fontSize: 14,
     fontWeight: "600",
+    marginBottom: 4,
   },
   emptySubText: {
-    color: "#71717a",
+    color: "#a1a1aa",
     fontSize: 12,
-    fontWeight: "500",
   },
 });
