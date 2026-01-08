@@ -561,20 +561,24 @@ router.get("/subscriptions/stats", authMiddleware, async (req, res) => {
       createdAt: { $gte: startOfMonth },
     });
     
-    // Trial stats
+    // Trial stats - simpler approach: fetch users with trial and filter in memory
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    // Users with active trial: started less than 7 days ago and not marked as used
     const usersOnActiveTrial = await User.countDocuments({
-      trialStartDate: { $exists: true, $ne: null },
-      trialUsed: { $ne: true },
-      $expr: {
-        $gt: [
-          { $add: ["$trialStartDate", 7 * 24 * 60 * 60 * 1000] }, // trial end date
-          new Date() // current date
-        ]
-      }
+      trialStartDate: { $gte: sevenDaysAgo },
+      trialUsed: { $ne: true }
     });
     
+    // Users with expired trial: trialUsed = true OR started more than 7 days ago
     const usersTrialExpired = await User.countDocuments({
-      trialUsed: true
+      $or: [
+        { trialUsed: true },
+        { 
+          trialStartDate: { $exists: true, $lt: sevenDaysAgo }
+        }
+      ]
     });
     
     res.json({
