@@ -68,6 +68,7 @@ import {
 import { inferMsnTeamId } from "../utils/teamIdMapper";
 import { MSN_LEAGUE_MAP } from "../utils/msnTransformer";
 import { useSubscription } from "../hooks/useSubscription";
+import { PremiumTrialModal } from "../components/PremiumTrialModal";
 import { Crown } from "lucide-react-native";
 
 const { width } = Dimensions.get("window");
@@ -552,7 +553,7 @@ export const HomeScreen = ({ navigation }: any) => {
     isFavoriteTeam,
   } = useFavorites();
   const { user, signOut } = useAuth();
-  const { isPremium } = useSubscription();
+  const { isPremium, hasTrialAvailable, refreshSubscription } = useSubscription();
   const [selectedLeague, setSelectedLeague] = useState<string>("ALL");
   const [warnings, setWarnings] = useState<Warning[]>([]);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
@@ -560,6 +561,7 @@ export const HomeScreen = ({ navigation }: any) => {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [showWorldCupModal, setShowWorldCupModal] = useState(false);
+  const [showTrialModal, setShowTrialModal] = useState(false);
 
   // Date Selection State
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -2509,12 +2511,16 @@ export const HomeScreen = ({ navigation }: any) => {
                   style={[styles.premiumBadge, isPremium ? styles.premiumBadgeActive : styles.premiumBadgeInactive]}
                   onPress={() => {
                     setShowProfileModal(false);
-                    navigation.navigate('Subscription');
+                    if (!isPremium && hasTrialAvailable) {
+                      setShowTrialModal(true);
+                    } else {
+                      navigation.navigate('Subscription');
+                    }
                   }}
                   activeOpacity={0.8}>
                   <Crown size={14} color={isPremium ? "#fbbf24" : "#71717a"} />
                   <Text style={[styles.premiumBadgeText, isPremium && styles.premiumBadgeTextActive]}>
-                    {isPremium ? 'Premium' : 'Seja Premium'}
+                    {isPremium ? 'Premium' : hasTrialAvailable ? '7 Dias Grátis' : 'Seja Premium'}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -2595,6 +2601,17 @@ export const HomeScreen = ({ navigation }: any) => {
       <WorldCupModal
         visible={showWorldCupModal}
         onClose={() => setShowWorldCupModal(false)}
+      />
+
+      {/* Premium Trial Modal */}
+      <PremiumTrialModal
+        visible={showTrialModal}
+        onClose={() => setShowTrialModal(false)}
+        onTrialActivated={() => {
+          setShowTrialModal(false);
+          refreshSubscription();
+        }}
+        featureName="Recursos Premium"
       />
     </View>
   );

@@ -29,6 +29,7 @@ import { MatchStatsModal } from "./MatchStatsModal";
 import { withNotificationPermission } from "../hooks/useNotificationPermission";
 import { useSubscription } from "../hooks/useSubscription";
 import { useNavigation } from "@react-navigation/native";
+import { PremiumTrialModal } from "./PremiumTrialModal";
 
 const { width } = Dimensions.get("window");
 
@@ -88,8 +89,9 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
   } = useFavorites();
   const [modalVisible, setModalVisible] = React.useState(false);
   const [notifyModalVisible, setNotifyModalVisible] = React.useState(false);
-  const { isPremium } = useSubscription();
+  const { isPremium, hasTrialAvailable, refreshSubscription } = useSubscription();
   const navigation = useNavigation<any>();
+  const [showTrialModal, setShowTrialModal] = React.useState(false);
 
   const isHomeFavorite = isFavoriteTeam(match.teams.home.id);
   const isAwayFavorite = isFavoriteTeam(match.teams.away.id);
@@ -143,7 +145,11 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
     
     // Verificar se é Premium antes de adicionar
     if (!isPremium) {
-      navigation.navigate("Subscription");
+      if (hasTrialAvailable) {
+        setShowTrialModal(true);
+      } else {
+        navigation.navigate("Subscription");
+      }
       return;
     }
 
@@ -674,6 +680,17 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         match={match}
+      />
+
+      {/* Premium Trial Modal */}
+      <PremiumTrialModal
+        visible={showTrialModal}
+        onClose={() => setShowTrialModal(false)}
+        onTrialActivated={() => {
+          setShowTrialModal(false);
+          refreshSubscription();
+        }}
+        featureName="Favoritar Times"
       />
     </>
   );

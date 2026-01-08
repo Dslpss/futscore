@@ -19,6 +19,7 @@ import { getSportsChannels, getChannels } from '../services/channelService';
 import { Channel } from '../types/Channel';
 import TVPlayerModal from './TVPlayerModal';
 import { useSubscription } from '../hooks/useSubscription';
+import { PremiumTrialModal } from './PremiumTrialModal';
 import { useNavigation } from '@react-navigation/native';
 import { Lock } from 'lucide-react-native';
 
@@ -113,8 +114,9 @@ export const LiveChannelsSlider: React.FC = () => {
   const [showPlayer, setShowPlayer] = useState(false);
   const [showChannelPicker, setShowChannelPicker] = useState(false);
   const [selectedGame, setSelectedGame] = useState<UnifiedGame | null>(null);
-  const { isPremium } = useSubscription();
+  const { isPremium, hasTrialAvailable, refreshSubscription } = useSubscription();
   const navigation = useNavigation<any>();
+  const [showTrialModal, setShowTrialModal] = useState(false);
 
   // Helper function to check if we have a channel for the broadcast
   const hasMatchingChannel = (broadcastChannel: string, availableChannels: Channel[]): boolean => {
@@ -404,7 +406,11 @@ export const LiveChannelsSlider: React.FC = () => {
   // Handle card press
   const handleCardPress = (game: UnifiedGame) => {
     if (!isPremium) {
-      navigation.navigate('Subscription');
+      if (hasTrialAvailable) {
+        setShowTrialModal(true);
+      } else {
+        navigation.navigate('Subscription');
+      }
       return;
     }
 
@@ -694,6 +700,17 @@ export const LiveChannelsSlider: React.FC = () => {
           </View>
         </BlurView>
       </Modal>
+
+      {/* Trial Modal */}
+      <PremiumTrialModal
+        visible={showTrialModal}
+        onClose={() => setShowTrialModal(false)}
+        onTrialActivated={() => {
+          setShowTrialModal(false);
+          refreshSubscription();
+        }}
+        featureName="Transmissões ao Vivo"
+      />
     </View>
   );
 };

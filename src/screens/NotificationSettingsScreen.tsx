@@ -24,6 +24,7 @@ import { authApi } from "../services/authApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSubscription } from "../hooks/useSubscription";
 import { Lock } from "lucide-react-native";
+import { PremiumTrialModal } from "../components/PremiumTrialModal";
 
 const NOTIFICATION_SETTINGS_KEY = "futscore_notification_settings";
 
@@ -43,7 +44,8 @@ export function NotificationSettingsScreen({ navigation }: any) {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const { isPremium } = useSubscription();
+  const { isPremium, hasTrialAvailable, refreshSubscription } = useSubscription();
+  const [showTrialModal, setShowTrialModal] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -93,12 +95,20 @@ export function NotificationSettingsScreen({ navigation }: any) {
       // Verificar Premium
       if (!isPremium) {
         if (key === "favoritesOnly" && value === true) {
-          navigation.navigate("Subscription");
+          if (hasTrialAvailable) {
+            setShowTrialModal(true);
+          } else {
+            navigation.navigate("Subscription");
+          }
           return;
         }
         // Desativar 'todos os jogos' ativa 'apenas favoritos' automaticamente, então bloqueia também
         if (key === "allMatches" && value === false) {
-          navigation.navigate("Subscription");
+          if (hasTrialAvailable) {
+            setShowTrialModal(true);
+          } else {
+            navigation.navigate("Subscription");
+          }
           return;
         }
       }
@@ -340,6 +350,17 @@ export function NotificationSettingsScreen({ navigation }: any) {
           <View style={styles.bottomSpacing} />
         </ScrollView>
       </LinearGradient>
+
+      {/* Premium Trial Modal */}
+      <PremiumTrialModal
+        visible={showTrialModal}
+        onClose={() => setShowTrialModal(false)}
+        onTrialActivated={() => {
+          setShowTrialModal(false);
+          refreshSubscription();
+        }}
+        featureName="Notificações de Favoritos"
+      />
     </SafeAreaView>
   );
 }
