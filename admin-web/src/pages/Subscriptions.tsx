@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { SubscriptionStats } from '../components/SubscriptionStats';
-import { Crown, Calendar, CreditCard, Search, Filter, X, CheckCircle, XCircle, Clock, Gift } from 'lucide-react';
+import { Crown, Calendar, CreditCard, Search, Filter, X, CheckCircle, XCircle, Clock, Gift, ArrowLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface Subscription {
   _id: string;
@@ -150,15 +151,24 @@ export const Subscriptions = () => {
     <div className="min-h-screen bg-zinc-950 p-6">
       <div className="mx-auto max-w-7xl">
         <div className="mb-8 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-yellow-500/10 p-3">
-              <Crown className="h-8 w-8 text-yellow-500" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-white">Assinaturas Premium</h1>
-              <p className="text-sm text-zinc-400">
-                Gerencie assinaturas e trials do OnFootBall
-              </p>
+          <div className="flex items-center gap-4">
+            <Link
+              to="/"
+              className="flex items-center gap-2 rounded-lg bg-zinc-800 px-3 py-2 text-sm font-medium text-zinc-400 hover:bg-zinc-700 hover:text-white transition-colors"
+            >
+              <ArrowLeft size={18} />
+              Voltar
+            </Link>
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-yellow-500/10 p-3">
+                <Crown className="h-8 w-8 text-yellow-500" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-white">Assinaturas Premium</h1>
+                <p className="text-sm text-zinc-400">
+                  Gerencie assinaturas e trials do OnFootBall
+                </p>
+              </div>
             </div>
           </div>
         </div>

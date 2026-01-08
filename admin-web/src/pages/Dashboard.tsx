@@ -6,7 +6,8 @@ import { ApkUploader } from "../components/ApkUploader";
 import { UpdateNotificationSender } from "../components/UpdateNotificationSender";
 import { ChannelManager } from "../components/ChannelManager";
 import { SystemControl } from "../components/SystemControl";
-import { LogOut, LayoutDashboard } from "lucide-react";
+import { LogOut, LayoutDashboard, Crown } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export const Dashboard = () => {
   const { user, signOut } = useAuth();
@@ -22,6 +23,13 @@ export const Dashboard = () => {
             <h1 className="text-xl font-bold text-white">FutScore Admin</h1>
           </div>
           <div className="flex items-center gap-4">
+            <Link
+              to="/subscriptions"
+              className="flex items-center gap-2 rounded-lg bg-yellow-500/10 px-4 py-2 text-sm font-medium text-yellow-500 hover:bg-yellow-500/20 transition-colors"
+            >
+              <Crown size={16} />
+              Assinaturas
+            </Link>
             <span className="text-sm text-zinc-400">Olá, {user?.name}</span>
             <button
               onClick={signOut}

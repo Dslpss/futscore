@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { Download } from './pages/Download';
+import { Subscriptions } from './pages/Subscriptions';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -28,6 +29,14 @@ function AppRoutes() {
           </PrivateRoute>
         }
       />
+      <Route
+        path="/subscriptions"
+        element={
+          <PrivateRoute>
+            <Subscriptions />
+          </PrivateRoute>
+        }
+      />
     </Routes>
   );
 }
@@ -43,3 +52,4 @@ function App() {
 }
 
 export default App;
+
