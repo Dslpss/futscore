@@ -28,7 +28,7 @@ export const SubscriptionStats = () => {
 
   const fetchStats = async () => {
     try {
-      const token = localStorage.getItem('adminToken');
+      const token = localStorage.getItem('@FutScoreAdmin:token');
       const response = await axios.get(`${import.meta.env.VITE_API_URL}/admin/subscriptions/stats`, {
         headers: { Authorization: `Bearer ${token}` },
       });
