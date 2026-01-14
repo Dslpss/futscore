@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Users, Bell, UserPlus, Star, Shield, TrendingUp, Trash2, Ban, Pause, Play, Crown, Tv, Gem } from "lucide-react";
+import { Users, Bell, UserPlus, Star, Shield, TrendingUp, Trash2, Ban, Pause, Play, Crown, Tv, Gem, Gift, X } from "lucide-react";
 import axios from "axios";
 
 interface UserStatsData {
@@ -30,6 +30,13 @@ export const UserStats = () => {
   const [loading, setLoading] = useState(true);
   const [showUserList, setShowUserList] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  
+  // Gift Premium Modal state
+  const [giftModalOpen, setGiftModalOpen] = useState(false);
+  const [giftTargetUser, setGiftTargetUser] = useState<User | null>(null);
+  const [giftDays, setGiftDays] = useState(7);
+  const [giftMessage, setGiftMessage] = useState("");
+  const [giftLoading, setGiftLoading] = useState(false);
 
   useEffect(() => {
     fetchStats();
@@ -124,6 +131,32 @@ export const UserStats = () => {
       alert(error.response?.data?.message || "Erro ao alterar status Premium");
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  const openGiftModal = (user: User) => {
+    setGiftTargetUser(user);
+    setGiftDays(7);
+    setGiftMessage("");
+    setGiftModalOpen(true);
+  };
+
+  const handleGiftPremium = async () => {
+    if (!giftTargetUser) return;
+    
+    setGiftLoading(true);
+    try {
+      await axios.post(`/admin/users/${giftTargetUser._id}/gift-premium`, {
+        days: giftDays,
+        message: giftMessage || undefined,
+      });
+      alert(`${giftDays} dias de Premium presenteados para ${giftTargetUser.name}!`);
+      setGiftModalOpen(false);
+      setGiftTargetUser(null);
+    } catch (error: any) {
+      alert(error.response?.data?.message || "Erro ao presentear Premium");
+    } finally {
+      setGiftLoading(false);
     }
   };
 
@@ -373,6 +406,14 @@ export const UserStats = () => {
                                 title={user.isPremium ? "Remover Premium" : "Ativar Premium"}>
                                 <Gem className="h-4 w-4" />
                               </button>
+
+                              {/* Gift Premium */}
+                              <button
+                                onClick={() => openGiftModal(user)}
+                                className="p-1.5 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors"
+                                title="Dar dias Premium">
+                                <Gift className="h-4 w-4" />
+                              </button>
                             
                             {/* Delete */}
                             <button
@@ -389,6 +430,77 @@ export const UserStats = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Gift Premium Modal */}
+      {giftModalOpen && giftTargetUser && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Gift className="h-5 w-5 text-green-400" />
+                <h3 className="text-lg font-semibold text-white">Dar dias Premium</h3>
+              </div>
+              <button
+                onClick={() => setGiftModalOpen(false)}
+                className="text-zinc-400 hover:text-white">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <p className="text-zinc-300 text-sm">
+                Usuário: <span className="text-white font-medium">{giftTargetUser.name}</span>
+              </p>
+              <p className="text-zinc-500 text-xs">{giftTargetUser.email}</p>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-zinc-400 mb-1">Quantidade de dias</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={365}
+                  value={giftDays}
+                  onChange={(e) => setGiftDays(parseInt(e.target.value) || 7)}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-green-500"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm text-zinc-400 mb-1">Mensagem (opcional)</label>
+                <textarea
+                  value={giftMessage}
+                  onChange={(e) => setGiftMessage(e.target.value)}
+                  placeholder={`Parabéns! Você ganhou ${giftDays} dias de acesso Premium grátis!`}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-green-500 h-20 resize-none"
+                />
+              </div>
+            </div>
+            
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setGiftModalOpen(false)}
+                className="flex-1 px-4 py-2 bg-zinc-700 text-white rounded-lg hover:bg-zinc-600 transition-colors">
+                Cancelar
+              </button>
+              <button
+                onClick={handleGiftPremium}
+                disabled={giftLoading}
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                {giftLoading ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                ) : (
+                  <>
+                    <Gift className="h-4 w-4" />
+                    Presentear
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

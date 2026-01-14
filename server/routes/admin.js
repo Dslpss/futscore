@@ -377,6 +377,54 @@ router.put("/users/:id/premium", authMiddleware, async (req, res) => {
   }
 });
 
+// Give premium days to a specific user (Admin)
+router.post("/users/:id/gift-premium", authMiddleware, async (req, res) => {
+  try {
+    const { days, message } = req.body;
+    
+    if (!days || days < 1 || days > 365) {
+      return res.status(400).json({ message: "Dias inválidos (1-365)" });
+    }
+    
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: "Usuário não encontrado." });
+    }
+    
+    // Set pending gift
+    user.giftPremiumDays = days;
+    user.giftPremiumMessage = message || `Parabéns! Você ganhou ${days} dias de acesso Premium grátis!`;
+    await user.save();
+    
+    // Send push notification if user has valid token
+    if (user.pushToken && Expo.isExpoPushToken(user.pushToken)) {
+      try {
+        await expo.sendPushNotificationsAsync([{
+          to: user.pushToken,
+          sound: "default",
+          title: "🎁 Presente Exclusivo!",
+          body: `Você ganhou ${days} dias de Premium! Abra o app para ativar.`,
+          data: { type: "gift_premium" },
+          priority: "high",
+          channelId: "updates",
+        }]);
+        console.log(`[Admin] Push notification sent to ${user.email} for gift`);
+      } catch (pushError) {
+        console.error(`[Admin] Failed to send push for gift:`, pushError.message);
+      }
+    }
+    
+    console.log(`[Admin] Gift ${days} days to ${user.email} by ${req.user.email}`);
+    res.json({ 
+      message: `${days} dias de Premium presenteados para ${user.name}!`,
+      user: { name: user.name, email: user.email }
+    });
+  } catch (err) {
+    console.error("[Admin] Error gifting premium:", err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // --- PUSH NOTIFICATIONS ---
 
 // Send update notification to all users (Admin)

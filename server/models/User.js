@@ -111,6 +111,24 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  // Sistema de Gift Premium (Admin giveaway)
+  giftPremiumDays: {
+    type: Number,
+    default: 0,
+  },
+  giftPremiumMessage: {
+    type: String,
+    default: null,
+  },
+  giftPremiumClaimedAt: {
+    type: Date,
+    default: null,
+  },
+  // Acesso premium via gift (sem subscription)
+  giftPremiumEndDate: {
+    type: Date,
+    default: null,
+  },
 });
 
 // Método para verificar se o trial está ativo
@@ -148,6 +166,11 @@ userSchema.methods.hasPremiumAccess = async function () {
     return true;
   }
   
+  // Verificar gift premium ativo
+  if (this.hasActiveGift()) {
+    return true;
+  }
+  
   if (!this.isPremium || !this.subscriptionId) {
     return false;
   }
@@ -165,6 +188,25 @@ userSchema.methods.hasPremiumAccess = async function () {
 
   // Verificar se a assinatura está ativa e não expirada
   return subscription.status === "active" && subscription.endDate > new Date();
+};
+
+// Método para verificar se o gift premium está ativo
+userSchema.methods.hasActiveGift = function () {
+  if (!this.giftPremiumEndDate) {
+    return false;
+  }
+  
+  const now = new Date();
+  return now < this.giftPremiumEndDate;
+};
+
+// Método para obter dias restantes do gift
+userSchema.methods.getGiftDaysRemaining = function () {
+  if (!this.hasActiveGift()) return 0;
+  
+  const now = new Date();
+  const diff = this.giftPremiumEndDate.getTime() - now.getTime();
+  return Math.ceil(diff / (1000 * 60 * 60 * 24));
 };
 
 module.exports = mongoose.model("User", userSchema);

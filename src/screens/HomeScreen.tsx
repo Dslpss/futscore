@@ -69,6 +69,7 @@ import { inferMsnTeamId } from "../utils/teamIdMapper";
 import { MSN_LEAGUE_MAP } from "../utils/msnTransformer";
 import { useSubscription } from "../hooks/useSubscription";
 import { PremiumTrialModal } from "../components/PremiumTrialModal";
+import { GiftPremiumModal } from "../components/GiftPremiumModal";
 import { Crown } from "lucide-react-native";
 
 const { width } = Dimensions.get("window");
@@ -553,7 +554,7 @@ export const HomeScreen = ({ navigation }: any) => {
     isFavoriteTeam,
   } = useFavorites();
   const { user, signOut } = useAuth();
-  const { isPremium, hasTrialAvailable, refreshSubscription } = useSubscription();
+  const { isPremium, hasTrialAvailable, refreshSubscription, pendingGift, claimGift, claimingGift } = useSubscription();
   const [selectedLeague, setSelectedLeague] = useState<string>("ALL");
   const [warnings, setWarnings] = useState<Warning[]>([]);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
@@ -562,6 +563,7 @@ export const HomeScreen = ({ navigation }: any) => {
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [showWorldCupModal, setShowWorldCupModal] = useState(false);
   const [showTrialModal, setShowTrialModal] = useState(false);
+  const [showGiftModal, setShowGiftModal] = useState(false);
 
   // Date Selection State
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -1051,6 +1053,14 @@ export const HomeScreen = ({ navigation }: any) => {
     checkPremiumModal();
     // backendFavorites is loaded automatically by FavoritesContext
   }, []);
+
+  // Check for pending gift and show modal
+  useEffect(() => {
+    if (pendingGift && pendingGift.days > 0) {
+      console.log(`[HomeScreen] Pending gift found: ${pendingGift.days} days`);
+      setShowGiftModal(true);
+    }
+  }, [pendingGift]);
 
   useEffect(() => {
     // Use backend favorites if available (from context, updates automatically)
@@ -2613,6 +2623,30 @@ export const HomeScreen = ({ navigation }: any) => {
         }}
         featureName="Recursos Premium"
       />
+
+      {/* Gift Premium Modal */}
+      {pendingGift && (
+        <GiftPremiumModal
+          visible={showGiftModal}
+          onClose={() => setShowGiftModal(false)}
+          onClaim={async () => {
+            const result = await claimGift();
+            if (result.success) {
+              setShowGiftModal(false);
+              Alert.alert(
+                "🎉 Presente Ativado!",
+                result.message,
+                [{ text: "OK", style: "default" }]
+              );
+            } else {
+              Alert.alert("Erro", result.message);
+            }
+          }}
+          days={pendingGift.days}
+          message={pendingGift.message}
+          loading={claimingGift}
+        />
+      )}
     </View>
   );
 };

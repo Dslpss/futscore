@@ -14,6 +14,11 @@ interface TrialStatus {
   daysRemaining: number;
 }
 
+interface PendingGift {
+  days: number;
+  message: string;
+}
+
 interface SubscriptionStatus {
   isPremium: boolean;
   hasSubscription: boolean;
@@ -26,6 +31,7 @@ interface SubscriptionStatus {
     paymentMethod: string;
   };
   trial?: TrialStatus;
+  pendingGift?: PendingGift | null;
 }
 
 export const useSubscription = () => {
@@ -36,6 +42,7 @@ export const useSubscription = () => {
   const [loading, setLoading] = useState(true);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [activatingTrial, setActivatingTrial] = useState(false);
+  const [claimingGift, setClaimingGift] = useState(false);
 
   const fetchSubscriptionStatus = async () => {
     try {
@@ -132,12 +139,49 @@ export const useSubscription = () => {
     fetchSubscriptionStatus();
   }, []);
 
+  // Claim gift function
+  const claimGift = async (): Promise<{ success: boolean; message: string; giftEndDate?: string }> => {
+    setClaimingGift(true);
+    try {
+      const token = await AsyncStorage.getItem('@FutScore:token');
+      if (!token) {
+        return { success: false, message: 'Usuário não autenticado' };
+      }
+
+      const response = await axios.post(
+        `${API_BASE_URL}/api/subscription/claim-gift`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      console.log('[Gift] Resgatado com sucesso:', response.data);
+      
+      // Atualizar status local
+      await fetchSubscriptionStatus();
+
+      return {
+        success: true,
+        message: response.data.message || 'Presente ativado com sucesso!',
+        giftEndDate: response.data.giftEndDate,
+      };
+    } catch (error: any) {
+      console.error('[Gift] Erro ao resgatar:', error?.response?.data || error?.message);
+      return {
+        success: false,
+        message: error?.response?.data?.message || 'Erro ao resgatar presente',
+      };
+    } finally {
+      setClaimingGift(false);
+    }
+  };
+
   // Derived values
   const trial = subscriptionStatus.trial;
   const hasTrialAvailable = trial?.hasTrialAvailable ?? false;
   const isTrialActive = trial?.isTrialActive ?? false;
   const trialDaysRemaining = trial?.daysRemaining ?? 0;
   const trialEndDate = trial?.trialEndDate ?? null;
+  const pendingGift = subscriptionStatus.pendingGift ?? null;
 
   return {
     isPremium: subscriptionStatus.isPremium,
@@ -154,6 +198,10 @@ export const useSubscription = () => {
     trialEndDate,
     activateTrial,
     activatingTrial,
+    // Gift
+    pendingGift,
+    claimGift,
+    claimingGift,
   };
 };
 

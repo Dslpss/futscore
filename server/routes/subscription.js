@@ -27,10 +27,20 @@ router.get("/status", auth, async (req, res) => {
       trialDaysRemaining = Math.ceil(diff / (1000 * 60 * 60 * 24));
     }
 
-    // Se não tem subscriptionId, retornar como não premium (mas pode ter trial)
+    // Check for active gift
+    const hasActiveGift = user.hasActiveGift ? user.hasActiveGift() : false;
+    const giftDaysRemaining = user.getGiftDaysRemaining ? user.getGiftDaysRemaining() : 0;
+
+    // Check for pending gift (not yet claimed)
+    const pendingGift = user.giftPremiumDays > 0 ? {
+      days: user.giftPremiumDays,
+      message: user.giftPremiumMessage || `Parabéns! Você ganhou ${user.giftPremiumDays} dias de acesso Premium!`,
+    } : null;
+
+    // Se não tem subscriptionId, retornar como não premium (mas pode ter trial ou gift)
     if (!user.subscriptionId) {
       return res.json({
-        isPremium: user.isPremium || isTrialActive,
+        isPremium: user.isPremium || isTrialActive || hasActiveGift,
         hasSubscription: false,
         // Trial info
         trial: {
@@ -40,6 +50,13 @@ router.get("/status", auth, async (req, res) => {
           trialEndDate,
           daysRemaining: trialDaysRemaining,
         },
+        // Gift info
+        gift: hasActiveGift ? {
+          isActive: true,
+          endDate: user.giftPremiumEndDate,
+          daysRemaining: giftDaysRemaining,
+        } : null,
+        pendingGift,
       });
     }
 
@@ -77,7 +94,7 @@ router.get("/status", auth, async (req, res) => {
     }
 
     return res.json({
-      isPremium: (user.isPremium && isActive) || isTrialActive,
+      isPremium: (user.isPremium && isActive) || isTrialActive || hasActiveGift,
       hasSubscription: true,
       subscription: {
         status: subscription.status,
@@ -94,6 +111,13 @@ router.get("/status", auth, async (req, res) => {
         trialEndDate,
         daysRemaining: trialDaysRemaining,
       },
+      // Gift info
+      gift: hasActiveGift ? {
+        isActive: true,
+        endDate: user.giftPremiumEndDate,
+        daysRemaining: giftDaysRemaining,
+      } : null,
+      pendingGift,
     });
   } catch (error) {
     console.error("Erro ao buscar status de assinatura:", error);
@@ -242,6 +266,61 @@ router.get("/trial-status", auth, async (req, res) => {
   } catch (error) {
     console.error("Erro ao buscar status do trial:", error);
     res.status(500).json({ error: "Erro ao buscar status do trial" });
+  }
+});
+
+/**
+ * POST /api/subscription/claim-gift
+ * Ativar gift premium pendente
+ */
+router.post("/claim-gift", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId);
+
+    if (!user) {
+      return res.status(404).json({ error: "Usuário não encontrado" });
+    }
+
+    // Verificar se tem gift pendente
+    if (!user.giftPremiumDays || user.giftPremiumDays <= 0) {
+      return res.status(400).json({ 
+        error: "Nenhum presente pendente",
+        message: "Você não tem nenhum presente para resgatar." 
+      });
+    }
+
+    const days = user.giftPremiumDays;
+    const message = user.giftPremiumMessage;
+
+    // Calcular data de expiração do gift
+    // Se já tem um gift ativo, adicionar dias ao existente
+    let giftEndDate;
+    if (user.giftPremiumEndDate && user.giftPremiumEndDate > new Date()) {
+      giftEndDate = new Date(user.giftPremiumEndDate);
+      giftEndDate.setDate(giftEndDate.getDate() + days);
+    } else {
+      giftEndDate = new Date();
+      giftEndDate.setDate(giftEndDate.getDate() + days);
+    }
+
+    // Atualizar usuário
+    user.giftPremiumEndDate = giftEndDate;
+    user.giftPremiumClaimedAt = new Date();
+    user.giftPremiumDays = 0; // Limpar pending
+    user.giftPremiumMessage = null;
+    await user.save();
+
+    console.log(`[Gift] User ${user.email} claimed ${days} days gift. Expires: ${giftEndDate}`);
+
+    return res.json({
+      success: true,
+      message: `${days} dias de Premium ativados com sucesso!`,
+      giftEndDate,
+      daysRemaining: days,
+    });
+  } catch (error) {
+    console.error("Erro ao resgatar gift:", error);
+    res.status(500).json({ error: "Erro ao resgatar presente" });
   }
 });
 
