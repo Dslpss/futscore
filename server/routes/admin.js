@@ -197,20 +197,21 @@ router.get("/users/stats", authMiddleware, async (req, res) => {
 router.get("/users", authMiddleware, async (req, res) => {
   try {
     const users = await User.find()
-      .select("name email isAdmin status statusUpdatedAt createdAt pushToken favoriteTeams canAccessTV isPremium trialStartDate trialUsed subscriptionId")
+      .select("name email isAdmin status statusUpdatedAt createdAt pushToken favoriteTeams canAccessTV isPremium trialStartDate trialUsed subscriptionId giftPremiumEndDate")
       .sort({ createdAt: -1 })
       .limit(100);
 
     res.json(
       users.map((user) => {
-        // Calculate trial status
+        const now = new Date();
+        
+        // Calculate trial status and days
         let trialStatus = 'none';
         let trialDaysRemaining = 0;
         
         if (user.trialStartDate && !user.trialUsed) {
           const trialEnd = new Date(user.trialStartDate);
           trialEnd.setDate(trialEnd.getDate() + 7);
-          const now = new Date();
           
           if (now < trialEnd) {
             trialStatus = 'active';
@@ -221,6 +222,16 @@ router.get("/users", authMiddleware, async (req, res) => {
         } else if (user.trialUsed) {
           trialStatus = 'used';
         }
+        
+        // Calculate gift days remaining
+        let giftDaysRemaining = 0;
+        if (user.giftPremiumEndDate && user.giftPremiumEndDate > now) {
+          giftDaysRemaining = Math.ceil((user.giftPremiumEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        }
+        
+        // Total days = trial days OR gift days (whichever ends later)
+        // Since gift is added on top of trial, we show the maximum end date
+        const totalDaysRemaining = Math.max(trialDaysRemaining, giftDaysRemaining);
         
         return {
           _id: user._id,
@@ -235,10 +246,13 @@ router.get("/users", authMiddleware, async (req, res) => {
           favoriteTeamsCount: user.favoriteTeams?.length || 0,
           canAccessTV: user.canAccessTV !== false,
           // Trial info
-          trialStatus,
-          trialDaysRemaining,
+          trialStatus: trialStatus === 'active' || giftDaysRemaining > 0 ? 'active' : trialStatus,
+          trialDaysRemaining: totalDaysRemaining, // Show combined days
           trialStartDate: user.trialStartDate,
           hasSubscription: !!user.subscriptionId,
+          // Gift info
+          giftPremiumEndDate: user.giftPremiumEndDate,
+          giftDaysRemaining,
         };
       })
     );
@@ -379,6 +393,7 @@ router.put("/users/:id/premium", authMiddleware, async (req, res) => {
 });
 
 // Give premium days to a specific user (Admin)
+// Days are IMMEDIATELY activated and ADDED to existing trial/gift days
 router.post("/users/:id/gift-premium", authMiddleware, async (req, res) => {
   try {
     const { days, message } = req.body;
@@ -392,8 +407,34 @@ router.post("/users/:id/gift-premium", authMiddleware, async (req, res) => {
       return res.status(404).json({ message: "Usuário não encontrado." });
     }
     
-    // Set pending gift
-    user.giftPremiumDays = days;
+    // Calculate new end date by ADDING days to the best existing date
+    // Priority: existing giftPremiumEndDate > trial end date > now
+    const now = new Date();
+    let baseDate = now;
+    
+    // Check if user has active gift (extends from gift end date)
+    if (user.giftPremiumEndDate && user.giftPremiumEndDate > now) {
+      baseDate = new Date(user.giftPremiumEndDate);
+      console.log(`[Admin] User has active gift ending ${baseDate.toISOString()}, adding ${days} days`);
+    }
+    // Check if user has active trial (extends from trial end date)
+    else if (user.trialStartDate && !user.trialUsed) {
+      const trialEnd = new Date(user.trialStartDate);
+      trialEnd.setDate(trialEnd.getDate() + 7);
+      if (trialEnd > now) {
+        baseDate = trialEnd;
+        console.log(`[Admin] User has active trial ending ${baseDate.toISOString()}, adding ${days} days`);
+      }
+    }
+    
+    // Set new gift end date
+    const newEndDate = new Date(baseDate);
+    newEndDate.setDate(newEndDate.getDate() + days);
+    
+    // Immediately activate the gift (no need to claim)
+    user.giftPremiumEndDate = newEndDate;
+    user.giftPremiumClaimedAt = now;
+    user.giftPremiumDays = 0; // No pending days, immediately activated
     user.giftPremiumMessage = message || `Parabéns! Você ganhou ${days} dias de acesso Premium grátis!`;
     await user.save();
     
@@ -404,7 +445,7 @@ router.post("/users/:id/gift-premium", authMiddleware, async (req, res) => {
           to: user.pushToken,
           sound: "default",
           title: "🎁 Presente Exclusivo!",
-          body: `Você ganhou ${days} dias de Premium! Abra o app para ativar.`,
+          body: `Você ganhou ${days} dias de Premium! Seu acesso já foi ativado.`,
           data: { type: "gift_premium" },
           priority: "high",
           channelId: "updates",
@@ -415,10 +456,10 @@ router.post("/users/:id/gift-premium", authMiddleware, async (req, res) => {
       }
     }
     
-    console.log(`[Admin] Gift ${days} days to ${user.email} by ${req.user.email}`);
+    console.log(`[Admin] Gift ${days} days to ${user.email} by ${req.user.email}. New end date: ${newEndDate.toISOString()}`);
     res.json({ 
-      message: `${days} dias de Premium presenteados para ${user.name}!`,
-      user: { name: user.name, email: user.email }
+      message: `${days} dias de Premium presenteados para ${user.name}! Ativado imediatamente até ${newEndDate.toLocaleDateString('pt-BR')}.`,
+      user: { name: user.name, email: user.email, newEndDate }
     });
   } catch (err) {
     console.error("[Admin] Error gifting premium:", err);
