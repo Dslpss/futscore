@@ -215,6 +215,30 @@ export const matchService = {
           sport: "Soccer",
           name: "Liga Portugal",
         },
+        {
+          msn: "Soccer_BrazilCarioca",
+          fd: null,
+          sport: "Soccer",
+          name: "Campeonato Carioca",
+        },
+        {
+          msn: "Soccer_BrazilMineiro",
+          fd: null,
+          sport: "Soccer",
+          name: "Campeonato Mineiro",
+        },
+        {
+          msn: "Soccer_BrazilPaulistaSerieA1",
+          fd: null,
+          sport: "Soccer",
+          name: "Campeonato Paulista",
+        },
+        {
+          msn: "Soccer_BrazilGaucho",
+          fd: null,
+          sport: "Soccer",
+          name: "Campeonato Gaúcho",
+        },
       ];
 
       let allFixtures: Match[] = [];

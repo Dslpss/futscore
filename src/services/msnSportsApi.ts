@@ -201,7 +201,13 @@ export const msnSportsApi = {
 
       schedules.forEach((schedule: any) => {
         if (schedule.games && Array.isArray(schedule.games)) {
-          allGames.push(...schedule.games);
+          // Attach league info to each game for logo extraction
+          const leagueInfo = schedule.league || null;
+          const gamesWithLeagueInfo = schedule.games.map((game: any) => ({
+            ...game,
+            _leagueInfo: leagueInfo, // Attach league info for transformer
+          }));
+          allGames.push(...gamesWithLeagueInfo);
         }
       });
 
