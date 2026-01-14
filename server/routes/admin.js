@@ -5,7 +5,8 @@ const AppVersion = require("../models/AppVersion");
 const SystemSetting = require("../models/SystemSetting");
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
-const { sendPushToAll, expo, Expo } = require("../services/pushNotifications");
+const { sendPushToAll, expo } = require("../services/pushNotifications");
+const { Expo } = require("expo-server-sdk");
 
 // Middleware to check if user is admin
 const authMiddleware = async (req, res, next) => {
