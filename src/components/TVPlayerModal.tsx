@@ -8,7 +8,12 @@ import {
   ActivityIndicator,
   Dimensions,
   StatusBar,
+  Linking,
+  Share,
+  Alert,
+  Platform,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -47,6 +52,7 @@ export default function TVPlayerModal({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [aspectRatioMode, setAspectRatioMode] = useState<AspectRatioMode>('16:9');
   const [showAspectMenu, setShowAspectMenu] = useState(false);
+  const [showCastMenu, setShowCastMenu] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -90,6 +96,7 @@ export default function TVPlayerModal({
       StatusBar.setHidden(false, 'fade');
       setIsFullscreen(false);
       setShowAspectMenu(false);
+      setShowCastMenu(false);
       // Clear auto-reload timeouts
       if (bufferingTimeoutRef.current) {
         clearTimeout(bufferingTimeoutRef.current);
@@ -146,11 +153,17 @@ export default function TVPlayerModal({
 
   useEffect(() => {
     if (showControls) {
-      // Auto-hide controls after 3 seconds
+      // Clear existing timeout
       if (controlsTimeoutRef.current) {
         clearTimeout(controlsTimeoutRef.current);
       }
 
+      // Don't auto-hide if a menu is open
+      if (showCastMenu || showAspectMenu) {
+        return;
+      }
+
+      // Auto-hide controls after 3 seconds
       controlsTimeoutRef.current = setTimeout(() => {
         setShowControls(false);
       }, 3000);
@@ -161,7 +174,7 @@ export default function TVPlayerModal({
         clearTimeout(controlsTimeoutRef.current);
       }
     };
-  }, [showControls]);
+  }, [showControls, showCastMenu, showAspectMenu]);
 
   // Auto-reload function - called when stall/buffering is detected
   const autoReload = async () => {
@@ -382,11 +395,150 @@ export default function TVPlayerModal({
 
   const toggleControls = () => {
     setShowControls(!showControls);
+    // Close any open menus when toggling controls
+    setShowAspectMenu(false);
+    setShowCastMenu(false);
   };
 
   const handleError = () => {
     setIsLoading(false);
     setError('Não foi possível reproduzir este canal. Verifique sua conexão ou tente outro canal.');
+  };
+
+  // =============================================
+  // CAST / EXTERNAL PLAYER FUNCTIONS
+  // =============================================
+
+  // Copy stream URL to clipboard
+  const handleCopyUrl = async () => {
+    try {
+      await Clipboard.setStringAsync(channel.url);
+      Alert.alert('URL Copiada', 'O link do stream foi copiado para a área de transferência.');
+      setShowCastMenu(false);
+    } catch (err) {
+      console.error('Error copying URL:', err);
+      Alert.alert('Erro', 'Não foi possível copiar o link.');
+    }
+  };
+
+  // Share stream URL
+  const handleShareUrl = async () => {
+    try {
+      await Share.share({
+        message: `Assistir ${channel.name}: ${channel.url}`,
+        title: channel.name,
+        url: channel.url, // iOS only
+      });
+      setShowCastMenu(false);
+    } catch (err) {
+      console.error('Error sharing:', err);
+    }
+  };
+
+  // Open in Web Video Caster (popular casting app)
+  const handleOpenWebVideoCaster = async () => {
+    try {
+      // Web Video Caster deep link scheme
+      const webVideoCasterUrl = `webvideocaster://play?url=${encodeURIComponent(channel.url)}&title=${encodeURIComponent(channel.name)}`;
+      const canOpen = await Linking.canOpenURL(webVideoCasterUrl);
+      
+      if (canOpen) {
+        await Linking.openURL(webVideoCasterUrl);
+        setShowCastMenu(false);
+      } else {
+        // Try alternative scheme
+        const altUrl = `intent://play?url=${encodeURIComponent(channel.url)}#Intent;scheme=webvideocaster;package=com.nickthecoder.webvideocaster;end`;
+        const canOpenAlt = await Linking.canOpenURL(altUrl);
+        
+        if (canOpenAlt) {
+          await Linking.openURL(altUrl);
+        } else {
+          Alert.alert(
+            'Web Video Caster',
+            'O aplicativo Web Video Caster não está instalado. Deseja baixar da Play Store?',
+            [
+              { text: 'Cancelar', style: 'cancel' },
+              { 
+                text: 'Baixar', 
+                onPress: () => Linking.openURL('https://play.google.com/store/apps/details?id=com.nickthecoder.webvideocaster') 
+              },
+            ]
+          );
+        }
+      }
+    } catch (err) {
+      console.error('Error opening Web Video Caster:', err);
+      Alert.alert('Erro', 'Não foi possível abrir o Web Video Caster.');
+    }
+  };
+
+  // Open in VLC Player
+  const handleOpenVLC = async () => {
+    try {
+      // VLC deep link
+      const vlcUrl = `vlc://${channel.url}`;
+      const canOpen = await Linking.canOpenURL(vlcUrl);
+      
+      if (canOpen) {
+        await Linking.openURL(vlcUrl);
+        setShowCastMenu(false);
+      } else {
+        Alert.alert(
+          'VLC Player',
+          'O VLC Player não está instalado. Deseja baixar da Play Store?',
+          [
+            { text: 'Cancelar', style: 'cancel' },
+            { 
+              text: 'Baixar', 
+              onPress: () => Linking.openURL('https://play.google.com/store/apps/details?id=org.videolan.vlc') 
+            },
+          ]
+        );
+      }
+    } catch (err) {
+      console.error('Error opening VLC:', err);
+      Alert.alert('Erro', 'Não foi possível abrir o VLC.');
+    }
+  };
+
+  // Open in MX Player
+  const handleOpenMXPlayer = async () => {
+    try {
+      // MX Player intent
+      const mxUrl = `intent:${channel.url}#Intent;package=com.mxtech.videoplayer.ad;type=video/*;S.title=${encodeURIComponent(channel.name)};end`;
+      const canOpen = await Linking.canOpenURL(mxUrl);
+      
+      if (canOpen) {
+        await Linking.openURL(mxUrl);
+        setShowCastMenu(false);
+      } else {
+        Alert.alert(
+          'MX Player',
+          'O MX Player não está instalado. Deseja baixar da Play Store?',
+          [
+            { text: 'Cancelar', style: 'cancel' },
+            { 
+              text: 'Baixar', 
+              onPress: () => Linking.openURL('https://play.google.com/store/apps/details?id=com.mxtech.videoplayer.ad') 
+            },
+          ]
+        );
+      }
+    } catch (err) {
+      console.error('Error opening MX Player:', err);
+      Alert.alert('Erro', 'Não foi possível abrir o MX Player.');
+    }
+  };
+
+  // Open stream URL directly (let system choose app)
+  const handleOpenExternal = async () => {
+    try {
+      await Linking.openURL(channel.url);
+      setShowCastMenu(false);
+    } catch (err) {
+      console.error('Error opening external:', err);
+      Alert.alert('Erro', 'Não foi possível abrir o stream em um aplicativo externo.');
+    }
   };
 
   if (!visible) return null;
@@ -505,10 +657,24 @@ export default function TVPlayerModal({
                 )}
                 
                 <View style={styles.bottomActions}>
+                  {/* Cast Button */}
+                  <TouchableOpacity
+                    style={[styles.actionButton, showCastMenu && styles.actionButtonActive]}
+                    onPress={() => {
+                      setShowCastMenu(!showCastMenu);
+                      setShowAspectMenu(false);
+                    }}
+                  >
+                    <Ionicons name="tv-outline" size={22} color="#fff" />
+                  </TouchableOpacity>
+
                   {/* Aspect Ratio Button */}
                   <TouchableOpacity
                     style={styles.actionButton}
-                    onPress={() => setShowAspectMenu(!showAspectMenu)}
+                    onPress={() => {
+                      setShowAspectMenu(!showAspectMenu);
+                      setShowCastMenu(false);
+                    }}
                   >
                     <Ionicons name="resize" size={22} color="#fff" />
                   </TouchableOpacity>
@@ -562,6 +728,91 @@ export default function TVPlayerModal({
                       </TouchableOpacity>
                     ))}
                   </View>
+                </View>
+              )}
+
+              {/* Cast Menu */}
+              {showCastMenu && (
+                <View style={styles.castMenu}>
+                  {/* Premium Header */}
+                  <View style={styles.castMenuHeader}>
+                    <View style={styles.castMenuIconWrapper}>
+                      <Ionicons name="tv-outline" size={24} color="#22c55e" />
+                    </View>
+                    <View style={styles.castMenuTitleWrapper}>
+                      <Text style={styles.castMenuTitle}>Abrir em outro app</Text>
+                      <Text style={styles.castMenuSubtitle}>Escolha como reproduzir</Text>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.castDivider} />
+                  <TouchableOpacity
+                    style={styles.castOption}
+                    onPress={handleOpenVLC}
+                  >
+                    <Ionicons name="play-circle-outline" size={20} color="#f97316" />
+                    <View style={styles.castOptionInfo}>
+                      <Text style={styles.castOptionText}>VLC Player</Text>
+                      <Text style={styles.castOptionSubtext}>Player avançado</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.castOption}
+                    onPress={handleOpenMXPlayer}
+                  >
+                    <Ionicons name="videocam-outline" size={20} color="#8b5cf6" />
+                    <View style={styles.castOptionInfo}>
+                      <Text style={styles.castOptionText}>MX Player</Text>
+                      <Text style={styles.castOptionSubtext}>Player popular</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <View style={styles.castDivider} />
+
+                  <TouchableOpacity
+                    style={styles.castOption}
+                    onPress={handleShareUrl}
+                  >
+                    <Ionicons name="share-outline" size={20} color="#3b82f6" />
+                    <View style={styles.castOptionInfo}>
+                      <Text style={styles.castOptionText}>Compartilhar</Text>
+                      <Text style={styles.castOptionSubtext}>Abre o Web Video Caster e outros apps</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.castOption}
+                    onPress={handleCopyUrl}
+                  >
+                    <Ionicons name="copy-outline" size={20} color="#94a3b8" />
+                    <View style={styles.castOptionInfo}>
+                      <Text style={styles.castOptionText}>Copiar URL</Text>
+                      <Text style={styles.castOptionSubtext}>Copiar link do stream</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <View style={styles.castDivider} />
+
+                  {/* Web Video Caster Tip */}
+                  <TouchableOpacity
+                    style={styles.castTip}
+                    onPress={() => {
+                      setShowCastMenu(false);
+                      Linking.openURL('https://play.google.com/store/apps/details?id=com.instantbits.cast.webvideo');
+                    }}
+                  >
+                    <View style={styles.castTipIcon}>
+                      <Text style={styles.castTipEmoji}>💡</Text>
+                    </View>
+                    <View style={styles.castTipContent}>
+                      <Text style={styles.castTipTitle}>Dica: Transmita para TV!</Text>
+                      <Text style={styles.castTipText}>
+                        Baixe o Web Video Caster para transmitir via Chromecast, Smart TV, Fire TV e mais!
+                      </Text>
+                    </View>
+                    <Ionicons name="download-outline" size={20} color="#22c55e" />
+                  </TouchableOpacity>
                 </View>
               )}
             </LinearGradient>
@@ -776,5 +1027,112 @@ const styles = StyleSheet.create({
   },
   aspectOptionTextActive: {
     fontWeight: '700',
+  },
+  // Cast Menu Styles
+  actionButtonActive: {
+    backgroundColor: 'rgba(34, 197, 94, 0.5)',
+  },
+  castMenu: {
+    position: 'absolute',
+    bottom: 80,
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  castMenuHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  castMenuIconWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  castMenuTitleWrapper: {
+    flex: 1,
+  },
+  castMenuTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  castMenuSubtitle: {
+    color: '#71717a',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  castOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    marginBottom: 8,
+  },
+  castOptionInfo: {
+    marginLeft: 14,
+    flex: 1,
+  },
+  castOptionText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  castOptionSubtext: {
+    color: '#94a3b8',
+    fontSize: 11,
+    marginTop: 2,
+  },
+  castDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    marginVertical: 8,
+  },
+  // Web Video Caster Tip Styles
+  castTip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.3)',
+    borderStyle: 'dashed',
+  },
+  castTipIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  castTipEmoji: {
+    fontSize: 16,
+  },
+  castTipContent: {
+    flex: 1,
+    marginLeft: 12,
+    marginRight: 8,
+  },
+  castTipTitle: {
+    color: '#22c55e',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  castTipText: {
+    color: '#94a3b8',
+    fontSize: 11,
+    marginTop: 2,
+    lineHeight: 14,
   },
 });

@@ -20,11 +20,12 @@ const NOTIFIED_GOALS_KEY = "futscore_notified_goals"; // Cache de gols já notif
 const CACHE_CLEANUP_KEY = "futscore_last_cleanup";
 const FAVORITE_MATCHES_KEY = "futscore_favorite_matches";
 const NOTIFICATION_SETTINGS_KEY = "futscore_notification_settings";
+const LAST_CHECK_TIME_KEY = "futscore_last_check_time"; // Persistente para evitar duplicatas ao reabrir app
 
 // Lock para evitar verificações simultâneas (evita notificações duplicadas)
 let isCheckingMatches = false;
 let lastCheckTime = 0;
-const MIN_CHECK_INTERVAL = 5000; // 5 segundos entre verificações
+const MIN_CHECK_INTERVAL = 30000; // 30 segundos entre verificações (aumentado para evitar duplicatas)
 
 // Interface das configurações de notificação
 interface NotificationSettings {
@@ -133,15 +134,41 @@ export const matchService = {
       return { liveMatches: [], todaysMatches: [] };
     }
 
+    // Verificação em memória (rápida)
     if (now - lastCheckTime < MIN_CHECK_INTERVAL) {
       console.log(
-        "[MatchService] Called too soon, skipping to avoid duplicates..."
+        "[MatchService] Called too soon (memory check), skipping to avoid duplicates..."
       );
       return { liveMatches: [], todaysMatches: [] };
     }
 
+    // Verificação persistente (evita duplicatas ao reabrir app)
+    try {
+      const lastCheckPersisted = await AsyncStorage.getItem(LAST_CHECK_TIME_KEY);
+      if (lastCheckPersisted) {
+        const lastCheckTimePersisted = parseInt(lastCheckPersisted, 10);
+        if (now - lastCheckTimePersisted < MIN_CHECK_INTERVAL) {
+          console.log(
+            "[MatchService] Called too soon (persistent check), skipping to avoid duplicates..."
+          );
+          // Atualizar a variável em memória para próximas verificações
+          lastCheckTime = lastCheckTimePersisted;
+          return { liveMatches: [], todaysMatches: [] };
+        }
+      }
+    } catch (error) {
+      console.log("[MatchService] Error reading persistent check time:", error);
+    }
+
     isCheckingMatches = true;
     lastCheckTime = now;
+
+    // Salvar timestamp persistente
+    try {
+      await AsyncStorage.setItem(LAST_CHECK_TIME_KEY, now.toString());
+    } catch (error) {
+      console.log("[MatchService] Error saving persistent check time:", error);
+    }
 
     try {
       console.log(
@@ -513,6 +540,8 @@ async function checkMatchStarted(
       ? JSON.parse(notifiedJson)
       : [];
 
+    console.log(`[MatchService] Already notified matches in cache: ${notifiedMatches.length}`);
+
     let hasChanges = false;
     const updatedNotified = [...notifiedMatches];
 
@@ -589,6 +618,8 @@ async function checkScoreChanges(
     const updatedNotifiedGoals = [...notifiedGoals];
     let hasScoreChanges = false;
     let hasGoalChanges = false;
+
+    console.log(`[MatchService] Already notified goals in cache: ${notifiedGoals.length}`);
 
     for (const match of currentMatches) {
       const matchId = match.fixture.id;
