@@ -53,11 +53,13 @@ export const MatchProvider: React.FC<{ children: ReactNode }> = ({
     setLoading(true);
     try {
       // Use the shared service - usar ref para evitar dependência no useEffect
-      const { liveMatches: live, todaysMatches: today } =
-        await matchService.checkMatchesAndNotify(favoriteTeamsRef.current);
+      const result = await matchService.checkMatchesAndNotify(favoriteTeamsRef.current);
 
-      setLiveMatches(live);
-      setTodaysMatches(today);
+      // Só atualiza o estado se o resultado não for null (chamada não foi ignorada)
+      if (result !== null) {
+        setLiveMatches(result.liveMatches);
+        setTodaysMatches(result.todaysMatches);
+      }
     } catch (error) {
       console.error("Error fetching matches", error);
     } finally {
@@ -96,9 +98,12 @@ export const MatchProvider: React.FC<{ children: ReactNode }> = ({
         // But for now calling fetchMatches is fine, just be careful with setLoading(true) there
         // Optimized: only fetch if not already loading
         matchService.checkMatchesAndNotify(favoriteTeamsRef.current)
-          .then(({ liveMatches: live, todaysMatches: today }) => {
-             setLiveMatches(live);
-             setTodaysMatches(today);
+          .then((result) => {
+            // Só atualiza se o resultado não for null (chamada não foi ignorada)
+            if (result !== null) {
+              setLiveMatches(result.liveMatches);
+              setTodaysMatches(result.todaysMatches);
+            }
           })
           .catch(err => console.error("Polling error", err));
       }
@@ -120,10 +125,15 @@ export const MatchProvider: React.FC<{ children: ReactNode }> = ({
         console.log("[MatchContext] App returned from background, refreshing matches...");
         // Refresh matches silently
         matchService.checkMatchesAndNotify(favoriteTeamsRef.current)
-          .then(({ liveMatches: live, todaysMatches: today }) => {
-            setLiveMatches(live);
-            setTodaysMatches(today);
-            console.log("[MatchContext] Matches refreshed after background return");
+          .then((result) => {
+            // Só atualiza se o resultado não for null (chamada não foi ignorada)
+            if (result !== null) {
+              setLiveMatches(result.liveMatches);
+              setTodaysMatches(result.todaysMatches);
+              console.log("[MatchContext] Matches refreshed after background return");
+            } else {
+              console.log("[MatchContext] Refresh skipped (called too soon)");
+            }
           })
           .catch(err => console.error("[MatchContext] Error refreshing after background:", err));
       }

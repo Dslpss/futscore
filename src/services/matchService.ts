@@ -131,7 +131,7 @@ export const matchService = {
     const now = Date.now();
     if (isCheckingMatches) {
       console.log("[MatchService] Already checking matches, skipping...");
-      return { liveMatches: [], todaysMatches: [] };
+      return null; // Retorna null para indicar que a chamada foi ignorada
     }
 
     // Verificação em memória (rápida)
@@ -139,7 +139,7 @@ export const matchService = {
       console.log(
         "[MatchService] Called too soon (memory check), skipping to avoid duplicates..."
       );
-      return { liveMatches: [], todaysMatches: [] };
+      return null; // Retorna null para indicar que a chamada foi ignorada
     }
 
     // Verificação persistente (evita duplicatas ao reabrir app)
@@ -153,7 +153,7 @@ export const matchService = {
           );
           // Atualizar a variável em memória para próximas verificações
           lastCheckTime = lastCheckTimePersisted;
-          return { liveMatches: [], todaysMatches: [] };
+          return null; // Retorna null para indicar que a chamada foi ignorada
         }
       }
     } catch (error) {
