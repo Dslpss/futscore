@@ -41,6 +41,7 @@ import { WorldCupModal } from "../components/WorldCupModal";
 import { TeamSearchBar } from "../components/TeamSearchBar";
 import { TVCardsSection } from "../components/TVCardsSection";
 import { AnnouncementCard } from "../components/AnnouncementCard";
+import { FavoriteLeaguesModal } from "../components/FavoriteLeaguesModal";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   Bell,
@@ -550,8 +551,10 @@ export const HomeScreen = ({ navigation }: any) => {
   } = useMatches();
   const {
     favoriteTeams,
+    favoriteLeagues,
     backendFavorites,
     toggleFavoriteTeam,
+    toggleFavoriteLeague,
     isFavoriteTeam,
   } = useFavorites();
   const { user, signOut } = useAuth();
@@ -565,6 +568,7 @@ export const HomeScreen = ({ navigation }: any) => {
   const [showWorldCupModal, setShowWorldCupModal] = useState(false);
   const [showTrialModal, setShowTrialModal] = useState(false);
   const [showGiftModal, setShowGiftModal] = useState(false);
+  const [showFavoriteLeaguesModal, setShowFavoriteLeaguesModal] = useState(false);
 
   // Date Selection State
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -1367,6 +1371,7 @@ export const HomeScreen = ({ navigation }: any) => {
   const leagues = [
     { code: "ALL", name: "Todos", icon: "🌍" },
     { code: "FAV", name: "Favoritos", icon: "⭐" },
+    { code: "MYLIG", name: "Minhas Ligas", icon: "🏆" },
     { code: "BSA", name: "Brasileirão", icon: "🇧🇷" },
     { code: "CDB", name: "Copa do Brasil", icon: "🏆" },
     { code: "CAR", name: "Carioca", icon: "🏟️" },
@@ -2105,6 +2110,7 @@ export const HomeScreen = ({ navigation }: any) => {
               const isSelected = selectedLeague === league.code;
               const isFirst = index === 0;
               const isLast = index === leagues.length - 1;
+              const isMYLIG = league.code === "MYLIG";
 
               return (
                 <TouchableOpacity
@@ -2115,7 +2121,20 @@ export const HomeScreen = ({ navigation }: any) => {
                     isLast && styles.leagueChipLast,
                     isSelected && styles.leagueChipActive,
                   ]}
-                  onPress={() => setSelectedLeague(league.code)}
+                  onPress={() => {
+                    if (isMYLIG && favoriteLeagues.length === 0) {
+                      // Se não tem ligas selecionadas, abre o modal
+                      setShowFavoriteLeaguesModal(true);
+                    } else {
+                      setSelectedLeague(league.code);
+                    }
+                  }}
+                  onLongPress={() => {
+                    if (isMYLIG) {
+                      // Long press sempre abre o modal para editar
+                      setShowFavoriteLeaguesModal(true);
+                    }
+                  }}
                   activeOpacity={0.8}>
                   {isSelected && (
                     <LinearGradient
@@ -2145,13 +2164,15 @@ export const HomeScreen = ({ navigation }: any) => {
                       </Text>
                     </View>
 
-                    {/* Text */}
+                    {/* Text with count for MYLIG */}
                     <Text
                       style={[
                         styles.leagueChipText,
                         isSelected && styles.leagueChipTextActive,
                       ]}>
-                      {league.name}
+                      {isMYLIG && favoriteLeagues.length > 0 
+                        ? `${league.name} (${favoriteLeagues.length})`
+                        : league.name}
                     </Text>
                   </View>
 
@@ -2205,6 +2226,38 @@ export const HomeScreen = ({ navigation }: any) => {
           favoriteTeams.includes(m.teams.home.id) ||
           favoriteTeams.includes(m.teams.away.id)
       );
+    } else if (selectedLeague === "MYLIG") {
+      // Filtrar por ligas favoritas do usuário
+      const msnMapping: Record<string, string> = {
+        BSA: "BrazilBrasileiroSerieA",
+        BSB: "BrazilBrasileiroSerieB",
+        CDB: "BrazilCopaDoBrasil",
+        CAR: "BrazilCarioca",
+        SPA: "BrazilPaulistaSerieA1",
+        MIN: "BrazilMineiro",
+        GAU: "BrazilGaucho",
+        CL: "InternationalClubsUEFAChampionsLeague",
+        EL: "UEFAEuropaLeague",
+        PL: "EnglandPremierLeague",
+        PD: "SpainLaLiga",
+        BL1: "GermanyBundesliga",
+        SA: "ItalySerieA",
+        FL1: "FranceLigue1",
+        PPL: "PortugalPrimeiraLiga",
+        ARG: "ArgentinaPrimeraDivision",
+        LIB: "CONMEBOLLibertadores",
+        SUL: "CONMEBOLSudamericana",
+      };
+      
+      matches = sourceMatches.filter((m) => {
+        const leagueId = m.league.id?.toString() || "";
+        // Verificar se a liga está nas favoritas
+        return favoriteLeagues.some((favLeagueCode) => {
+          if (leagueId === favLeagueCode) return true;
+          if (msnMapping[favLeagueCode] && leagueId.includes(msnMapping[favLeagueCode])) return true;
+          return false;
+        });
+      });
     } else if (selectedLeague === "FINISHED") {
       matches = sourceMatches.filter((m) =>
         ["FT", "AET", "PEN"].includes(m.fixture.status.short)
@@ -2693,6 +2746,12 @@ export const HomeScreen = ({ navigation }: any) => {
       <WorldCupModal
         visible={showWorldCupModal}
         onClose={() => setShowWorldCupModal(false)}
+      />
+
+      {/* Favorite Leagues Modal */}
+      <FavoriteLeaguesModal
+        visible={showFavoriteLeaguesModal}
+        onClose={() => setShowFavoriteLeaguesModal(false)}
       />
 
       {/* Premium Trial Modal */}

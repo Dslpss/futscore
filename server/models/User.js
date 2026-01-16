@@ -37,6 +37,7 @@ const userSchema = new mongoose.Schema({
   notificationSettings: {
     allMatches: { type: Boolean, default: true }, // Notificar todos os jogos
     favoritesOnly: { type: Boolean, default: false }, // Apenas favoritos
+    favoriteLeaguesNotify: { type: Boolean, default: false }, // Notificar ligas favoritas (premium)
     goals: { type: Boolean, default: true }, // Notificar gols
     matchStart: { type: Boolean, default: true }, // Notificar início de jogo
   },
@@ -67,6 +68,10 @@ const userSchema = new mongoose.Schema({
   // IDs de partidas marcadas para receber notificações (sino 🔔)
   favoriteMatchIds: [{
     type: String, // Armazena fixtureId ou msnGameId como string
+  }],
+  // Ligas favoritas (apenas usuários premium recebem notificações)
+  favoriteLeagues: [{
+    type: String, // Códigos como "BSA", "CL", "PL", etc.
   }],
   createdAt: {
     type: Date,

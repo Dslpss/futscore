@@ -194,6 +194,101 @@ router.delete("/favorite-matches/:matchId", authMiddleware, async (req, res) => 
   }
 });
 
+// ============ FAVORITE LEAGUES (Premium Feature 🏆) ============
+
+// Get user's favorite leagues
+router.get("/favorite-leagues", authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select("favoriteLeagues");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.json({ favoriteLeagues: user.favoriteLeagues || [] });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Update favorite leagues (replace entire list)
+router.put("/favorite-leagues", authMiddleware, async (req, res) => {
+  try {
+    const { favoriteLeagues } = req.body;
+
+    if (!Array.isArray(favoriteLeagues)) {
+      return res.status(400).json({ message: "favoriteLeagues must be an array" });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.userId,
+      { favoriteLeagues },
+      { new: true }
+    ).select("favoriteLeagues");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    console.log(`[FavoriteLeagues] Updated leagues for user: ${favoriteLeagues.join(", ")}`);
+    res.json({ favoriteLeagues: user.favoriteLeagues });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Add a single league to favorites
+router.post("/favorite-leagues/:leagueId", authMiddleware, async (req, res) => {
+  try {
+    const { leagueId } = req.params;
+    const user = await User.findById(req.userId);
+    
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Initialize array if not exists
+    if (!user.favoriteLeagues) {
+      user.favoriteLeagues = [];
+    }
+
+    // Check if already exists
+    if (user.favoriteLeagues.includes(leagueId)) {
+      return res.json({ favoriteLeagues: user.favoriteLeagues });
+    }
+
+    user.favoriteLeagues.push(leagueId);
+    await user.save();
+
+    console.log(`[FavoriteLeagues] Added league ${leagueId} for user ${user.email}`);
+    res.json({ favoriteLeagues: user.favoriteLeagues });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Remove a league from favorites
+router.delete("/favorite-leagues/:leagueId", authMiddleware, async (req, res) => {
+  try {
+    const { leagueId } = req.params;
+    const user = await User.findById(req.userId);
+    
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    user.favoriteLeagues = (user.favoriteLeagues || []).filter(id => id !== leagueId);
+    await user.save();
+
+    console.log(`[FavoriteLeagues] Removed league ${leagueId} for user ${user.email}`);
+    res.json({ favoriteLeagues: user.favoriteLeagues });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 // ============ PUSH NOTIFICATIONS ============
 
 // Registrar Push Token do dispositivo
@@ -244,7 +339,7 @@ router.delete("/push-token", authMiddleware, async (req, res) => {
 // Atualizar configurações de notificação
 router.put("/notification-settings", authMiddleware, async (req, res) => {
   try {
-    const { allMatches, favoritesOnly, goals, matchStart } = req.body;
+    const { allMatches, favoritesOnly, favoriteLeaguesNotify, goals, matchStart } = req.body;
 
     const user = await User.findByIdAndUpdate(
       req.userId,
@@ -252,6 +347,7 @@ router.put("/notification-settings", authMiddleware, async (req, res) => {
         notificationSettings: {
           allMatches: allMatches !== undefined ? allMatches : true,
           favoritesOnly: favoritesOnly !== undefined ? favoritesOnly : false,
+          favoriteLeaguesNotify: favoriteLeaguesNotify !== undefined ? favoriteLeaguesNotify : false,
           goals: goals !== undefined ? goals : true,
           matchStart: matchStart !== undefined ? matchStart : true,
         },

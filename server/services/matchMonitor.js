@@ -148,6 +148,7 @@ async function fetchEspnLiveMatches() {
               homeScore: homeScore,
               awayScore: awayScore,
               league: league.name || "Intercontinental Cup",
+              leagueId: league.id || league.slug || "FIC", // ID da liga para notificações
               startTime: event.date,
               isLive: isLive,
               detailedStatus: detailedStatus,
@@ -321,6 +322,7 @@ async function fetchLiveMatches() {
               homeScore: parseInt(homeParticipant?.result?.score) || 0,
               awayScore: parseInt(awayParticipant?.result?.score) || 0,
               league: league.name,
+              leagueId: league.id, // ID da liga para notificações de favoritos
               startTime: game.startDateTime,
               isLive: isLive,
               detailedStatus:

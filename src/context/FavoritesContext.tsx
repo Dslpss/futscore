@@ -19,16 +19,47 @@ interface FavoriteMatch {
   msnGameId?: string;
 }
 
+// Interface para liga favorita
+export interface FavoriteLeague {
+  id: string;
+  name: string;
+  logo?: string;
+  country?: string;
+}
+
+// Ligas disponíveis para seguir
+export const AVAILABLE_LEAGUES: FavoriteLeague[] = [
+  { id: "BSA", name: "Brasileirão Série A", logo: "https://media.api-sports.io/football/leagues/71.png", country: "Brazil" },
+  { id: "BSB", name: "Brasileirão Série B", logo: "https://media.api-sports.io/football/leagues/72.png", country: "Brazil" },
+  { id: "CDB", name: "Copa do Brasil", logo: "https://media.api-sports.io/football/leagues/73.png", country: "Brazil" },
+  { id: "CL", name: "Champions League", logo: "https://media.api-sports.io/football/leagues/2.png", country: "Europe" },
+  { id: "EL", name: "Europa League", logo: "https://media.api-sports.io/football/leagues/3.png", country: "Europe" },
+  { id: "PL", name: "Premier League", logo: "https://media.api-sports.io/football/leagues/39.png", country: "England" },
+  { id: "PD", name: "La Liga", logo: "https://media.api-sports.io/football/leagues/140.png", country: "Spain" },
+  { id: "BL1", name: "Bundesliga", logo: "https://media.api-sports.io/football/leagues/78.png", country: "Germany" },
+  { id: "SA", name: "Serie A", logo: "https://media.api-sports.io/football/leagues/135.png", country: "Italy" },
+  { id: "FL1", name: "Ligue 1", logo: "https://media.api-sports.io/football/leagues/61.png", country: "France" },
+  { id: "PPL", name: "Liga Portugal", logo: "https://media.api-sports.io/football/leagues/94.png", country: "Portugal" },
+  { id: "ARG", name: "Liga Argentina", logo: "https://media.api-sports.io/football/leagues/128.png", country: "Argentina" },
+  { id: "LIB", name: "Libertadores", logo: "https://media.api-sports.io/football/leagues/13.png", country: "South America" },
+  { id: "SUL", name: "Copa Sul-Americana", logo: "https://media.api-sports.io/football/leagues/11.png", country: "South America" },
+  { id: "CAR", name: "Campeonato Carioca", logo: "https://media.api-sports.io/football/leagues/287.png", country: "Brazil" },
+  { id: "SPA", name: "Campeonato Paulista", logo: "https://media.api-sports.io/football/leagues/280.png", country: "Brazil" },
+  { id: "MIN", name: "Campeonato Mineiro", logo: "https://media.api-sports.io/football/leagues/288.png", country: "Brazil" },
+  { id: "GAU", name: "Campeonato Gaúcho", logo: "https://media.api-sports.io/football/leagues/289.png", country: "Brazil" },
+];
+
 interface FavoritesContextData {
   favoriteTeams: number[];
-  favoriteLeagues: number[];
+  favoriteLeagues: string[];
+  favoriteLeaguesData: FavoriteLeague[];
   favoriteMatches: FavoriteMatch[];
   backendFavorites: FavoriteTeam[]; // Expose backend favorites
   toggleFavoriteTeam: (teamId: number, teamInfo?: { name: string; logo: string; country: string; msnId?: string }) => Promise<void>;
-  toggleFavoriteLeague: (leagueId: number) => Promise<void>;
+  toggleFavoriteLeague: (leagueId: string) => Promise<void>;
   toggleFavoriteMatch: (match: FavoriteMatch) => Promise<void>;
   isFavoriteTeam: (teamId: number) => boolean;
-  isFavoriteLeague: (leagueId: number) => boolean;
+  isFavoriteLeague: (leagueId: string) => boolean;
   isFavoriteMatch: (fixtureId: number) => boolean;
   getFavoriteMatches: () => FavoriteMatch[];
   clearExpiredFavoriteMatches: () => Promise<void>;
@@ -48,9 +79,12 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({
 }) => {
   const { token, isAuthenticated } = useAuth();
   const [favoriteTeams, setFavoriteTeams] = useState<number[]>([]);
-  const [favoriteLeagues, setFavoriteLeagues] = useState<number[]>([]);
+  const [favoriteLeagues, setFavoriteLeagues] = useState<string[]>([]);
   const [favoriteMatches, setFavoriteMatches] = useState<FavoriteMatch[]>([]);
   const [backendFavorites, setBackendFavorites] = useState<FavoriteTeam[]>([]);
+
+  // Computed: dados completos das ligas favoritas
+  const favoriteLeaguesData = AVAILABLE_LEAGUES.filter(l => favoriteLeagues.includes(l.id));
 
   // Load local favorites on mount
   useEffect(() => {
@@ -92,14 +126,25 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({
   // Refresh favorites from backend
   const refreshFromBackend = async () => {
     try {
+      // Fetch favorite teams
       const backendFavs = await authApi.getFavoriteTeams();
-      console.log(`[FavoritesContext] Loaded ${backendFavs.length} favorites from backend`);
+      console.log(`[FavoritesContext] Loaded ${backendFavs.length} favorite teams from backend`);
       setBackendFavorites(backendFavs);
       
       // Sync local state with backend
       const backendIds = backendFavs.map(f => f.id);
       setFavoriteTeams(backendIds);
       await AsyncStorage.setItem(FAVORITE_TEAMS_KEY, JSON.stringify(backendIds));
+
+      // Fetch favorite leagues
+      try {
+        const backendLeagues = await authApi.getFavoriteLeagues();
+        console.log(`[FavoritesContext] Loaded ${backendLeagues.length} favorite leagues from backend`);
+        setFavoriteLeagues(backendLeagues);
+        await AsyncStorage.setItem(FAVORITE_LEAGUES_KEY, JSON.stringify(backendLeagues));
+      } catch (leagueError) {
+        console.log("[FavoritesContext] Could not sync leagues with backend");
+      }
     } catch (error) {
       console.log("[FavoritesContext] Could not sync with backend, using local data");
     }
@@ -146,17 +191,33 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({
     }
   };
 
-  const toggleFavoriteLeague = async (leagueId: number) => {
+  const toggleFavoriteLeague = async (leagueId: string) => {
     try {
-      const newFavorites = favoriteLeagues.includes(leagueId)
+      const isFav = favoriteLeagues.includes(leagueId);
+      const newFavorites = isFav
         ? favoriteLeagues.filter((id) => id !== leagueId)
         : [...favoriteLeagues, leagueId];
 
+      // Update local state first for immediate feedback
       setFavoriteLeagues(newFavorites);
       await AsyncStorage.setItem(
         FAVORITE_LEAGUES_KEY,
         JSON.stringify(newFavorites)
       );
+      console.log(`[FavoritesContext] Toggled league ${leagueId}, total: ${newFavorites.length}`);
+
+      // Sync with backend
+      try {
+        if (isFav) {
+          await authApi.removeFavoriteLeague(leagueId);
+          console.log(`[FavoritesContext] Removed league ${leagueId} from backend`);
+        } else {
+          await authApi.addFavoriteLeague(leagueId);
+          console.log(`[FavoritesContext] Added league ${leagueId} to backend`);
+        }
+      } catch (backendError) {
+        console.log(`[FavoritesContext] Backend sync failed for league:`, backendError);
+      }
     } catch (error) {
       console.error("Error toggling favorite league:", error);
     }
@@ -241,7 +302,7 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   const isFavoriteTeam = (teamId: number) => favoriteTeams.includes(teamId);
-  const isFavoriteLeague = (leagueId: number) =>
+  const isFavoriteLeague = (leagueId: string) =>
     favoriteLeagues.includes(leagueId);
   const isFavoriteMatch = (fixtureId: number) =>
     favoriteMatches.some((m) => m.fixtureId === fixtureId);
@@ -252,6 +313,7 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({
       value={{
         favoriteTeams,
         favoriteLeagues,
+        favoriteLeaguesData,
         favoriteMatches,
         backendFavorites,
         toggleFavoriteTeam,

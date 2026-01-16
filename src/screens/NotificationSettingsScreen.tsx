@@ -19,18 +19,21 @@ import {
   Play,
   ChevronLeft,
   Info,
+  Trophy,
 } from "lucide-react-native";
 import { authApi } from "../services/authApi";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSubscription } from "../hooks/useSubscription";
 import { Lock } from "lucide-react-native";
 import { PremiumTrialModal } from "../components/PremiumTrialModal";
+import { useFavorites } from "../context/FavoritesContext";
 
 const NOTIFICATION_SETTINGS_KEY = "futscore_notification_settings";
 
 interface NotificationSettings {
   allMatches: boolean;
   favoritesOnly: boolean;
+  favoriteLeaguesNotify: boolean; // Notificações de ligas favoritas
   goals: boolean;
   matchStart: boolean;
 }
@@ -39,12 +42,14 @@ export function NotificationSettingsScreen({ navigation }: any) {
   const [settings, setSettings] = useState<NotificationSettings>({
     allMatches: true,
     favoritesOnly: false,
+    favoriteLeaguesNotify: false,
     goals: true,
     matchStart: true,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { isPremium, hasTrialAvailable, refreshSubscription } = useSubscription();
+  const { favoriteLeagues } = useFavorites();
   const [showTrialModal, setShowTrialModal] = useState(false);
 
   useEffect(() => {
@@ -59,6 +64,7 @@ export function NotificationSettingsScreen({ navigation }: any) {
       const loadedSettings = {
         allMatches: data.allMatches ?? false,
         favoritesOnly: data.favoritesOnly ?? true,
+        favoriteLeaguesNotify: data.favoriteLeaguesNotify ?? false,
         goals: data.goals ?? true,
         matchStart: data.matchStart ?? true,
       };
@@ -77,7 +83,11 @@ export function NotificationSettingsScreen({ navigation }: any) {
           NOTIFICATION_SETTINGS_KEY
         );
         if (localSettings) {
-          setSettings(JSON.parse(localSettings));
+          const parsed = JSON.parse(localSettings);
+          setSettings({
+            ...parsed,
+            favoriteLeaguesNotify: parsed.favoriteLeaguesNotify ?? false,
+          });
         }
       } catch {
         // Usar valores padrão
@@ -272,6 +282,67 @@ export function NotificationSettingsScreen({ navigation }: any) {
               </View>
             </TouchableOpacity>
           </View>
+
+          {/* Seção: Ligas Favoritas (Premium) */}
+          {isPremium && favoriteLeagues.length > 0 && (
+            <>
+              <Text style={styles.sectionTitle}>Ligas Favoritas 🏆</Text>
+              <View style={styles.settingCard}>
+                <View style={styles.switchRow}>
+                  <View style={[styles.switchIcon, { backgroundColor: "rgba(34, 197, 94, 0.15)" }]}>
+                    <Trophy size={22} color="#22c55e" />
+                  </View>
+                  <View style={styles.switchContent}>
+                    <Text style={styles.switchTitle}>Notificar Ligas Favoritas</Text>
+                    <Text style={styles.switchDescription}>
+                      Receber notificações de jogos das suas {favoriteLeagues.length} ligas favoritas
+                    </Text>
+                  </View>
+                  <Switch
+                    value={settings.favoriteLeaguesNotify}
+                    onValueChange={(value) => updateSetting("favoriteLeaguesNotify", value)}
+                    trackColor={{ false: "#3f3f46", true: "#22c55e50" }}
+                    thumbColor={settings.favoriteLeaguesNotify ? "#22c55e" : "#71717a"}
+                    disabled={saving}
+                  />
+                </View>
+              </View>
+            </>
+          )}
+
+          {/* Mostrar opção bloqueada para não-premium */}
+          {!isPremium && (
+            <>
+              <Text style={styles.sectionTitle}>Ligas Favoritas 🏆</Text>
+              <TouchableOpacity
+                style={styles.settingCard}
+                onPress={() => {
+                  if (hasTrialAvailable) {
+                    setShowTrialModal(true);
+                  } else {
+                    navigation.navigate("Subscription");
+                  }
+                }}
+                activeOpacity={0.8}
+              >
+                <View style={styles.switchRow}>
+                  <View style={[styles.switchIcon, { backgroundColor: "rgba(251, 191, 36, 0.15)" }]}>
+                    <Lock size={22} color="#fbbf24" />
+                  </View>
+                  <View style={styles.switchContent}>
+                    <Text style={[styles.switchTitle, { color: "#a1a1aa" }]}>Notificar Ligas Favoritas</Text>
+                    <Text style={styles.switchDescription}>
+                      Receba notificações de jogos das competições que você segue{" "}
+                      <Text style={{ color: "#fbbf24" }}>(Premium)</Text>
+                    </Text>
+                  </View>
+                  <View style={styles.premiumBadge}>
+                    <Text style={styles.premiumBadgeText}>PRO</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            </>
+          )}
 
           {/* Seção: Tipos de notificação */}
           <Text style={styles.sectionTitle}>Tipos de alerta</Text>
@@ -558,5 +629,18 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: 40,
+  },
+  premiumBadge: {
+    backgroundColor: "rgba(251, 191, 36, 0.2)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(251, 191, 36, 0.3)",
+  },
+  premiumBadgeText: {
+    color: "#fbbf24",
+    fontSize: 11,
+    fontWeight: "700",
   },
 });

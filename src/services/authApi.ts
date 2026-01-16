@@ -245,4 +245,55 @@ export const authApi = {
       throw error;
     }
   },
+
+  // ============ FAVORITE LEAGUES (Premium Feature 🏆) ============
+
+  // Get favorite league IDs from backend
+  getFavoriteLeagues: async (): Promise<string[]> => {
+    try {
+      const response = await authClient.get("/user/favorite-leagues");
+      return response.data.favoriteLeagues || [];
+    } catch (error: any) {
+      console.error("Error fetching favorite leagues:", error);
+      return [];
+    }
+  },
+
+  // Update favorite leagues (replace entire list)
+  saveFavoriteLeagues: async (leagues: string[]): Promise<string[]> => {
+    try {
+      const response = await authClient.put("/user/favorite-leagues", {
+        favoriteLeagues: leagues,
+      });
+      console.log(`[Auth] Saved ${leagues.length} favorite leagues`);
+      return response.data.favoriteLeagues || [];
+    } catch (error: any) {
+      console.error("Error saving favorite leagues:", error);
+      throw error;
+    }
+  },
+
+  // Add a league to favorites
+  addFavoriteLeague: async (leagueId: string): Promise<string[]> => {
+    try {
+      const response = await authClient.post(`/user/favorite-leagues/${leagueId}`);
+      console.log(`[Auth] League ${leagueId} added to favorites`);
+      return response.data.favoriteLeagues || [];
+    } catch (error: any) {
+      console.error("Error adding favorite league:", error);
+      throw error;
+    }
+  },
+
+  // Remove a league from favorites
+  removeFavoriteLeague: async (leagueId: string): Promise<string[]> => {
+    try {
+      const response = await authClient.delete(`/user/favorite-leagues/${leagueId}`);
+      console.log(`[Auth] League ${leagueId} removed from favorites`);
+      return response.data.favoriteLeagues || [];
+    } catch (error: any) {
+      console.error("Error removing favorite league:", error);
+      throw error;
+    }
+  },
 };

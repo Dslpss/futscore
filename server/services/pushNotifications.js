@@ -67,8 +67,8 @@ async function sendPushToAll(title, body, data = {}, filter = {}) {
     }
 
     const users = await User.find(query).select(
-      "pushToken notificationSettings favoriteTeams favoriteMatchIds"
-    );
+      "pushToken notificationSettings favoriteTeams favoriteMatchIds favoriteLeagues isPremium trialStartDate trialUsed giftPremiumEndDate subscriptionId"
+    ).populate("subscriptionId");
 
     if (users.length === 0) {
       console.log("[Push] Nenhum usuário para notificar");
@@ -92,6 +92,64 @@ async function sendPushToAll(title, body, data = {}, filter = {}) {
       // Fallback: try to parse the whole string
       const parsed = parseInt(id);
       return isNaN(parsed) ? null : parsed;
+    };
+
+    // Helper: Check if user has premium access
+    const hasPremiumAccess = (user) => {
+      // Check trial
+      if (user.trialStartDate && !user.trialUsed) {
+        const trialEnd = new Date(user.trialStartDate);
+        trialEnd.setDate(trialEnd.getDate() + 7);
+        if (new Date() < trialEnd) return true;
+      }
+      
+      // Check gift premium
+      if (user.giftPremiumEndDate && new Date() < user.giftPremiumEndDate) {
+        return true;
+      }
+      
+      // Check subscription
+      if (user.isPremium && user.subscriptionId) {
+        const sub = user.subscriptionId;
+        return sub.status === "active" && sub.endDate > new Date();
+      }
+      
+      return false;
+    };
+
+    // Helper: Check if league ID matches user's favorite leagues
+    const matchesFavoriteLeague = (user, leagueId) => {
+      if (!user.favoriteLeagues || user.favoriteLeagues.length === 0) return false;
+      
+      // Mapeamento de códigos para IDs MSN
+      const msnMapping = {
+        BSA: "BrazilBrasileiroSerieA",
+        BSB: "BrazilBrasileiroSerieB",
+        CDB: "BrazilCopaDoBrasil",
+        CAR: "BrazilCarioca",
+        SPA: "BrazilPaulistaSerieA1",
+        MIN: "BrazilMineiro",
+        GAU: "BrazilGaucho",
+        CL: "InternationalClubsUEFAChampionsLeague",
+        EL: "UEFAEuropaLeague",
+        PL: "EnglandPremierLeague",
+        PD: "SpainLaLiga",
+        BL1: "GermanyBundesliga",
+        SA: "ItalySerieA",
+        FL1: "FranceLigue1",
+        PPL: "PortugalPrimeiraLiga",
+        ARG: "ArgentinaPrimeraDivision",
+        LIB: "CONMEBOLLibertadores",
+        SUL: "CONMEBOLSudamericana",
+      };
+      
+      return user.favoriteLeagues.some(favLeagueCode => {
+        // Verificação direta
+        if (leagueId === favLeagueCode) return true;
+        // Verificação via mapeamento MSN
+        if (msnMapping[favLeagueCode] && leagueId.includes(msnMapping[favLeagueCode])) return true;
+        return false;
+      });
     };
 
     // Extract numeric IDs from the match data
@@ -137,8 +195,17 @@ async function sendPushToAll(title, body, data = {}, filter = {}) {
           );
         });
         
-        // Permitir se for partida marcada OU time favorito
-        if (!isMarkedMatch && !isFavoriteTeamMatch) continue;
+        // 3. Verificar ligas favoritas (apenas se for premium E tiver a configuração ativada) 🏆
+        let isFavoriteLeagueMatch = false;
+        if (data.leagueId && hasPremiumAccess(user) && settings.favoriteLeaguesNotify) {
+          isFavoriteLeagueMatch = matchesFavoriteLeague(user, data.leagueId);
+          if (isFavoriteLeagueMatch) {
+            console.log(`[Push] ✓ Match is from user's favorite league (premium + setting enabled) - league: ${data.leagueId}`);
+          }
+        }
+        
+        // Permitir se for partida marcada OU time favorito OU liga favorita (premium + config)
+        if (!isMarkedMatch && !isFavoriteTeamMatch && !isFavoriteLeagueMatch) continue;
         
         if (isMarkedMatch) {
           console.log(`[Push] ✓ Match ${matchIdStr}/${msnGameIdStr || 'no-msn'} is in user's favoriteMatchIds (bell icon) - user: ${user.pushToken?.substring(0, 30)}...`);
@@ -158,7 +225,16 @@ async function sendPushToAll(title, body, data = {}, filter = {}) {
           teamId === data.awayTeamId
         );
       });
-      const finalTitle = isFavorite ? `⭐ ${title}` : title;
+      
+      // Adicionar emoji de liga se for liga favorita (premium + configuração ativada)
+      const isFavoriteLeague = data.leagueId && hasPremiumAccess(user) && settings.favoriteLeaguesNotify && matchesFavoriteLeague(user, data.leagueId);
+      
+      let finalTitle = title;
+      if (isFavorite) {
+        finalTitle = `⭐ ${title}`;
+      } else if (isFavoriteLeague) {
+        finalTitle = `🏆 ${title}`;
+      }
 
       messages.push({
         to: user.pushToken,
@@ -221,6 +297,7 @@ async function notifyMatchStarted(match) {
     msnGameId: match.id, // Include msnGameId for bell icon matching
     homeTeamId: match.homeTeamId,
     awayTeamId: match.awayTeamId,
+    leagueId: match.leagueId || match.league, // Include leagueId for favorite leagues
   });
 }
 
@@ -257,6 +334,7 @@ async function notifyGoal(
     msnGameId: match.id, // Include msnGameId for bell icon matching
     homeTeamId: match.homeTeamId,
     awayTeamId: match.awayTeamId,
+    leagueId: match.leagueId || match.league, // Include leagueId for favorite leagues
     scorer: scorerTeam,
     playerName,
     minute,
