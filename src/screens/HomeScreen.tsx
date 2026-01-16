@@ -40,6 +40,7 @@ import { PremiumFeaturesModal } from "../components/PremiumFeaturesModal";
 import { WorldCupModal } from "../components/WorldCupModal";
 import { TeamSearchBar } from "../components/TeamSearchBar";
 import { TVCardsSection } from "../components/TVCardsSection";
+import { AnnouncementCard } from "../components/AnnouncementCard";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   Bell,
@@ -1726,6 +1727,9 @@ export const HomeScreen = ({ navigation }: any) => {
 
       {/* ESPN, OndeAssistir, and News Cards - Fully isolated component */}
       <TVCardsSection />
+
+      {/* Announcements */}
+      <AnnouncementCard onNavigate={(screen) => navigation.navigate(screen)} />
 
       {/* Action Buttons - Premium Card Container */}
       <View style={styles.actionButtonsWrapper}>

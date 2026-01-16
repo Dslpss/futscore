@@ -5,6 +5,7 @@ import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { Download } from './pages/Download';
 import { Subscriptions } from './pages/Subscriptions';
+import Announcements from './pages/Announcements';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -34,6 +35,14 @@ function AppRoutes() {
         element={
           <PrivateRoute>
             <Subscriptions />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/announcements"
+        element={
+          <PrivateRoute>
+            <Announcements />
           </PrivateRoute>
         }
       />
