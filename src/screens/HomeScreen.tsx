@@ -1746,7 +1746,7 @@ export const HomeScreen = ({ navigation }: any) => {
               <Text style={styles.actionButtonsTitle}>Ações Rápidas</Text>
             </View>
             <View style={styles.actionCountBadge}>
-              <Text style={styles.actionCountText}>9 atalhos</Text>
+              <Text style={styles.actionCountText}>10 atalhos</Text>
             </View>
           </View>
 
@@ -2030,6 +2030,30 @@ export const HomeScreen = ({ navigation }: any) => {
                 <View style={styles.actionButtonTextContainer}>
                   <Text style={styles.actionButtonText}>Palpites</Text>
                   <Text style={styles.actionButtonSubtext}>Aposte</Text>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            {/* Second Screen Button - NEW */}
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigation.navigate("SecondScreen")}
+              activeOpacity={0.85}>
+              <LinearGradient
+                colors={["#1a1a3e", "#1a1a2e"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.actionButtonGradient}>
+                <View style={styles.actionButtonIconWrapper}>
+                  <LinearGradient
+                    colors={["#60a5fa", "#3b82f6"]}
+                    style={styles.actionIconGradient}>
+                    <Text style={styles.actionButtonIcon}>📺</Text>
+                  </LinearGradient>
+                </View>
+                <View style={styles.actionButtonTextContainer}>
+                  <Text style={styles.actionButtonText}>2ª Tela</Text>
+                  <Text style={styles.actionButtonSubtext}>Minimalista</Text>
                 </View>
               </LinearGradient>
             </TouchableOpacity>

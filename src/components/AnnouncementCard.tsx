@@ -255,11 +255,13 @@ export const AnnouncementCard: React.FC<AnnouncementCardProps> = ({ onNavigate }
 
           <View style={styles.textContent}>
             <Text style={styles.title}>{current.title}</Text>
-            <Text style={styles.message} numberOfLines={2}>
-              {current.message}
-            </Text>
           </View>
         </View>
+        
+        {/* Message - Full width below */}
+        <Text style={styles.message}>
+          {current.message}
+        </Text>
 
         {/* Action Button */}
         {current.actionType !== "none" && (
@@ -380,7 +382,8 @@ const styles = StyleSheet.create({
   message: {
     color: "#a1a1aa",
     fontSize: 13,
-    lineHeight: 18,
+    lineHeight: 20,
+    marginTop: 12,
   },
   actionButton: {
     marginTop: 16,

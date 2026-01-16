@@ -21,6 +21,7 @@ import { RadiosScreen } from "./src/screens/RadiosScreen";
 import TVChannelsScreen from "./src/screens/TVChannelsScreen";
 import { SubscriptionScreen } from "./src/screens/SubscriptionScreen";
 import { PredictionsScreen } from "./src/screens/PredictionsScreen";
+import { SecondScreenMode } from "./src/screens/SecondScreenMode";
 import { StatusBar } from "expo-status-bar";
 import { View, ActivityIndicator } from "react-native";
 import { forceCheckMatches } from "./src/services/backgroundTask";
@@ -97,6 +98,7 @@ function AppNavigation() {
             <Stack.Screen name="TVChannels" component={TVChannelsScreen} />
             <Stack.Screen name="Subscription" component={SubscriptionScreen} />
             <Stack.Screen name="Predictions" component={PredictionsScreen} />
+            <Stack.Screen name="SecondScreen" component={SecondScreenMode} />
           </Stack.Navigator>
         </MatchProvider>
       </FavoritesProvider>
