@@ -1,5 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { API_URL } from "./api";
+import { CONFIG } from "../constants/config";
+
+const API_URL = CONFIG.BACKEND_URL;
 
 const getAuthHeaders = async () => {
   const token = await AsyncStorage.getItem("token");
@@ -114,7 +116,9 @@ export async function getMyStats(): Promise<UserStats> {
     });
 
     if (!response.ok) {
-      throw new Error("Failed to fetch stats");
+      const errorText = await response.text();
+      console.error(`[PredictionsAPI] Stats error: ${response.status}`, errorText);
+      throw new Error(`Failed to fetch stats: ${response.status} ${errorText}`);
     }
 
     return await response.json();
@@ -170,7 +174,10 @@ export async function getMatchPrediction(
     );
 
     if (!response.ok) {
-      throw new Error("Failed to fetch prediction");
+      if (response.status === 404) return null; // No prediction yet
+      const errorText = await response.text();
+      console.error(`[PredictionsAPI] Match prediction error: ${response.status}`, errorText);
+      throw new Error(`Failed to fetch prediction: ${response.status}`);
     }
 
     const data = await response.json();
