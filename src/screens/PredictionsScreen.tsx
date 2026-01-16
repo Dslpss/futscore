@@ -5,14 +5,16 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  RefreshControl,
-  SafeAreaView,
   StatusBar,
   ActivityIndicator,
   Dimensions,
   Image,
+  ScrollView,
+  RefreshControl,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   ChevronLeft,
   Trophy,
@@ -21,6 +23,8 @@ import {
   Flame,
   Medal,
   Users,
+  Calendar,
+  History,
 } from "lucide-react-native";
 import { PredictionCard } from "../components/PredictionCard";
 import { LeaderboardModal } from "../components/LeaderboardModal";
@@ -108,137 +112,233 @@ export const PredictionsScreen: React.FC<PredictionsScreenProps> = ({
     setRefreshing(false);
   }, [activeTab]);
 
-  const renderStatsCard = () => {
+  const renderStatsHeader = () => {
     if (!stats) return null;
 
     return (
-      <LinearGradient
-        colors={["rgba(34, 197, 94, 0.15)", "rgba(34, 197, 94, 0.05)"]}
-        style={styles.statsCard}
-      >
-        {/* Points Header */}
-        <View style={styles.statsHeader}>
-          <View style={styles.pointsContainer}>
-            <Trophy size={24} color="#fbbf24" />
-            <Text style={styles.totalPoints}>{stats.totalPoints}</Text>
-            <Text style={styles.pointsLabel}>pontos</Text>
+      <View style={styles.premiumHeaderContainer}>
+        {/* Background Gradients */}
+        <LinearGradient
+          colors={["#052e16", "#09090b"]} // Verde escuro para preto
+          style={StyleSheet.absoluteFill}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+        />
+        
+        {/* Decorative Glow */}
+        <View style={styles.headerGlow} />
+
+        <SafeAreaView edges={['top']} style={styles.safeAreaHeader}>
+          {/* Top Bar */}
+          <View style={styles.navigationBar}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+              activeOpacity={0.7}
+            >
+              <BlurView intensity={20} tint="light" style={styles.blurButton}>
+                <ChevronLeft size={24} color="#fff" />
+              </BlurView>
+            </TouchableOpacity>
+            
+            <View style={styles.titleContainer}>
+              <Text style={styles.screenTitle}>Central de Palpites</Text>
+            </View>
+
+            <TouchableOpacity 
+              style={styles.globalRankButton}
+              onPress={() => setShowLeaderboard(true)}
+              activeOpacity={0.7}
+            >
+              <LinearGradient
+                colors={['#fbbf24', '#d97706']}
+                style={styles.globalRankGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <Trophy size={16} color="#451a03" strokeWidth={2.5} />
+                <Text style={styles.globalRankText}>RANK</Text>
+              </LinearGradient>
+            </TouchableOpacity>
           </View>
 
-          <TouchableOpacity
-            style={styles.leaderboardButton}
-            onPress={() => setShowLeaderboard(true)}
-          >
-            <Users size={18} color="#22c55e" />
-            <Text style={styles.leaderboardButtonText}>Ranking</Text>
-          </TouchableOpacity>
-        </View>
+          {/* User Stats - Hero Section */}
+          <View style={styles.heroStatsContainer}>
+            <View style={styles.mainPointsBadge}>
+              <LinearGradient
+                colors={['rgba(34, 197, 94, 0.2)', 'rgba(34, 197, 94, 0.05)']}
+                style={styles.pointsCircle}
+              >
+                <Text style={styles.pointsValue}>{stats.totalPoints}</Text>
+                <Text style={styles.pointsLabel}>PONTOS</Text>
+              </LinearGradient>
+            </View>
 
-        {/* Stats Grid */}
-        <View style={styles.statsGrid}>
-          <View style={styles.statItem}>
-            <Target size={20} color="#22c55e" />
-            <Text style={styles.statValue}>{stats.predictions.exact}</Text>
-            <Text style={styles.statLabel}>Exatos</Text>
-          </View>
+            <View style={styles.statsRow}>
+              <View style={styles.miniStat}>
+                <View style={[styles.iconBadge, { backgroundColor: 'rgba(59, 130, 246, 0.2)' }]}>
+                  <TrendingUp size={16} color="#3b82f6" />
+                </View>
+                <View>
+                  <Text style={styles.miniStatValue}>{stats.accuracy}%</Text>
+                  <Text style={styles.miniStatLabel}>Precisão</Text>
+                </View>
+              </View>
 
-          <View style={styles.statItem}>
-            <TrendingUp size={20} color="#3b82f6" />
-            <Text style={styles.statValue}>{stats.accuracy}%</Text>
-            <Text style={styles.statLabel}>Acertos</Text>
-          </View>
+              <View style={styles.divider} />
 
-          <View style={styles.statItem}>
-            <Flame size={20} color="#ef4444" />
-            <Text style={styles.statValue}>{stats.currentStreak}</Text>
-            <Text style={styles.statLabel}>Sequência</Text>
-          </View>
+              <View style={styles.miniStat}>
+                <View style={[styles.iconBadge, { backgroundColor: 'rgba(34, 197, 94, 0.2)' }]}>
+                  <Target size={16} color="#22c55e" />
+                </View>
+                <View>
+                  <Text style={styles.miniStatValue}>{stats.predictions.exact}</Text>
+                  <Text style={styles.miniStatLabel}>Cravadas</Text>
+                </View>
+              </View>
 
-          <View style={styles.statItem}>
-            <Medal size={20} color="#f59e0b" />
-            <Text style={styles.statValue}>{stats.predictions.total}</Text>
-            <Text style={styles.statLabel}>Palpites</Text>
-          </View>
-        </View>
+              <View style={styles.divider} />
 
-        {/* Streak Bonus Info */}
-        {stats.currentStreak >= 3 && (
-          <View style={styles.streakBonus}>
-            <Flame size={16} color="#ef4444" />
-            <Text style={styles.streakBonusText}>
-              🔥 Bônus de sequência ativo! +2 pontos por acerto
-            </Text>
+              <View style={styles.miniStat}>
+                <View style={[styles.iconBadge, { backgroundColor: 'rgba(239, 68, 68, 0.2)' }]}>
+                  <Flame size={16} color="#ef4444" />
+                </View>
+                <View>
+                  <Text style={styles.miniStatValue}>{stats.currentStreak}</Text>
+                  <Text style={styles.miniStatLabel}>Sequência</Text>
+                </View>
+              </View>
+            </View>
+
+            {stats.currentStreak >= 3 && (
+              <LinearGradient
+                colors={['rgba(239, 68, 68, 0.2)', 'rgba(239, 68, 68, 0.05)']}
+                style={styles.streakAlert}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              >
+                <Flame size={14} color="#ef4444" fill="#ef4444" />
+                <Text style={styles.streakAlertText}>
+                  FIRE MODE! Ganhe pontos em dobro no próximo acerto!
+                </Text>
+              </LinearGradient>
+            )}
           </View>
-        )}
-      </LinearGradient>
+        </SafeAreaView>
+      </View>
     );
   };
 
   const renderTabs = () => (
-    <View style={styles.tabsContainer}>
-      <TouchableOpacity
-        style={[styles.tab, activeTab === "upcoming" && styles.tabActive]}
-        onPress={() => setActiveTab("upcoming")}
-      >
-        <Text
-          style={[
-            styles.tabText,
-            activeTab === "upcoming" && styles.tabTextActive,
-          ]}
+    <View style={styles.tabsWrapper}>
+      <View style={styles.tabsContainer}>
+        <TouchableOpacity
+          style={styles.tabButton}
+          onPress={() => setActiveTab("upcoming")}
+          activeOpacity={0.8}
         >
-          📅 Próximos Jogos
-        </Text>
-      </TouchableOpacity>
+          {activeTab === "upcoming" && (
+            <LinearGradient
+              colors={['#22c55e', '#16a34a']}
+              style={StyleSheet.absoluteFill}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+            />
+          )}
+          <View style={styles.tabContent}>
+            <Calendar 
+              size={16} 
+              color={activeTab === "upcoming" ? "#fff" : "#71717a"} 
+            />
+            <Text style={[
+              styles.tabText,
+              activeTab === "upcoming" ? styles.tabTextActive : styles.tabTextInactive
+            ]}>Próximos</Text>
+          </View>
+        </TouchableOpacity>
 
-      <TouchableOpacity
-        style={[styles.tab, activeTab === "history" && styles.tabActive]}
-        onPress={() => setActiveTab("history")}
-      >
-        <Text
-          style={[
-            styles.tabText,
-            activeTab === "history" && styles.tabTextActive,
-          ]}
+        <TouchableOpacity
+          style={styles.tabButton}
+          onPress={() => setActiveTab("history")}
+          activeOpacity={0.8}
         >
-          📊 Histórico
-        </Text>
-      </TouchableOpacity>
+           {activeTab === "history" && (
+            <LinearGradient
+              colors={['#3b82f6', '#2563eb']}
+              style={StyleSheet.absoluteFill}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+            />
+          )}
+          <View style={styles.tabContent}>
+            <History 
+              size={16} 
+              color={activeTab === "history" ? "#fff" : "#71717a"} 
+            />
+            <Text style={[
+              styles.tabText,
+              activeTab === "history" ? styles.tabTextActive : styles.tabTextInactive
+            ]}>Histórico</Text>
+          </View>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
-  const renderUpcomingMatches = () => {
-    if (upcomingMatches.length === 0) {
+  const renderContent = () => {
+    if (loading) {
       return (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyEmoji}>⚽</Text>
-          <Text style={styles.emptyTitle}>Nenhum jogo para palpitar</Text>
-          <Text style={styles.emptySubtitle}>
-            Volte mais tarde para ver os próximos jogos disponíveis
-          </Text>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#22c55e" />
+          <Text style={styles.loadingText}>Carregando dados...</Text>
         </View>
       );
     }
 
-    return (
-      <FlatList
-        data={upcomingMatches}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <PredictionCard match={item} onPredictionMade={handleRefresh} />
-        )}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-      />
-    );
-  };
+    if (activeTab === "upcoming") {
+      if (upcomingMatches.length === 0) {
+        return (
+          <View style={styles.emptyState}>
+            <LinearGradient
+              colors={['rgba(34, 197, 94, 0.1)', 'transparent']}
+              style={styles.emptyIconBg}
+            >
+              <Target size={48} color="#22c55e" />
+            </LinearGradient>
+            <Text style={styles.emptyTitle}>Tudo pronto por enquanto</Text>
+            <Text style={styles.emptySubtitle}>
+              Nenhum jogo novo para palpitar. Volte mais tarde!
+            </Text>
+          </View>
+        );
+      }
 
-  const renderHistory = () => {
+      return (
+        <FlatList
+          data={upcomingMatches}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <PredictionCard match={item} onPredictionMade={handleRefresh} />
+          )}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#22c55e" />
+          }
+        />
+      );
+    }
+
+    // History Tab
     if (predictions.length === 0) {
       return (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyEmoji}>📊</Text>
-          <Text style={styles.emptyTitle}>Sem histórico ainda</Text>
+          <View style={[styles.emptyIconBg, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+            <History size={48} color="#3b82f6" />
+          </View>
+          <Text style={styles.emptyTitle}>Sem histórico</Text>
           <Text style={styles.emptySubtitle}>
-            Seus palpites aparecerão aqui após as partidas terminarem
+            Seus palpites finalizados aparecerão aqui.
           </Text>
         </View>
       );
@@ -265,232 +365,271 @@ export const PredictionsScreen: React.FC<PredictionsScreenProps> = ({
         )}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#22c55e" />
+        }
       />
     );
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor="#09090b" />
-
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <ChevronLeft size={24} color="#fff" />
-        </TouchableOpacity>
-
-        <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>🎯 Palpites</Text>
-          <Text style={styles.headerSubtitle}>Teste seus conhecimentos</Text>
-        </View>
-
-        <View style={styles.headerRight} />
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+      
+      {renderStatsHeader()}
+      
+      <View style={styles.mainContent}>
+        {renderTabs()}
+        {renderContent()}
       </View>
 
-      {/* Stats Card */}
-      {renderStatsCard()}
-
-      {/* Tabs */}
-      {renderTabs()}
-
-      {/* Content */}
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#22c55e" />
-          <Text style={styles.loadingText}>Carregando...</Text>
-        </View>
-      ) : (
-        <View style={styles.content}>
-          {activeTab === "upcoming" ? renderUpcomingMatches() : renderHistory()}
-        </View>
-      )}
-
-      {/* Leaderboard Modal */}
       <LeaderboardModal
         visible={showLeaderboard}
         onClose={() => setShowLeaderboard(false)}
       />
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
+  container: {
     flex: 1,
     backgroundColor: "#09090b",
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+  premiumHeaderContainer: {
+    paddingBottom: 24,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+    overflow: 'hidden',
+    marginBottom: -20, // Negative margin for overlap
+    zIndex: 10,
+  },
+  headerGlow: {
+    position: 'absolute',
+    top: -100,
+    left: width * 0.2,
+    width: width * 0.6,
+    height: 300,
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    borderRadius: 999,
+    transform: [{ scaleX: 2 }],
+  },
+  safeAreaHeader: {
+    zIndex: 2,
+  },
+  navigationBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.1)",
   },
   backButton: {
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  blurButton: {
     width: 40,
     height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.1)",
-    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
   },
-  headerTitleContainer: {
-    alignItems: "center",
+  titleContainer: {
+    alignItems: 'center',
   },
-  headerTitle: {
-    color: "#fff",
-    fontSize: 20,
-    fontWeight: "bold",
+  screenTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
-  headerSubtitle: {
-    color: "#888",
-    fontSize: 12,
+  globalRankButton: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: "#fbbf24",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  headerRight: {
-    width: 40,
-  },
-  statsCard: {
-    margin: 16,
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "rgba(34, 197, 94, 0.3)",
-  },
-  statsHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  pointsContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  totalPoints: {
-    color: "#fff",
-    fontSize: 32,
-    fontWeight: "bold",
-  },
-  pointsLabel: {
-    color: "#888",
-    fontSize: 14,
-  },
-  leaderboardButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(34, 197, 94, 0.2)",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    gap: 6,
-  },
-  leaderboardButtonText: {
-    color: "#22c55e",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  statsGrid: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-  },
-  statItem: {
-    alignItems: "center",
+  globalRankGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     gap: 4,
   },
-  statValue: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
+  globalRankText: {
+    color: '#451a03',
+    fontSize: 10,
+    fontWeight: '800',
   },
-  statLabel: {
-    color: "#888",
-    fontSize: 11,
+  heroStatsContainer: {
+    marginTop: 10,
+    alignItems: 'center',
   },
-  streakBonus: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(239, 68, 68, 0.2)",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    marginTop: 12,
+  mainPointsBadge: {
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  pointsCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.3)',
+    shadowColor: "#22c55e",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  pointsValue: {
+    color: '#fff',
+    fontSize: 36,
+    fontWeight: '800',
+    lineHeight: 40,
+  },
+  pointsLabel: {
+    color: '#4ade80',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+  },
+  miniStat: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    minWidth: 90,
+  },
+  divider: {
+    width: 1,
+    height: 24,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    marginHorizontal: 12,
+  },
+  iconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  miniStatValue: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  miniStatLabel: {
+    color: '#a1a1aa',
+    fontSize: 10,
+  },
+  streakAlert: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
+    marginTop: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
   },
-  streakBonusText: {
-    color: "#ef4444",
-    fontSize: 12,
-    fontWeight: "600",
+  streakAlertText: {
+    color: '#fca5a5',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  mainContent: {
+    flex: 1,
+    backgroundColor: '#09090b',
+    paddingTop: 32, // Space for overlap
+  },
+  tabsWrapper: {
+    paddingHorizontal: 16,
+    marginBottom: 16,
   },
   tabsContainer: {
-    flexDirection: "row",
-    paddingHorizontal: 16,
-    gap: 8,
-    marginBottom: 8,
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 12,
+    padding: 4,
   },
-  tab: {
+  tabButton: {
     flex: 1,
-    paddingVertical: 12,
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.05)",
-    borderRadius: 10,
+    height: 36,
+    borderRadius: 8,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  tabActive: {
-    backgroundColor: "rgba(34, 197, 94, 0.2)",
-    borderWidth: 1,
-    borderColor: "rgba(34, 197, 94, 0.5)",
+  tabContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   tabText: {
-    color: "#888",
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   tabTextActive: {
-    color: "#22c55e",
+    color: '#fff',
   },
-  content: {
-    flex: 1,
+  tabTextInactive: {
+    color: '#71717a',
   },
   listContent: {
     paddingHorizontal: 16,
-    paddingBottom: 20,
+    paddingBottom: 40,
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   loadingText: {
-    color: "#888",
+    color: '#71717a',
     marginTop: 12,
+    fontSize: 12,
   },
   emptyState: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 40,
   },
-  emptyEmoji: {
-    fontSize: 64,
+  emptyIconBg: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 16,
   },
   emptyTitle: {
-    color: "#fff",
+    color: '#fff',
     fontSize: 18,
-    fontWeight: "bold",
-    textAlign: "center",
+    fontWeight: '700',
     marginBottom: 8,
   },
   emptySubtitle: {
-    color: "#888",
-    fontSize: 14,
-    textAlign: "center",
+    color: '#71717a',
+    fontSize: 13,
+    textAlign: 'center',
+    maxWidth: 240,
   },
 });
 
