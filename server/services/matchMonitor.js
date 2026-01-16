@@ -10,6 +10,7 @@ const {
   notifySecondHalfStarted,
   notifyMatchEnded,
 } = require("./pushNotifications");
+const { processPredictions } = require("./predictionService");
 
 // Cache de scores e status para detectar mudanças
 let lastKnownScores = {};
@@ -785,6 +786,23 @@ async function checkAndNotify() {
             `[Monitor] 🏁 Fim de jogo: ${match.homeTeam} ${match.homeScore} x ${match.awayScore} ${match.awayTeam}`
           );
           await notifyMatchEnded(match);
+          
+          // Processar palpites para este jogo finalizado
+          try {
+            const completedMatch = {
+              id: matchId,
+              homeScore: match.homeScore,
+              awayScore: match.awayScore,
+            };
+            const result = await processPredictions([completedMatch]);
+            if (result.processed > 0) {
+              console.log(
+                `[Monitor] 🎯 Palpites processados: ${result.processed} palpites, ${result.pointsAwarded} pontos`
+              );
+            }
+          } catch (predError) {
+            console.error("[Monitor] Erro ao processar palpites:", predError.message);
+          }
         } else if (recentlyFinished) {
           console.log(
             `[Monitor] ⏭️ Fim de jogo detectado mas não estava monitorando: ${match.homeTeam} vs ${match.awayTeam} (${minutesSinceStart}min desde início)`
