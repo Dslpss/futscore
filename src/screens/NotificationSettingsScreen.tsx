@@ -284,7 +284,7 @@ export function NotificationSettingsScreen({ navigation }: any) {
           </View>
 
           {/* Seção: Ligas Favoritas (Premium) */}
-          {isPremium && favoriteLeagues.length > 0 && (
+          {isPremium && (
             <>
               <Text style={styles.sectionTitle}>Ligas Favoritas 🏆</Text>
               <View style={styles.settingCard}>
@@ -295,7 +295,9 @@ export function NotificationSettingsScreen({ navigation }: any) {
                   <View style={styles.switchContent}>
                     <Text style={styles.switchTitle}>Notificar Ligas Favoritas</Text>
                     <Text style={styles.switchDescription}>
-                      Receber notificações de jogos das suas {favoriteLeagues.length} ligas favoritas
+                      {favoriteLeagues.length > 0 
+                        ? `Receber notificações de jogos das suas ${favoriteLeagues.length} ligas favoritas`
+                        : "Primeiro selecione suas ligas favoritas na tela inicial"}
                     </Text>
                   </View>
                   <Switch
@@ -303,9 +305,16 @@ export function NotificationSettingsScreen({ navigation }: any) {
                     onValueChange={(value) => updateSetting("favoriteLeaguesNotify", value)}
                     trackColor={{ false: "#3f3f46", true: "#22c55e50" }}
                     thumbColor={settings.favoriteLeaguesNotify ? "#22c55e" : "#71717a"}
-                    disabled={saving}
+                    disabled={saving || favoriteLeagues.length === 0}
                   />
                 </View>
+                {favoriteLeagues.length === 0 && (
+                  <View style={styles.leagueHintRow}>
+                    <Text style={styles.leagueHintText}>
+                      💡 Toque em "Minhas Ligas" na tela inicial para selecionar
+                    </Text>
+                  </View>
+                )}
               </View>
             </>
           )}
@@ -642,5 +651,15 @@ const styles = StyleSheet.create({
     color: "#fbbf24",
     fontSize: 11,
     fontWeight: "700",
+  },
+  leagueHintRow: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    paddingTop: 4,
+  },
+  leagueHintText: {
+    color: "#71717a",
+    fontSize: 12,
+    fontStyle: "italic",
   },
 });

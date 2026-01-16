@@ -2122,8 +2122,9 @@ export const HomeScreen = ({ navigation }: any) => {
                     isSelected && styles.leagueChipActive,
                   ]}
                   onPress={() => {
-                    if (isMYLIG && favoriteLeagues.length === 0) {
-                      // Se não tem ligas selecionadas, abre o modal
+                    if (isMYLIG) {
+                      // Toque sempre abre o modal para gerenciar ligas favoritas
+                      console.log("[HomeScreen] Abrindo modal de ligas favoritas...");
                       setShowFavoriteLeaguesModal(true);
                     } else {
                       setSelectedLeague(league.code);
@@ -2131,7 +2132,7 @@ export const HomeScreen = ({ navigation }: any) => {
                   }}
                   onLongPress={() => {
                     if (isMYLIG) {
-                      // Long press sempre abre o modal para editar
+                      // Long press também abre o modal
                       setShowFavoriteLeaguesModal(true);
                     }
                   }}

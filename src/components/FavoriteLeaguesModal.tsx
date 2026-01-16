@@ -26,6 +26,9 @@ export const FavoriteLeaguesModal: React.FC<FavoriteLeaguesModalProps> = ({
 }) => {
   const { favoriteLeagues, toggleFavoriteLeague, isFavoriteLeague } = useFavorites();
 
+  console.log("[FavoriteLeaguesModal] visible:", visible);
+  console.log("[FavoriteLeaguesModal] AVAILABLE_LEAGUES count:", AVAILABLE_LEAGUES.length);
+
   // Agrupar ligas por país
   const groupedLeagues = AVAILABLE_LEAGUES.reduce((acc, league) => {
     const country = league.country || "Other";
@@ -44,6 +47,8 @@ export const FavoriteLeaguesModal: React.FC<FavoriteLeaguesModalProps> = ({
     if (indexB === -1) return -1;
     return indexA - indexB;
   });
+
+  console.log("[FavoriteLeaguesModal] sortedCountries:", sortedCountries);
 
   const renderLeagueItem = (league: FavoriteLeague) => {
     const isFollowing = isFavoriteLeague(league.id);
@@ -120,17 +125,24 @@ export const FavoriteLeaguesModal: React.FC<FavoriteLeaguesModalProps> = ({
           {/* Leagues List */}
           <ScrollView
             style={styles.scrollView}
-            showsVerticalScrollIndicator={false}
+            showsVerticalScrollIndicator={true}
             contentContainerStyle={styles.scrollContent}
+            nestedScrollEnabled={true}
           >
-            {sortedCountries.map((country) => (
-              <View key={country} style={styles.countrySection}>
-                <Text style={styles.countryTitle}>{country}</Text>
-                <View style={styles.leaguesGrid}>
-                  {groupedLeagues[country].map(renderLeagueItem)}
+            {sortedCountries.length === 0 ? (
+              <Text style={{ color: "#fff", textAlign: "center", marginTop: 20 }}>
+                Nenhuma liga disponível
+              </Text>
+            ) : (
+              sortedCountries.map((country) => (
+                <View key={country} style={styles.countrySection}>
+                  <Text style={styles.countryTitle}>{country}</Text>
+                  <View style={styles.leaguesGrid}>
+                    {groupedLeagues[country].map(renderLeagueItem)}
+                  </View>
                 </View>
-              </View>
-            ))}
+              ))
+            )}
           </ScrollView>
 
           {/* Confirm Button */}
@@ -146,7 +158,11 @@ export const FavoriteLeaguesModal: React.FC<FavoriteLeaguesModalProps> = ({
                 end={{ x: 1, y: 0 }}
                 style={styles.confirmGradient}
               >
-                <Text style={styles.confirmText}>Confirmar</Text>
+                <Text style={styles.confirmText}>
+                  {favoriteLeagues.length > 0 
+                    ? `Confirmar (${favoriteLeagues.length})` 
+                    : "Fechar"}
+                </Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>
@@ -166,7 +182,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#18181b",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    maxHeight: "85%",
+    height: "85%",
     overflow: "hidden",
   },
   header: {
