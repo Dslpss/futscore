@@ -1742,7 +1742,7 @@ export const HomeScreen = ({ navigation }: any) => {
               <Text style={styles.actionButtonsTitle}>Ações Rápidas</Text>
             </View>
             <View style={styles.actionCountBadge}>
-              <Text style={styles.actionCountText}>8 atalhos</Text>
+              <Text style={styles.actionCountText}>9 atalhos</Text>
             </View>
           </View>
 
@@ -1972,6 +1972,60 @@ export const HomeScreen = ({ navigation }: any) => {
                 <View style={styles.actionButtonTextContainer}>
                   <Text style={styles.actionButtonText}>Rádios</Text>
                   <Text style={styles.actionButtonSubtext}>Ao Vivo</Text>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            {/* Predictions Button - NEW */}
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => {
+                // Pass upcoming matches to predictions screen
+                const upcomingForPredictions = [
+                  ...liveMatches,
+                  ...todaysMatches,
+                  ...customMatches,
+                ]
+                  .filter(m => ["NS", "TBD", "TIMED"].includes(m.fixture.status.short))
+                  .slice(0, 20)
+                  .map(m => ({
+                    id: m.fixture.id.toString(),
+                    homeTeam: {
+                      name: m.teams.home.name,
+                      logo: m.teams.home.logo,
+                      id: m.teams.home.id?.toString(),
+                    },
+                    awayTeam: {
+                      name: m.teams.away.name,
+                      logo: m.teams.away.logo,
+                      id: m.teams.away.id?.toString(),
+                    },
+                    competition: {
+                      name: m.league.name,
+                      logo: m.league.logo,
+                    },
+                    date: m.fixture.date,
+                    status: m.fixture.status.short,
+                  }));
+
+                navigation.navigate("Predictions", { matches: upcomingForPredictions });
+              }}
+              activeOpacity={0.85}>
+              <LinearGradient
+                colors={["#1e4a3f", "#1a1a2e"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.actionButtonGradient}>
+                <View style={styles.actionButtonIconWrapper}>
+                  <LinearGradient
+                    colors={["#34d399", "#10b981"]}
+                    style={styles.actionIconGradient}>
+                    <Text style={styles.actionButtonIcon}>🎯</Text>
+                  </LinearGradient>
+                </View>
+                <View style={styles.actionButtonTextContainer}>
+                  <Text style={styles.actionButtonText}>Palpites</Text>
+                  <Text style={styles.actionButtonSubtext}>Aposte</Text>
                 </View>
               </LinearGradient>
             </TouchableOpacity>

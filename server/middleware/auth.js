@@ -14,8 +14,8 @@ const authMiddleware = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.userId = decoded.id;
 
-    // Check user status
-    const user = await User.findById(decoded.id).select('status');
+    // Get full user for routes that need it
+    const user = await User.findById(decoded.id).select('name email status');
     
     if (!user) {
       return res.status(401).json({ message: 'User not found' });
@@ -35,11 +35,16 @@ const authMiddleware = async (req, res, next) => {
       });
     }
 
+    // Add user to request for use in routes
+    req.user = user;
+
     next();
   } catch (error) {
     res.status(401).json({ message: 'Token is not valid' });
   }
 };
 
+// Export both as default and named export for compatibility
 module.exports = authMiddleware;
+module.exports.authMiddleware = authMiddleware;
 
