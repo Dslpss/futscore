@@ -4,7 +4,7 @@ import { CONFIG } from "../constants/config";
 const API_URL = CONFIG.BACKEND_URL;
 
 const getAuthHeaders = async () => {
-  const token = await AsyncStorage.getItem("token");
+  const token = await AsyncStorage.getItem("@FutScore:token");
   return {
     Authorization: `Bearer ${token}`,
     "Content-Type": "application/json",
