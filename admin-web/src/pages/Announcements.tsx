@@ -61,7 +61,7 @@ export default function Announcements() {
     fetchAnnouncements();
   }, []);
 
-  const getToken = () => localStorage.getItem('adminToken');
+  const getToken = () => localStorage.getItem('@FutScoreAdmin:token');
 
   const fetchAnnouncements = async () => {
     try {
