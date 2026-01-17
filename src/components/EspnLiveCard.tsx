@@ -11,7 +11,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Tv, Play, RefreshCw, X, Calendar, MapPin, Clock } from 'lucide-react-native';
+import { Tv, Play, RefreshCw, X, Calendar, MapPin, Clock, AlertTriangle } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { espnApi, EspnEvent } from '../services/espnApi';
 import { EspnLiveEvent } from '../types';
@@ -535,6 +535,14 @@ const EspnEventModal: React.FC<EspnEventModalProps> = ({ event, visible, onClose
                 <LiveMatchInfo event={liveEventData} />
               ) : null}
 
+              {/* Warning Banner */}
+              <View style={styles.warningContainer}>
+                <AlertTriangle size={14} color="#eab308" />
+                <Text style={styles.warningText}>
+                  A disponibilidade dos canais é de responsabilidade das emissoras.
+                </Text>
+              </View>
+
               {/* Close Button */}
               <TouchableOpacity style={styles.modalCloseButton} onPress={onClose}>
                 <Text style={styles.modalCloseButtonText}>Fechar</Text>
@@ -950,9 +958,9 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(220, 38, 38, 0.3)',
   },
   modalCloseButtonText: {
-    color: '#dc2626',
+    color: '#a1a1aa',
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
     textAlign: 'center',
   },
   liveDataLoading: {
@@ -969,5 +977,23 @@ const styles = StyleSheet.create({
     color: '#71717a',
     fontSize: 12,
     fontWeight: '600',
+  },
+  warningContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(234, 179, 8, 0.1)',
+    padding: 12,
+    borderRadius: 8,
+    gap: 8,
+    marginVertical: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(234, 179, 8, 0.2)',
+  },
+  warningText: {
+    flex: 1,
+    color: '#eab308',
+    fontSize: 11,
+    lineHeight: 16,
+    fontWeight: '500',
   },
 });

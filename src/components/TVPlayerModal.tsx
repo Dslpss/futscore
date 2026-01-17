@@ -604,6 +604,15 @@ export default function TVPlayerModal({
                   <Ionicons name="reload" size={20} color="#fff" />
                   <Text style={styles.retryText}>Tentar novamente</Text>
                 </TouchableOpacity>
+
+                {/* Warning about third-party channels */}
+                <View style={styles.errorWarningBanner}>
+                  <Ionicons name="information-circle" size={16} color="#eab308" />
+                  <Text style={styles.errorWarningText}>
+                    Os canais são de fontes externas e podem ficar indisponíveis. 
+                    O desenvolvedor não controla a disponibilidade.
+                  </Text>
+                </View>
               </LinearGradient>
             </View>
           )}
@@ -1134,5 +1143,23 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 2,
     lineHeight: 14,
+  },
+  errorWarningBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(234, 179, 8, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(234, 179, 8, 0.3)',
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 20,
+    maxWidth: 300,
+    gap: 10,
+  },
+  errorWarningText: {
+    flex: 1,
+    fontSize: 11,
+    color: '#eab308',
+    lineHeight: 16,
   },
 });

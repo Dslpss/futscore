@@ -298,6 +298,19 @@ export default function TVChannelsScreen({ navigation }: any) {
             <Text style={styles.statLabel}>Esportes</Text>
           </View>
         </View>
+
+        {/* Warning Banner */}
+        <View style={styles.warningBanner}>
+          <View style={styles.warningIconContainer}>
+            <Ionicons name="warning" size={16} color="#eab308" />
+          </View>
+          <View style={styles.warningTextContainer}>
+            <Text style={styles.warningText}>
+              Os canais são de fontes externas e podem ficar indisponíveis a qualquer momento. 
+              O desenvolvedor não tem controle sobre a disponibilidade dos streams.
+            </Text>
+          </View>
+        </View>
       </LinearGradient>
     </View>
   );
@@ -699,5 +712,33 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '700',
+  },
+  warningBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#eab30815',
+    borderWidth: 1,
+    borderColor: '#eab30830',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 12,
+    gap: 10,
+  },
+  warningIconContainer: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: '#eab30820',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  warningTextContainer: {
+    flex: 1,
+  },
+  warningText: {
+    fontSize: 12,
+    color: '#eab308',
+    lineHeight: 18,
+    fontWeight: '500',
   },
 });

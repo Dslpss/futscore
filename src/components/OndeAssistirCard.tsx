@@ -412,6 +412,14 @@ const GameModal: React.FC<GameModalProps> = ({ game, visible, onClose }) => {
                   </View>
                 </View>
               </View>
+
+              {/* Warning Banner */}
+              <View style={styles.warningContainer}>
+                <Trophy size={14} color="#eab308" />
+                <Text style={styles.warningText}>
+                  A disponibilidade dos canais é de responsabilidade das emissoras.
+                </Text>
+              </View>
             </View>
 
             {/* Close Button */}
@@ -708,5 +716,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     textAlign: 'center',
+  },
+  warningContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(234, 179, 8, 0.1)',
+    padding: 12,
+    borderRadius: 8,
+    gap: 8,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(234, 179, 8, 0.2)',
+  },
+  warningText: {
+    flex: 1,
+    color: '#eab308',
+    fontSize: 11,
+    lineHeight: 16,
+    fontWeight: '500',
   },
 });

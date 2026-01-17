@@ -10,7 +10,8 @@ import {
   Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Crown, Check, X, Calendar, CreditCard, Sparkles } from 'lucide-react-native';
+import { Crown, Check, X, Calendar, CreditCard, Sparkles, AlertTriangle } from 'lucide-react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
 import { useSubscription } from '../hooks/useSubscription';
 import { PremiumBadge } from '../components/PremiumBadge';
@@ -210,6 +211,19 @@ export const SubscriptionScreen = ({ navigation }: any) => {
               <Text style={styles.featureText}>{feature.text}</Text>
             </View>
           ))}
+        </View>
+
+        {/* Aviso sobre canais de TV */}
+        <View style={styles.tvWarningBanner}>
+          <View style={styles.tvWarningIconContainer}>
+            <Ionicons name="warning" size={18} color="#eab308" />
+          </View>
+          <View style={styles.tvWarningTextContainer}>
+            <Text style={styles.tvWarningTitle}>Aviso sobre TV ao Vivo</Text>
+            <Text style={styles.tvWarningText}>
+              Os canais de TV são de fontes externas e podem ficar indisponíveis a qualquer momento. O desenvolvedor não tem controle sobre a disponibilidade dos streams.
+            </Text>
+          </View>
         </View>
 
         <View style={styles.guarantee}>
@@ -506,5 +520,39 @@ const styles = StyleSheet.create({
     color: '#ef4444',
     fontSize: 14,
     fontWeight: '600',
+  },
+  // TV Warning Banner
+  tvWarningBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#eab30812',
+    borderWidth: 1,
+    borderColor: '#eab30830',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+    gap: 12,
+  },
+  tvWarningIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#eab30820',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tvWarningTextContainer: {
+    flex: 1,
+  },
+  tvWarningTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#eab308',
+    marginBottom: 4,
+  },
+  tvWarningText: {
+    fontSize: 12,
+    color: '#d4a50a',
+    lineHeight: 18,
   },
 });

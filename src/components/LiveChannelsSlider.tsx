@@ -548,6 +548,14 @@ export const LiveChannelsSlider: React.FC = () => {
         </View>
       )}
 
+      {/* Warning Banner about third-party channels */}
+      <View style={styles.channelWarningBanner}>
+        <Ionicons name="information-circle" size={14} color="#eab308" />
+        <Text style={styles.channelWarningText}>
+          Canais de fontes externas. Disponibilidade pode variar.
+        </Text>
+      </View>
+
       {/* Cards Slider */}
       <ScrollView
         horizontal
@@ -1171,6 +1179,23 @@ const styles = StyleSheet.create({
     color: '#eab308',
     fontSize: 14,
     fontWeight: '600',
+  },
+  channelWarningBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(234, 179, 8, 0.08)',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    borderRadius: 8,
+    gap: 6,
+  },
+  channelWarningText: {
+    flex: 1,
+    color: '#ca8a04',
+    fontSize: 11,
+    fontWeight: '500',
   },
 });
 
