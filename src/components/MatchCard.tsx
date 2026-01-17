@@ -89,7 +89,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
   } = useFavorites();
   const [modalVisible, setModalVisible] = React.useState(false);
   const [notifyModalVisible, setNotifyModalVisible] = React.useState(false);
-  const { isPremium, hasTrialAvailable, refreshSubscription } = useSubscription();
+  const { isPremium, hasTrialAvailable, refreshSubscription, loading: subscriptionLoading } = useSubscription();
   const navigation = useNavigation<any>();
   const [showTrialModal, setShowTrialModal] = React.useState(false);
 
@@ -140,6 +140,12 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
     // Se está removendo dos favoritos, não precisa verificar permissão
     if (isFavoriteTeam(teamId)) {
       toggleFavoriteTeam(teamId, teamInfo);
+      return;
+    }
+    
+    // Se ainda está carregando o status de premium, aguardar
+    if (subscriptionLoading) {
+      await refreshSubscription();
       return;
     }
     

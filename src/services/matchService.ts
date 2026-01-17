@@ -126,7 +126,7 @@ export const matchService = {
    * @param favoriteTeams List of favorite team IDs
    * @returns List of live matches
    */
-  checkMatchesAndNotify: async (favoriteTeams: number[] = []) => {
+  checkMatchesAndNotify: async (favoriteTeams: number[] = [], forceRefresh: boolean = false) => {
     // Proteção contra chamadas simultâneas/muito frequentes
     const now = Date.now();
     if (isCheckingMatches) {
@@ -134,30 +134,35 @@ export const matchService = {
       return null; // Retorna null para indicar que a chamada foi ignorada
     }
 
-    // Verificação em memória (rápida)
-    if (now - lastCheckTime < MIN_CHECK_INTERVAL) {
-      console.log(
-        "[MatchService] Called too soon (memory check), skipping to avoid duplicates..."
-      );
-      return null; // Retorna null para indicar que a chamada foi ignorada
-    }
-
-    // Verificação persistente (evita duplicatas ao reabrir app)
-    try {
-      const lastCheckPersisted = await AsyncStorage.getItem(LAST_CHECK_TIME_KEY);
-      if (lastCheckPersisted) {
-        const lastCheckTimePersisted = parseInt(lastCheckPersisted, 10);
-        if (now - lastCheckTimePersisted < MIN_CHECK_INTERVAL) {
-          console.log(
-            "[MatchService] Called too soon (persistent check), skipping to avoid duplicates..."
-          );
-          // Atualizar a variável em memória para próximas verificações
-          lastCheckTime = lastCheckTimePersisted;
-          return null; // Retorna null para indicar que a chamada foi ignorada
-        }
+    // Se não for forceRefresh, aplicar verificações de tempo
+    if (!forceRefresh) {
+      // Verificação em memória (rápida)
+      if (now - lastCheckTime < MIN_CHECK_INTERVAL) {
+        console.log(
+          "[MatchService] Called too soon (memory check), skipping to avoid duplicates..."
+        );
+        return null; // Retorna null para indicar que a chamada foi ignorada
       }
-    } catch (error) {
-      console.log("[MatchService] Error reading persistent check time:", error);
+
+      // Verificação persistente (evita duplicatas ao reabrir app)
+      try {
+        const lastCheckPersisted = await AsyncStorage.getItem(LAST_CHECK_TIME_KEY);
+        if (lastCheckPersisted) {
+          const lastCheckTimePersisted = parseInt(lastCheckPersisted, 10);
+          if (now - lastCheckTimePersisted < MIN_CHECK_INTERVAL) {
+            console.log(
+              "[MatchService] Called too soon (persistent check), skipping to avoid duplicates..."
+            );
+            // Atualizar a variável em memória para próximas verificações
+            lastCheckTime = lastCheckTimePersisted;
+            return null; // Retorna null para indicar que a chamada foi ignorada
+          }
+        }
+      } catch (error) {
+        console.log("[MatchService] Error reading persistent check time:", error);
+      }
+    } else {
+      console.log("[MatchService] Force refresh enabled, skipping time checks...");
     }
 
     isCheckingMatches = true;

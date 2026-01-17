@@ -114,9 +114,13 @@ export const LiveChannelsSlider: React.FC = () => {
   const [showPlayer, setShowPlayer] = useState(false);
   const [showChannelPicker, setShowChannelPicker] = useState(false);
   const [selectedGame, setSelectedGame] = useState<UnifiedGame | null>(null);
-  const { isPremium, hasTrialAvailable, refreshSubscription } = useSubscription();
+  const { isPremium, hasTrialAvailable, refreshSubscription, loading: subscriptionLoading, isChannelsMaintenance } = useSubscription();
   const navigation = useNavigation<any>();
   const [showTrialModal, setShowTrialModal] = useState(false);
+  const [showMaintenanceModal, setShowMaintenanceModal] = useState(false);
+
+  // Debug log para verificar status de manutenção
+  console.log('[LiveChannelsSlider] isChannelsMaintenance:', isChannelsMaintenance);
 
   // Helper function to check if we have a channel for the broadcast
   const hasMatchingChannel = (broadcastChannel: string, availableChannels: Channel[]): boolean => {
@@ -404,8 +408,30 @@ export const LiveChannelsSlider: React.FC = () => {
   }, [channels]);
 
   // Handle card press
-  const handleCardPress = (game: UnifiedGame) => {
+  const handleCardPress = async (game: UnifiedGame) => {
+    console.log('[LiveChannelsSlider] handleCardPress called');
+    console.log('[LiveChannelsSlider] isPremium:', isPremium);
+    console.log('[LiveChannelsSlider] subscriptionLoading:', subscriptionLoading);
+    console.log('[LiveChannelsSlider] hasTrialAvailable:', hasTrialAvailable);
+    console.log('[LiveChannelsSlider] isChannelsMaintenance:', isChannelsMaintenance);
+    
+    // Verificar se está em manutenção
+    if (isChannelsMaintenance) {
+      console.log('[LiveChannelsSlider] Channels are in maintenance mode');
+      setShowMaintenanceModal(true);
+      return;
+    }
+    
+    // Se ainda está carregando o status de premium, aguardar antes de prosseguir
+    if (subscriptionLoading) {
+      console.log('[LiveChannelsSlider] Still loading, refreshing subscription...');
+      // Esperar um pouco e verificar novamente (ou simplesmente ignorar se ainda está carregando)
+      await refreshSubscription();
+      return;
+    }
+
     if (!isPremium) {
+      console.log('[LiveChannelsSlider] User is NOT premium, redirecting...');
       if (hasTrialAvailable) {
         setShowTrialModal(true);
       } else {
@@ -414,6 +440,7 @@ export const LiveChannelsSlider: React.FC = () => {
       return;
     }
 
+    console.log('[LiveChannelsSlider] User IS premium, opening player...');
     if (game.channels.length === 1) {
       const channel = findMatchingChannel(game.channels[0]);
       if (channel) {
@@ -511,6 +538,16 @@ export const LiveChannelsSlider: React.FC = () => {
         </View>
       </View>
 
+      {/* Maintenance Banner */}
+      {isChannelsMaintenance && (
+        <View style={styles.maintenanceBanner}>
+          <Ionicons name="construct" size={16} color="#eab308" />
+          <Text style={styles.maintenanceBannerText}>
+            Transmissões em manutenção
+          </Text>
+        </View>
+      )}
+
       {/* Cards Slider */}
       <ScrollView
         horizontal
@@ -588,14 +625,19 @@ export const LiveChannelsSlider: React.FC = () => {
                   </View>
                   
                   {matchedChannel ? (
-                    <View style={styles.watchBadge}>
-                      {!isPremium ? (
+                    <View style={[
+                      styles.watchBadge,
+                      isChannelsMaintenance && { backgroundColor: '#eab308' }
+                    ]}>
+                      {isChannelsMaintenance ? (
+                        <Ionicons name="construct" size={12} color="#fff" />
+                      ) : !isPremium ? (
                         <Lock size={12} color="#fff" />
                       ) : (
                         <Ionicons name="play" size={12} color="#fff" />
                       )}
                       <Text style={styles.watchText}>
-                        {!isPremium ? 'Premium' : 'Assistir'}
+                        {isChannelsMaintenance ? 'Manutenção' : !isPremium ? 'Premium' : 'Assistir'}
                       </Text>
                     </View>
                   ) : (
@@ -711,6 +753,45 @@ export const LiveChannelsSlider: React.FC = () => {
         }}
         featureName="Transmissões ao Vivo"
       />
+
+      {/* Maintenance Modal */}
+      <Modal
+        visible={showMaintenanceModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowMaintenanceModal(false)}
+      >
+        <BlurView intensity={25} tint="dark" style={styles.modalOverlay}>
+          <View style={styles.maintenanceContainer}>
+            <LinearGradient
+              colors={['#2a2a1e', '#1a1a0e']}
+              style={styles.maintenanceContent}
+            >
+              {/* Icon */}
+              <View style={styles.maintenanceIcon}>
+                <Ionicons name="construct" size={48} color="#eab308" />
+              </View>
+
+              {/* Title */}
+              <Text style={styles.maintenanceTitle}>Sistema em Manutenção</Text>
+
+              {/* Description */}
+              <Text style={styles.maintenanceDescription}>
+                Os canais de TV estão temporariamente em manutenção para melhorias.{'\n\n'}
+                Por favor, tente novamente em alguns minutos.
+              </Text>
+
+              {/* Close Button */}
+              <TouchableOpacity
+                style={styles.maintenanceButton}
+                onPress={() => setShowMaintenanceModal(false)}
+              >
+                <Text style={styles.maintenanceButtonText}>Entendi</Text>
+              </TouchableOpacity>
+            </LinearGradient>
+          </View>
+        </BlurView>
+      </Modal>
     </View>
   );
 };
@@ -1016,6 +1097,80 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',
+  },
+  // Maintenance Modal Styles
+  maintenanceContainer: {
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    borderRadius: 24,
+    overflow: 'hidden',
+    width: '85%',
+    maxWidth: 340,
+    borderWidth: 1,
+    borderColor: 'rgba(234, 179, 8, 0.3)',
+  },
+  maintenanceContent: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  maintenanceIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(234, 179, 8, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: 'rgba(234, 179, 8, 0.3)',
+  },
+  maintenanceTitle: {
+    color: '#eab308',
+    fontSize: 20,
+    fontWeight: '800',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  maintenanceDescription: {
+    color: '#a1a1aa',
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  maintenanceButton: {
+    backgroundColor: 'rgba(234, 179, 8, 0.2)',
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(234, 179, 8, 0.4)',
+    width: '100%',
+  },
+  maintenanceButtonText: {
+    color: '#eab308',
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  // Maintenance Banner Styles
+  maintenanceBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(234, 179, 8, 0.15)',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderRadius: 12,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(234, 179, 8, 0.3)',
+  },
+  maintenanceBannerText: {
+    color: '#eab308',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 

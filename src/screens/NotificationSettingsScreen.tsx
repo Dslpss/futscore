@@ -48,7 +48,7 @@ export function NotificationSettingsScreen({ navigation }: any) {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const { isPremium, hasTrialAvailable, refreshSubscription } = useSubscription();
+  const { isPremium, hasTrialAvailable, refreshSubscription, loading: subscriptionLoading } = useSubscription();
   const { favoriteLeagues } = useFavorites();
   const [showTrialModal, setShowTrialModal] = useState(false);
 
@@ -102,6 +102,12 @@ export function NotificationSettingsScreen({ navigation }: any) {
     value: boolean
   ) => {
     try {
+      // Se ainda está carregando o status de premium, aguardar
+      if (subscriptionLoading) {
+        await refreshSubscription();
+        return;
+      }
+      
       // Verificar Premium
       if (!isPremium) {
         if (key === "favoritesOnly" && value === true) {

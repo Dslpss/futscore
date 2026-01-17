@@ -37,10 +37,20 @@ router.get("/status", auth, async (req, res) => {
       message: user.giftPremiumMessage || `Parabéns! Você ganhou ${user.giftPremiumDays} dias de acesso Premium!`,
     } : null;
 
+    // DEBUG: Log all premium-related fields
+    console.log(`[Subscription Status] User: ${user.email}`);
+    console.log(`[Subscription Status] user.isPremium: ${user.isPremium}`);
+    console.log(`[Subscription Status] isTrialActive: ${isTrialActive}`);
+    console.log(`[Subscription Status] hasActiveGift: ${hasActiveGift}`);
+    console.log(`[Subscription Status] user.subscriptionId: ${user.subscriptionId}`);
+    console.log(`[Subscription Status] Final isPremium will be: ${user.isPremium || isTrialActive || hasActiveGift}`);
+
     // Se não tem subscriptionId, retornar como não premium (mas pode ter trial ou gift)
     if (!user.subscriptionId) {
+      const finalIsPremium = user.isPremium || isTrialActive || hasActiveGift;
+      console.log(`[Subscription Status] Returning (no subscription): isPremium = ${finalIsPremium}`);
       return res.json({
-        isPremium: user.isPremium || isTrialActive || hasActiveGift,
+        isPremium: finalIsPremium,
         hasSubscription: false,
         // Trial info
         trial: {

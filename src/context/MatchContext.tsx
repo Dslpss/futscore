@@ -49,11 +49,12 @@ export const MatchProvider: React.FC<{ children: ReactNode }> = ({
     setLeagues(data);
   };
 
-  const fetchMatches = async () => {
+  const fetchMatches = async (forceRefresh: boolean = false) => {
     setLoading(true);
     try {
       // Use the shared service - usar ref para evitar dependência no useEffect
-      const result = await matchService.checkMatchesAndNotify(favoriteTeamsRef.current);
+      // forceRefresh=true ignora a proteção de tempo de 30 segundos
+      const result = await matchService.checkMatchesAndNotify(favoriteTeamsRef.current, forceRefresh);
 
       // Só atualiza o estado se o resultado não for null (chamada não foi ignorada)
       if (result !== null) {
@@ -80,7 +81,8 @@ export const MatchProvider: React.FC<{ children: ReactNode }> = ({
       // Não chamar aqui para evitar notificações duplicadas
       registerBackgroundFetchAsync(); // Register background task
       fetchLeagues();
-      fetchMatches();
+      // forceRefresh=true para garantir que os dados carreguem imediatamente na inicialização
+      fetchMatches(true);
     });
   }, []); // Sem dependências - executa apenas na montagem inicial
 
@@ -154,7 +156,8 @@ export const MatchProvider: React.FC<{ children: ReactNode }> = ({
         todaysMatches,
         leagues,
         loading,
-        refreshMatches: fetchMatches,
+        // forceRefresh=true para que pull-to-refresh sempre funcione
+        refreshMatches: () => fetchMatches(true),
       }}>
       {children}
     </MatchContext.Provider>

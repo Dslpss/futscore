@@ -5,6 +5,7 @@ import { AppState, AppStateStatus } from "react-native";
 import * as ScreenOrientation from "expo-screen-orientation";
 import { MatchProvider } from "./src/context/MatchContext";
 import { FavoritesProvider } from "./src/context/FavoritesContext";
+import { SubscriptionProvider } from "./src/context/SubscriptionContext";
 import { AuthProvider, useAuth } from "./src/context/AuthContext";
 import { HomeScreen } from "./src/screens/HomeScreen";
 import { LoginScreen } from "./src/screens/LoginScreen";
@@ -77,31 +78,33 @@ function AppNavigation() {
   // Renderizar navegação autenticada COM providers de dados
   if (isAuthenticated) {
     return (
-      <FavoritesProvider>
-        <MatchProvider>
-          <Stack.Navigator screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="Home" component={HomeScreen} />
-            <Stack.Screen
-              name="TeamSelection"
-              component={TeamSelectionScreen}
-            />
-            <Stack.Screen name="LeaguesExplorer" component={LeaguesExplorer} />
-            <Stack.Screen name="Standings" component={StandingsScreen} />
-            <Stack.Screen
-              name="NotificationSettings"
-              component={NotificationSettingsScreen}
-            />
-            <Stack.Screen name="Calendar" component={CalendarScreen} />
-            <Stack.Screen name="Videos" component={VideosScreen} />
-            <Stack.Screen name="News" component={NewsScreen} />
-            <Stack.Screen name="Radios" component={RadiosScreen} />
-            <Stack.Screen name="TVChannels" component={TVChannelsScreen} />
-            <Stack.Screen name="Subscription" component={SubscriptionScreen} />
-            <Stack.Screen name="Predictions" component={PredictionsScreen} />
-            <Stack.Screen name="SecondScreen" component={SecondScreenMode} />
-          </Stack.Navigator>
-        </MatchProvider>
-      </FavoritesProvider>
+      <SubscriptionProvider>
+        <FavoritesProvider>
+          <MatchProvider>
+            <Stack.Navigator screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="Home" component={HomeScreen} />
+              <Stack.Screen
+                name="TeamSelection"
+                component={TeamSelectionScreen}
+              />
+              <Stack.Screen name="LeaguesExplorer" component={LeaguesExplorer} />
+              <Stack.Screen name="Standings" component={StandingsScreen} />
+              <Stack.Screen
+                name="NotificationSettings"
+                component={NotificationSettingsScreen}
+              />
+              <Stack.Screen name="Calendar" component={CalendarScreen} />
+              <Stack.Screen name="Videos" component={VideosScreen} />
+              <Stack.Screen name="News" component={NewsScreen} />
+              <Stack.Screen name="Radios" component={RadiosScreen} />
+              <Stack.Screen name="TVChannels" component={TVChannelsScreen} />
+              <Stack.Screen name="Subscription" component={SubscriptionScreen} />
+              <Stack.Screen name="Predictions" component={PredictionsScreen} />
+              <Stack.Screen name="SecondScreen" component={SecondScreenMode} />
+            </Stack.Navigator>
+          </MatchProvider>
+        </FavoritesProvider>
+      </SubscriptionProvider>
     );
   }
 
