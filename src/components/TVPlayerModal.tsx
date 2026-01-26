@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Modal,
@@ -12,25 +12,30 @@ import {
   Share,
   Alert,
   Platform,
-} from 'react-native';
-import * as Clipboard from 'expo-clipboard';
-import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import * as ScreenOrientation from 'expo-screen-orientation';
-import * as NavigationBar from 'expo-navigation-bar';
-import { Channel } from '../types/Channel';
-import { incrementViewCount } from '../services/channelService';
+} from "react-native";
+import * as Clipboard from "expo-clipboard";
+import { Video, ResizeMode, AVPlaybackStatus } from "expo-av";
+import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import * as ScreenOrientation from "expo-screen-orientation";
+import * as NavigationBar from "expo-navigation-bar";
+import { Channel } from "../types/Channel";
+import { incrementViewCount } from "../services/channelService";
 
-const { width, height } = Dimensions.get('window');
+const { width, height } = Dimensions.get("window");
 
 // Opções de formato de tela
-type AspectRatioMode = 'auto' | '16:9' | '4:3' | 'stretch';
-const ASPECT_RATIO_OPTIONS: { key: AspectRatioMode; label: string; ratio?: number }[] = [
-  { key: 'auto', label: 'Auto' },
-  { key: '16:9', label: '16:9', ratio: 16 / 9 },
-  { key: '4:3', label: '4:3', ratio: 4 / 3 },
-  { key: 'stretch', label: 'Esticar' },
+type AspectRatioMode = "auto" | "16:9" | "4:3" | "stretch";
+const ASPECT_RATIO_OPTIONS: {
+  key: AspectRatioMode;
+  label: string;
+  ratio?: number;
+}[] = [
+  { key: "auto", label: "Auto" },
+  { key: "16:9", label: "16:9", ratio: 16 / 9 },
+  { key: "4:3", label: "4:3", ratio: 4 / 3 },
+  { key: "stretch", label: "Esticar" },
 ];
 
 interface TVPlayerModalProps {
@@ -50,35 +55,50 @@ export default function TVPlayerModal({
   const [error, setError] = useState<string | null>(null);
   const [showControls, setShowControls] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [aspectRatioMode, setAspectRatioMode] = useState<AspectRatioMode>('16:9');
+  const [aspectRatioMode, setAspectRatioMode] =
+    useState<AspectRatioMode>("16:9");
   const [showAspectMenu, setShowAspectMenu] = useState(false);
   const [showCastMenu, setShowCastMenu] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   // Auto-reload system refs
   const bufferingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const stallCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastPositionRef = useRef<number>(0);
   const stallCountRef = useRef<number>(0);
   const isBufferingRef = useRef<boolean>(false);
-  
+
   // Configuration for auto-reload
   const MAX_BUFFERING_TIME = 15000; // 15 seconds of buffering triggers reload
   const STALL_CHECK_INTERVAL = 3000; // Check every 3 seconds
   const MAX_STALL_COUNT = 6; // 6 consecutive stalls trigger reload (more tolerant)
   const MAX_RECONNECT_ATTEMPTS = 5; // Maximum auto-reconnect attempts
 
+  // Keep screen awake while player is visible
+  useEffect(() => {
+    const tag = "tv-player-wakelock";
+    if (visible) {
+      activateKeepAwakeAsync(tag);
+    }
+
+    return () => {
+      deactivateKeepAwake(tag);
+    };
+  }, [visible]);
+
   useEffect(() => {
     if (visible && channel) {
       // Start in portrait mode
-      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+      ScreenOrientation.lockAsync(
+        ScreenOrientation.OrientationLock.PORTRAIT_UP,
+      );
       // Show navigation bar initially
-      NavigationBar.setVisibilityAsync('visible');
-      NavigationBar.setBehaviorAsync('overlay-swipe');
+      NavigationBar.setVisibilityAsync("visible");
+      NavigationBar.setBehaviorAsync("overlay-swipe");
       // Hide status bar initially (player should always be immersive)
-      StatusBar.setHidden(true, 'fade');
+      StatusBar.setHidden(true, "fade");
       // Reset reconnect attempts
       setReconnectAttempts(0);
       setIsReconnecting(false);
@@ -87,13 +107,15 @@ export default function TVPlayerModal({
       // Increment view count
       incrementViewCount(channel._id);
     }
-    
+
     // Cleanup: restore portrait and reset fullscreen when closing
     return () => {
-      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
-      NavigationBar.setVisibilityAsync('visible');
-      NavigationBar.setBehaviorAsync('inset-touch');
-      StatusBar.setHidden(false, 'fade');
+      ScreenOrientation.lockAsync(
+        ScreenOrientation.OrientationLock.PORTRAIT_UP,
+      );
+      NavigationBar.setVisibilityAsync("visible");
+      NavigationBar.setBehaviorAsync("inset-touch");
+      StatusBar.setHidden(false, "fade");
       setIsFullscreen(false);
       setShowAspectMenu(false);
       setShowCastMenu(false);
@@ -112,42 +134,46 @@ export default function TVPlayerModal({
   const toggleFullscreen = async () => {
     if (isFullscreen) {
       // Exit fullscreen - go back to portrait
-      await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
-      await NavigationBar.setVisibilityAsync('visible');
-      await NavigationBar.setBehaviorAsync('overlay-swipe');
-      StatusBar.setHidden(true, 'fade'); // Keep hidden in portrait player mode too
+      await ScreenOrientation.lockAsync(
+        ScreenOrientation.OrientationLock.PORTRAIT_UP,
+      );
+      await NavigationBar.setVisibilityAsync("visible");
+      await NavigationBar.setBehaviorAsync("overlay-swipe");
+      StatusBar.setHidden(true, "fade"); // Keep hidden in portrait player mode too
       setIsFullscreen(false);
-      setAspectRatioMode('16:9'); // Reset to 16:9 when exiting fullscreen
+      setAspectRatioMode("16:9"); // Reset to 16:9 when exiting fullscreen
     } else {
       // Enter fullscreen - go landscape and hide nav bar + gesture bar completely
-      await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
-      await NavigationBar.setBehaviorAsync('overlay-swipe');
-      await NavigationBar.setVisibilityAsync('hidden');
-      StatusBar.setHidden(true, 'fade');
+      await ScreenOrientation.lockAsync(
+        ScreenOrientation.OrientationLock.LANDSCAPE,
+      );
+      await NavigationBar.setBehaviorAsync("overlay-swipe");
+      await NavigationBar.setVisibilityAsync("hidden");
+      StatusBar.setHidden(true, "fade");
       setIsFullscreen(true);
-      setAspectRatioMode('stretch'); // Switch to stretch when entering fullscreen
+      setAspectRatioMode("stretch"); // Switch to stretch when entering fullscreen
     }
     setShowControls(true);
   };
 
   const getVideoStyle = () => {
-    const option = ASPECT_RATIO_OPTIONS.find(o => o.key === aspectRatioMode);
-    
-    if (aspectRatioMode === 'stretch') {
-      return { width: '100%' as const, height: '100%' as const };
+    const option = ASPECT_RATIO_OPTIONS.find((o) => o.key === aspectRatioMode);
+
+    if (aspectRatioMode === "stretch") {
+      return { width: "100%" as const, height: "100%" as const };
     }
-    
+
     if (option?.ratio) {
-      return { width: '100%' as const, aspectRatio: option.ratio };
+      return { width: "100%" as const, aspectRatio: option.ratio };
     }
-    
+
     // Auto mode - use contain
-    return { width: '100%' as const, aspectRatio: 16 / 9 };
+    return { width: "100%" as const, aspectRatio: 16 / 9 };
   };
 
   const getResizeMode = () => {
-    if (aspectRatioMode === 'stretch') return ResizeMode.STRETCH;
-    if (aspectRatioMode === 'auto') return ResizeMode.CONTAIN;
+    if (aspectRatioMode === "stretch") return ResizeMode.STRETCH;
+    if (aspectRatioMode === "auto") return ResizeMode.CONTAIN;
     return ResizeMode.CONTAIN;
   };
 
@@ -180,12 +206,12 @@ export default function TVPlayerModal({
   const autoReload = async () => {
     // Prevent multiple simultaneous reloads
     if (isReconnecting) {
-      console.log('Already reconnecting, skipping...');
+      console.log("Already reconnecting, skipping...");
       return;
     }
 
     if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-      console.log('Max reconnect attempts reached');
+      console.log("Max reconnect attempts reached");
       setIsReconnecting(false);
       setError('Conexão perdida. Toque em "Tentar novamente" para reconectar.');
       return;
@@ -193,13 +219,15 @@ export default function TVPlayerModal({
 
     // Check if videoRef is still valid
     if (!videoRef.current) {
-      console.log('Video ref is null, skipping reload');
+      console.log("Video ref is null, skipping reload");
       return;
     }
 
-    console.log(`Auto-reload attempt ${reconnectAttempts + 1}/${MAX_RECONNECT_ATTEMPTS}`);
+    console.log(
+      `Auto-reload attempt ${reconnectAttempts + 1}/${MAX_RECONNECT_ATTEMPTS}`,
+    );
     setIsReconnecting(true);
-    setReconnectAttempts(prev => prev + 1);
+    setReconnectAttempts((prev) => prev + 1);
     stallCountRef.current = 0;
     lastPositionRef.current = 0;
     isBufferingRef.current = false;
@@ -218,10 +246,10 @@ export default function TVPlayerModal({
       }
 
       await videoRef.current.unloadAsync();
-      
+
       // Longer delay before reloading to prevent rapid loops
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
       // Check again after delay
       if (!videoRef.current) {
         setIsReconnecting(false);
@@ -231,15 +259,15 @@ export default function TVPlayerModal({
       await videoRef.current.loadAsync(
         { uri: channel.url },
         { shouldPlay: true },
-        false
+        false,
       );
-      
+
       // Success - will be confirmed by playback status update
-      console.log('Reload successful, waiting for playback...');
+      console.log("Reload successful, waiting for playback...");
     } catch (err: any) {
-      console.error('Error auto-reloading video:', err);
+      console.error("Error auto-reloading video:", err);
       setIsReconnecting(false);
-      
+
       // Only retry if we haven't hit max attempts and ref is still valid
       if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS && videoRef.current) {
         setTimeout(() => {
@@ -253,25 +281,25 @@ export default function TVPlayerModal({
     if (status.isLoaded) {
       setIsLoading(false);
       setIsPlaying(status.isPlaying);
-      
+
       // If we were reconnecting and now loaded, mark as successful
       if (isReconnecting && status.isPlaying && !status.isBuffering) {
-        console.log('Reconnection successful!');
+        console.log("Reconnection successful!");
         setIsReconnecting(false);
         setReconnectAttempts(0);
         stallCountRef.current = 0;
       }
-      
+
       // Check for buffering state - but only if not already reconnecting
       const isCurrentlyBuffering = status.isBuffering;
-      
+
       if (isCurrentlyBuffering && !isBufferingRef.current && !isReconnecting) {
         // Started buffering - set timeout for auto-reload
         isBufferingRef.current = true;
-        console.log('Started buffering...');
-        
+        console.log("Started buffering...");
+
         bufferingTimeoutRef.current = setTimeout(() => {
-          console.log('Buffering timeout reached - auto-reloading');
+          console.log("Buffering timeout reached - auto-reloading");
           autoReload();
         }, MAX_BUFFERING_TIME);
       } else if (!isCurrentlyBuffering && isBufferingRef.current) {
@@ -284,23 +312,33 @@ export default function TVPlayerModal({
         // Reset stall count on successful playback resume
         stallCountRef.current = 0;
       }
-      
+
       // Check for stalled playback - but NOT during buffering or reconnecting
-      if (status.isPlaying && !isCurrentlyBuffering && !isReconnecting && status.positionMillis !== undefined) {
+      if (
+        status.isPlaying &&
+        !isCurrentlyBuffering &&
+        !isReconnecting &&
+        status.positionMillis !== undefined
+      ) {
         const currentPosition = status.positionMillis;
-        
+
         // Only count as stall if position exactly same AND we've been playing for a bit
-        if (currentPosition === lastPositionRef.current && currentPosition > 1000) {
+        if (
+          currentPosition === lastPositionRef.current &&
+          currentPosition > 1000
+        ) {
           // Position hasn't changed - might be stalled
           stallCountRef.current++;
-          
+
           // Only log every few stalls to reduce noise
           if (stallCountRef.current % 2 === 0) {
-            console.log(`Stall detected: ${stallCountRef.current}/${MAX_STALL_COUNT}`);
+            console.log(
+              `Stall detected: ${stallCountRef.current}/${MAX_STALL_COUNT}`,
+            );
           }
-          
+
           if (stallCountRef.current >= MAX_STALL_COUNT) {
-            console.log('Max stalls reached - auto-reloading');
+            console.log("Max stalls reached - auto-reloading");
             stallCountRef.current = 0; // Reset before reload to prevent immediate re-trigger
             autoReload();
           }
@@ -317,7 +355,7 @@ export default function TVPlayerModal({
     } else {
       // Handle error state
       if (status.error) {
-        console.error('Video error:', status.error);
+        console.error("Video error:", status.error);
         setIsLoading(false);
         // Auto-reload on error instead of showing error immediately
         if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS && !isReconnecting) {
@@ -346,24 +384,24 @@ export default function TVPlayerModal({
     setReconnectAttempts(0);
     stallCountRef.current = 0;
     lastPositionRef.current = 0;
-    
+
     // Clear buffering timeout
     if (bufferingTimeoutRef.current) {
       clearTimeout(bufferingTimeoutRef.current);
       bufferingTimeoutRef.current = null;
     }
-    
+
     if (videoRef.current) {
       try {
         await videoRef.current.unloadAsync();
         await videoRef.current.loadAsync(
           { uri: channel.url },
           { shouldPlay: true },
-          false
+          false,
         );
       } catch (err: any) {
-        console.error('Error reloading video:', err);
-        setError('Falha ao recarregar stream');
+        console.error("Error reloading video:", err);
+        setError("Falha ao recarregar stream");
         setIsLoading(false);
       }
     }
@@ -375,21 +413,23 @@ export default function TVPlayerModal({
       await videoRef.current.stopAsync();
       await videoRef.current.unloadAsync();
     }
-    
+
     // Reset orientation to portrait
-    await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
-    
+    await ScreenOrientation.lockAsync(
+      ScreenOrientation.OrientationLock.PORTRAIT_UP,
+    );
+
     // Show navigation bar and status bar
-    await NavigationBar.setVisibilityAsync('visible');
-    await NavigationBar.setBehaviorAsync('inset-touch');
-    StatusBar.setHidden(false, 'fade');
-    
+    await NavigationBar.setVisibilityAsync("visible");
+    await NavigationBar.setBehaviorAsync("inset-touch");
+    StatusBar.setHidden(false, "fade");
+
     // Reset states
     setError(null);
     setIsLoading(true);
     setIsFullscreen(false);
     setShowAspectMenu(false);
-    
+
     onClose();
   };
 
@@ -402,7 +442,9 @@ export default function TVPlayerModal({
 
   const handleError = () => {
     setIsLoading(false);
-    setError('Não foi possível reproduzir este canal. Verifique sua conexão ou tente outro canal.');
+    setError(
+      "Não foi possível reproduzir este canal. Verifique sua conexão ou tente outro canal.",
+    );
   };
 
   // =============================================
@@ -413,11 +455,14 @@ export default function TVPlayerModal({
   const handleCopyUrl = async () => {
     try {
       await Clipboard.setStringAsync(channel.url);
-      Alert.alert('URL Copiada', 'O link do stream foi copiado para a área de transferência.');
+      Alert.alert(
+        "URL Copiada",
+        "O link do stream foi copiado para a área de transferência.",
+      );
       setShowCastMenu(false);
     } catch (err) {
-      console.error('Error copying URL:', err);
-      Alert.alert('Erro', 'Não foi possível copiar o link.');
+      console.error("Error copying URL:", err);
+      Alert.alert("Erro", "Não foi possível copiar o link.");
     }
   };
 
@@ -431,7 +476,7 @@ export default function TVPlayerModal({
       });
       setShowCastMenu(false);
     } catch (err) {
-      console.error('Error sharing:', err);
+      console.error("Error sharing:", err);
     }
   };
 
@@ -441,7 +486,7 @@ export default function TVPlayerModal({
       // Web Video Caster deep link scheme
       const webVideoCasterUrl = `webvideocaster://play?url=${encodeURIComponent(channel.url)}&title=${encodeURIComponent(channel.name)}`;
       const canOpen = await Linking.canOpenURL(webVideoCasterUrl);
-      
+
       if (canOpen) {
         await Linking.openURL(webVideoCasterUrl);
         setShowCastMenu(false);
@@ -449,26 +494,29 @@ export default function TVPlayerModal({
         // Try alternative scheme
         const altUrl = `intent://play?url=${encodeURIComponent(channel.url)}#Intent;scheme=webvideocaster;package=com.nickthecoder.webvideocaster;end`;
         const canOpenAlt = await Linking.canOpenURL(altUrl);
-        
+
         if (canOpenAlt) {
           await Linking.openURL(altUrl);
         } else {
           Alert.alert(
-            'Web Video Caster',
-            'O aplicativo Web Video Caster não está instalado. Deseja baixar da Play Store?',
+            "Web Video Caster",
+            "O aplicativo Web Video Caster não está instalado. Deseja baixar da Play Store?",
             [
-              { text: 'Cancelar', style: 'cancel' },
-              { 
-                text: 'Baixar', 
-                onPress: () => Linking.openURL('https://play.google.com/store/apps/details?id=com.nickthecoder.webvideocaster') 
+              { text: "Cancelar", style: "cancel" },
+              {
+                text: "Baixar",
+                onPress: () =>
+                  Linking.openURL(
+                    "https://play.google.com/store/apps/details?id=com.nickthecoder.webvideocaster",
+                  ),
               },
-            ]
+            ],
           );
         }
       }
     } catch (err) {
-      console.error('Error opening Web Video Caster:', err);
-      Alert.alert('Erro', 'Não foi possível abrir o Web Video Caster.');
+      console.error("Error opening Web Video Caster:", err);
+      Alert.alert("Erro", "Não foi possível abrir o Web Video Caster.");
     }
   };
 
@@ -478,26 +526,29 @@ export default function TVPlayerModal({
       // VLC deep link
       const vlcUrl = `vlc://${channel.url}`;
       const canOpen = await Linking.canOpenURL(vlcUrl);
-      
+
       if (canOpen) {
         await Linking.openURL(vlcUrl);
         setShowCastMenu(false);
       } else {
         Alert.alert(
-          'VLC Player',
-          'O VLC Player não está instalado. Deseja baixar da Play Store?',
+          "VLC Player",
+          "O VLC Player não está instalado. Deseja baixar da Play Store?",
           [
-            { text: 'Cancelar', style: 'cancel' },
-            { 
-              text: 'Baixar', 
-              onPress: () => Linking.openURL('https://play.google.com/store/apps/details?id=org.videolan.vlc') 
+            { text: "Cancelar", style: "cancel" },
+            {
+              text: "Baixar",
+              onPress: () =>
+                Linking.openURL(
+                  "https://play.google.com/store/apps/details?id=org.videolan.vlc",
+                ),
             },
-          ]
+          ],
         );
       }
     } catch (err) {
-      console.error('Error opening VLC:', err);
-      Alert.alert('Erro', 'Não foi possível abrir o VLC.');
+      console.error("Error opening VLC:", err);
+      Alert.alert("Erro", "Não foi possível abrir o VLC.");
     }
   };
 
@@ -507,26 +558,29 @@ export default function TVPlayerModal({
       // MX Player intent
       const mxUrl = `intent:${channel.url}#Intent;package=com.mxtech.videoplayer.ad;type=video/*;S.title=${encodeURIComponent(channel.name)};end`;
       const canOpen = await Linking.canOpenURL(mxUrl);
-      
+
       if (canOpen) {
         await Linking.openURL(mxUrl);
         setShowCastMenu(false);
       } else {
         Alert.alert(
-          'MX Player',
-          'O MX Player não está instalado. Deseja baixar da Play Store?',
+          "MX Player",
+          "O MX Player não está instalado. Deseja baixar da Play Store?",
           [
-            { text: 'Cancelar', style: 'cancel' },
-            { 
-              text: 'Baixar', 
-              onPress: () => Linking.openURL('https://play.google.com/store/apps/details?id=com.mxtech.videoplayer.ad') 
+            { text: "Cancelar", style: "cancel" },
+            {
+              text: "Baixar",
+              onPress: () =>
+                Linking.openURL(
+                  "https://play.google.com/store/apps/details?id=com.mxtech.videoplayer.ad",
+                ),
             },
-          ]
+          ],
         );
       }
     } catch (err) {
-      console.error('Error opening MX Player:', err);
-      Alert.alert('Erro', 'Não foi possível abrir o MX Player.');
+      console.error("Error opening MX Player:", err);
+      Alert.alert("Erro", "Não foi possível abrir o MX Player.");
     }
   };
 
@@ -536,8 +590,11 @@ export default function TVPlayerModal({
       await Linking.openURL(channel.url);
       setShowCastMenu(false);
     } catch (err) {
-      console.error('Error opening external:', err);
-      Alert.alert('Erro', 'Não foi possível abrir o stream em um aplicativo externo.');
+      console.error("Error opening external:", err);
+      Alert.alert(
+        "Erro",
+        "Não foi possível abrir o stream em um aplicativo externo.",
+      );
     }
   };
 
@@ -548,16 +605,14 @@ export default function TVPlayerModal({
       visible={visible}
       animationType="fade"
       onRequestClose={handleClose}
-      supportedOrientations={['portrait', 'landscape']}
-    >
+      supportedOrientations={["portrait", "landscape"]}>
       <StatusBar hidden />
       <View style={styles.container}>
         {/* Video Player */}
         <TouchableOpacity
           style={styles.videoContainer}
           activeOpacity={1}
-          onPress={toggleControls}
-        >
+          onPress={toggleControls}>
           <Video
             ref={videoRef}
             source={{ uri: channel.url }}
@@ -593,24 +648,34 @@ export default function TVPlayerModal({
           {error && (
             <View style={styles.errorOverlay}>
               <LinearGradient
-                colors={['rgba(15, 23, 42, 0.95)', 'rgba(15, 23, 42, 0.9)']}
-                style={styles.errorGradient}
-              >
-                <Ionicons name="alert-circle-outline" size={64} color="#ef4444" />
+                colors={["rgba(15, 23, 42, 0.95)", "rgba(15, 23, 42, 0.9)"]}
+                style={styles.errorGradient}>
+                <Ionicons
+                  name="alert-circle-outline"
+                  size={64}
+                  color="#ef4444"
+                />
                 <Text style={styles.errorTitle}>Erro ao reproduzir</Text>
                 <Text style={styles.errorMessage}>{error}</Text>
-                
-                <TouchableOpacity style={styles.retryButton} onPress={handleReload}>
+
+                <TouchableOpacity
+                  style={styles.retryButton}
+                  onPress={handleReload}>
                   <Ionicons name="reload" size={20} color="#fff" />
                   <Text style={styles.retryText}>Tentar novamente</Text>
                 </TouchableOpacity>
 
                 {/* Warning about third-party channels */}
                 <View style={styles.errorWarningBanner}>
-                  <Ionicons name="information-circle" size={16} color="#eab308" />
+                  <Ionicons
+                    name="information-circle"
+                    size={16}
+                    color="#eab308"
+                  />
                   <Text style={styles.errorWarningText}>
-                    Os canais são de fontes externas e podem ficar indisponíveis. 
-                    O desenvolvedor não controla a disponibilidade.
+                    Os canais são de fontes externas e podem ficar
+                    indisponíveis. O desenvolvedor não controla a
+                    disponibilidade.
                   </Text>
                 </View>
               </LinearGradient>
@@ -620,9 +685,8 @@ export default function TVPlayerModal({
           {/* Controls Overlay */}
           {showControls && !error && (
             <LinearGradient
-              colors={['rgba(0,0,0,0.7)', 'transparent', 'rgba(0,0,0,0.7)']}
-              style={styles.controlsOverlay}
-            >
+              colors={["rgba(0,0,0,0.7)", "transparent", "rgba(0,0,0,0.7)"]}
+              style={styles.controlsOverlay}>
               {/* Top Bar */}
               <View style={styles.topBar}>
                 <View style={styles.channelInfo}>
@@ -634,11 +698,10 @@ export default function TVPlayerModal({
                     {channel.name}
                   </Text>
                 </View>
-                
+
                 <TouchableOpacity
                   style={styles.closeButton}
-                  onPress={handleClose}
-                >
+                  onPress={handleClose}>
                   <Ionicons name="close" size={28} color="#fff" />
                 </TouchableOpacity>
               </View>
@@ -647,10 +710,9 @@ export default function TVPlayerModal({
               <View style={styles.centerControls}>
                 <TouchableOpacity
                   style={styles.playButton}
-                  onPress={handlePlayPause}
-                >
+                  onPress={handlePlayPause}>
                   <Ionicons
-                    name={isPlaying ? 'pause' : 'play'}
+                    name={isPlaying ? "pause" : "play"}
                     size={48}
                     color="#fff"
                   />
@@ -661,19 +723,23 @@ export default function TVPlayerModal({
               <View style={styles.bottomBar}>
                 {channel.groupTitle && (
                   <View style={styles.categoryBadge}>
-                    <Text style={styles.categoryText}>{channel.groupTitle}</Text>
+                    <Text style={styles.categoryText}>
+                      {channel.groupTitle}
+                    </Text>
                   </View>
                 )}
-                
+
                 <View style={styles.bottomActions}>
                   {/* Cast Button */}
                   <TouchableOpacity
-                    style={[styles.actionButton, showCastMenu && styles.actionButtonActive]}
+                    style={[
+                      styles.actionButton,
+                      showCastMenu && styles.actionButtonActive,
+                    ]}
                     onPress={() => {
                       setShowCastMenu(!showCastMenu);
                       setShowAspectMenu(false);
-                    }}
-                  >
+                    }}>
                     <Ionicons name="tv-outline" size={22} color="#fff" />
                   </TouchableOpacity>
 
@@ -683,26 +749,23 @@ export default function TVPlayerModal({
                     onPress={() => {
                       setShowAspectMenu(!showAspectMenu);
                       setShowCastMenu(false);
-                    }}
-                  >
+                    }}>
                     <Ionicons name="resize" size={22} color="#fff" />
                   </TouchableOpacity>
 
                   <TouchableOpacity
                     style={styles.actionButton}
-                    onPress={handleReload}
-                  >
+                    onPress={handleReload}>
                     <Ionicons name="refresh" size={22} color="#fff" />
                   </TouchableOpacity>
-                  
+
                   <TouchableOpacity
                     style={styles.actionButton}
-                    onPress={toggleFullscreen}
-                  >
-                    <Ionicons 
-                      name={isFullscreen ? "contract" : "expand"} 
-                      size={22} 
-                      color="#fff" 
+                    onPress={toggleFullscreen}>
+                    <Ionicons
+                      name={isFullscreen ? "contract" : "expand"}
+                      size={22}
+                      color="#fff"
                     />
                   </TouchableOpacity>
                 </View>
@@ -718,20 +781,20 @@ export default function TVPlayerModal({
                         key={option.key}
                         style={[
                           styles.aspectOption,
-                          aspectRatioMode === option.key && styles.aspectOptionActive,
+                          aspectRatioMode === option.key &&
+                            styles.aspectOptionActive,
                         ]}
                         onPress={() => {
                           setAspectRatioMode(option.key);
                           setShowAspectMenu(false);
                           setShowControls(true);
-                        }}
-                      >
+                        }}>
                         <Text
                           style={[
                             styles.aspectOptionText,
-                            aspectRatioMode === option.key && styles.aspectOptionTextActive,
-                          ]}
-                        >
+                            aspectRatioMode === option.key &&
+                              styles.aspectOptionTextActive,
+                          ]}>
                           {option.label}
                         </Text>
                       </TouchableOpacity>
@@ -749,31 +812,45 @@ export default function TVPlayerModal({
                       <Ionicons name="tv-outline" size={24} color="#22c55e" />
                     </View>
                     <View style={styles.castMenuTitleWrapper}>
-                      <Text style={styles.castMenuTitle}>Abrir em outro app</Text>
-                      <Text style={styles.castMenuSubtitle}>Escolha como reproduzir</Text>
+                      <Text style={styles.castMenuTitle}>
+                        Abrir em outro app
+                      </Text>
+                      <Text style={styles.castMenuSubtitle}>
+                        Escolha como reproduzir
+                      </Text>
                     </View>
                   </View>
-                  
+
                   <View style={styles.castDivider} />
                   <TouchableOpacity
                     style={styles.castOption}
-                    onPress={handleOpenVLC}
-                  >
-                    <Ionicons name="play-circle-outline" size={20} color="#f97316" />
+                    onPress={handleOpenVLC}>
+                    <Ionicons
+                      name="play-circle-outline"
+                      size={20}
+                      color="#f97316"
+                    />
                     <View style={styles.castOptionInfo}>
                       <Text style={styles.castOptionText}>VLC Player</Text>
-                      <Text style={styles.castOptionSubtext}>Player avançado</Text>
+                      <Text style={styles.castOptionSubtext}>
+                        Player avançado
+                      </Text>
                     </View>
                   </TouchableOpacity>
 
                   <TouchableOpacity
                     style={styles.castOption}
-                    onPress={handleOpenMXPlayer}
-                  >
-                    <Ionicons name="videocam-outline" size={20} color="#8b5cf6" />
+                    onPress={handleOpenMXPlayer}>
+                    <Ionicons
+                      name="videocam-outline"
+                      size={20}
+                      color="#8b5cf6"
+                    />
                     <View style={styles.castOptionInfo}>
                       <Text style={styles.castOptionText}>MX Player</Text>
-                      <Text style={styles.castOptionSubtext}>Player popular</Text>
+                      <Text style={styles.castOptionSubtext}>
+                        Player popular
+                      </Text>
                     </View>
                   </TouchableOpacity>
 
@@ -781,23 +858,25 @@ export default function TVPlayerModal({
 
                   <TouchableOpacity
                     style={styles.castOption}
-                    onPress={handleShareUrl}
-                  >
+                    onPress={handleShareUrl}>
                     <Ionicons name="share-outline" size={20} color="#3b82f6" />
                     <View style={styles.castOptionInfo}>
                       <Text style={styles.castOptionText}>Compartilhar</Text>
-                      <Text style={styles.castOptionSubtext}>Abre o Web Video Caster e outros apps</Text>
+                      <Text style={styles.castOptionSubtext}>
+                        Abre o Web Video Caster e outros apps
+                      </Text>
                     </View>
                   </TouchableOpacity>
 
                   <TouchableOpacity
                     style={styles.castOption}
-                    onPress={handleCopyUrl}
-                  >
+                    onPress={handleCopyUrl}>
                     <Ionicons name="copy-outline" size={20} color="#94a3b8" />
                     <View style={styles.castOptionInfo}>
                       <Text style={styles.castOptionText}>Copiar URL</Text>
-                      <Text style={styles.castOptionSubtext}>Copiar link do stream</Text>
+                      <Text style={styles.castOptionSubtext}>
+                        Copiar link do stream
+                      </Text>
                     </View>
                   </TouchableOpacity>
 
@@ -808,19 +887,27 @@ export default function TVPlayerModal({
                     style={styles.castTip}
                     onPress={() => {
                       setShowCastMenu(false);
-                      Linking.openURL('https://play.google.com/store/apps/details?id=com.instantbits.cast.webvideo');
-                    }}
-                  >
+                      Linking.openURL(
+                        "https://play.google.com/store/apps/details?id=com.instantbits.cast.webvideo",
+                      );
+                    }}>
                     <View style={styles.castTipIcon}>
                       <Text style={styles.castTipEmoji}>💡</Text>
                     </View>
                     <View style={styles.castTipContent}>
-                      <Text style={styles.castTipTitle}>Dica: Transmita para TV!</Text>
+                      <Text style={styles.castTipTitle}>
+                        Dica: Transmita para TV!
+                      </Text>
                       <Text style={styles.castTipText}>
-                        Baixe o Web Video Caster para transmitir via Chromecast, Smart TV, Fire TV e mais!
+                        Baixe o Web Video Caster para transmitir via Chromecast,
+                        Smart TV, Fire TV e mais!
                       </Text>
                     </View>
-                    <Ionicons name="download-outline" size={20} color="#22c55e" />
+                    <Ionicons
+                      name="download-outline"
+                      size={20}
+                      color="#22c55e"
+                    />
                   </TouchableOpacity>
                 </View>
               )}
@@ -835,37 +922,37 @@ export default function TVPlayerModal({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: "#000",
   },
   videoContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#000',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#000",
   },
   video: {
-    width: '100%',
+    width: "100%",
     aspectRatio: 16 / 9,
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   loadingText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
     marginTop: 16,
   },
   reconnectingText: {
-    color: '#22c55e',
+    color: "#22c55e",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     marginTop: 16,
   },
   reconnectingSubtext: {
-    color: '#94a3b8',
+    color: "#94a3b8",
     fontSize: 12,
     marginTop: 8,
   },
@@ -874,46 +961,46 @@ const styles = StyleSheet.create({
   },
   errorGradient: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 32,
   },
   errorTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontWeight: "bold",
+    color: "#fff",
     marginTop: 16,
     marginBottom: 8,
   },
   errorMessage: {
     fontSize: 14,
-    color: '#cbd5e1',
-    textAlign: 'center',
+    color: "#cbd5e1",
+    textAlign: "center",
     marginBottom: 24,
     lineHeight: 20,
   },
   retryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
-    backgroundColor: '#6366f1',
+    backgroundColor: "#6366f1",
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
   },
   retryText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   controlsOverlay: {
     ...StyleSheet.absoluteFillObject,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
   },
   topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     padding: 20,
     paddingTop: 48,
   },
@@ -921,100 +1008,100 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   liveBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
-    backgroundColor: 'rgba(239, 68, 68, 0.9)',
+    backgroundColor: "rgba(239, 68, 68, 0.9)",
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 6,
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     marginBottom: 8,
   },
   liveIndicator: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   liveText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   channelName: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#fff',
+    fontWeight: "600",
+    color: "#fff",
   },
   closeButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
     marginLeft: 12,
   },
   centerControls: {
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   playButton: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(99, 102, 241, 0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(99, 102, 241, 0.9)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   bottomBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 20,
     paddingBottom: 32,
   },
   categoryBadge: {
-    backgroundColor: 'rgba(99, 102, 241, 0.8)',
+    backgroundColor: "rgba(99, 102, 241, 0.8)",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
   },
   categoryText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   bottomActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
-    marginLeft: 'auto',
+    marginLeft: "auto",
   },
   actionButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   aspectMenu: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 80,
     right: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    backgroundColor: "rgba(0, 0, 0, 0.9)",
     borderRadius: 12,
     padding: 12,
     minWidth: 150,
   },
   aspectMenuTitle: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 8,
-    textAlign: 'center',
+    textAlign: "center",
     opacity: 0.7,
   },
   aspectOptions: {
@@ -1024,67 +1111,67 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
   },
   aspectOptionActive: {
-    backgroundColor: '#22c55e',
+    backgroundColor: "#22c55e",
   },
   aspectOptionText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 14,
-    textAlign: 'center',
+    textAlign: "center",
   },
   aspectOptionTextActive: {
-    fontWeight: '700',
+    fontWeight: "700",
   },
   // Cast Menu Styles
   actionButtonActive: {
-    backgroundColor: 'rgba(34, 197, 94, 0.5)',
+    backgroundColor: "rgba(34, 197, 94, 0.5)",
   },
   castMenu: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 80,
     left: 20,
     right: 20,
-    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+    backgroundColor: "rgba(15, 23, 42, 0.95)",
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: "rgba(255, 255, 255, 0.1)",
   },
   castMenuHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 4,
   },
   castMenuIconWrapper: {
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: 'rgba(34, 197, 94, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(34, 197, 94, 0.15)",
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 12,
   },
   castMenuTitleWrapper: {
     flex: 1,
   },
   castMenuTitle: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   castMenuSubtitle: {
-    color: '#71717a',
+    color: "#71717a",
     fontSize: 12,
     marginTop: 2,
   },
   castOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 12,
     borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
     marginBottom: 8,
   },
   castOptionInfo: {
@@ -1092,38 +1179,38 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   castOptionText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   castOptionSubtext: {
-    color: '#94a3b8',
+    color: "#94a3b8",
     fontSize: 11,
     marginTop: 2,
   },
   castDivider: {
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
     marginVertical: 8,
   },
   // Web Video Caster Tip Styles
   castTip: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 12,
     borderRadius: 10,
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    backgroundColor: "rgba(34, 197, 94, 0.1)",
     borderWidth: 1,
-    borderColor: 'rgba(34, 197, 94, 0.3)',
-    borderStyle: 'dashed',
+    borderColor: "rgba(34, 197, 94, 0.3)",
+    borderStyle: "dashed",
   },
   castTipIcon: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(34, 197, 94, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(34, 197, 94, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   castTipEmoji: {
     fontSize: 16,
@@ -1134,22 +1221,22 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   castTipTitle: {
-    color: '#22c55e',
+    color: "#22c55e",
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   castTipText: {
-    color: '#94a3b8',
+    color: "#94a3b8",
     fontSize: 11,
     marginTop: 2,
     lineHeight: 14,
   },
   errorWarningBanner: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: 'rgba(234, 179, 8, 0.15)',
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: "rgba(234, 179, 8, 0.15)",
     borderWidth: 1,
-    borderColor: 'rgba(234, 179, 8, 0.3)',
+    borderColor: "rgba(234, 179, 8, 0.3)",
     borderRadius: 10,
     padding: 12,
     marginTop: 20,
@@ -1159,7 +1246,7 @@ const styles = StyleSheet.create({
   errorWarningText: {
     flex: 1,
     fontSize: 11,
-    color: '#eab308',
+    color: "#eab308",
     lineHeight: 16,
   },
 });

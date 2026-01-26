@@ -9,6 +9,7 @@ import {
   StatusBar,
   ActivityIndicator,
 } from "react-native";
+import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { LinearGradient } from "expo-linear-gradient";
 import { LucideX, LucideMaximize2 } from "lucide-react-native";
 import YoutubePlayer from "react-native-youtube-iframe";
@@ -48,6 +49,17 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   const [loading, setLoading] = useState(true);
   const [playing, setPlaying] = useState(true);
 
+  // Keep screen awake while player is visible
+  React.useEffect(() => {
+    const tag = "video-player-wakelock";
+    if (visible) {
+      activateKeepAwakeAsync(tag);
+    }
+    return () => {
+      deactivateKeepAwake(tag);
+    };
+  }, [visible]);
+
   const onStateChange = useCallback((state: string) => {
     if (state === "ended") {
       setPlaying(false);
@@ -64,21 +76,18 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
       animationType="fade"
       transparent={true}
       onRequestClose={onClose}
-      statusBarTranslucent
-    >
+      statusBarTranslucent>
       <StatusBar backgroundColor="rgba(0,0,0,0.95)" barStyle="light-content" />
       <View style={styles.overlay}>
         <LinearGradient
           colors={["rgba(0,0,0,0.98)", "rgba(10,10,10,0.98)"]}
-          style={styles.container}
-        >
+          style={styles.container}>
           {/* Header */}
           <View style={styles.header}>
             <TouchableOpacity
               style={styles.closeButton}
               onPress={onClose}
-              activeOpacity={0.7}
-            >
+              activeOpacity={0.7}>
               <LucideX color="#fff" size={24} />
             </TouchableOpacity>
           </View>
@@ -126,8 +135,8 @@ export const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
                   {video.videoType === "Highlight"
                     ? "Melhores Momentos"
                     : video.videoType === "Recap"
-                    ? "Resumo"
-                    : video.videoType}
+                      ? "Resumo"
+                      : video.videoType}
                 </Text>
               </View>
 
