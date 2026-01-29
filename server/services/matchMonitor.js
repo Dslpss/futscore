@@ -770,8 +770,7 @@ async function checkAndNotify() {
 
       // 5. Verificar FIM DE JOGO (fora do if isLive para pegar jogos que acabaram de terminar)
       if (match.isFinished && !notifiedMatchEnds.has(matchId)) {
-        // Só notifica se o jogo estava sendo monitorado (já tinha começado)
-        // E se o jogo não terminou há muito tempo (evita notificações de jogos antigos)
+        // Verificar se o jogo terminou há pouco tempo (evita notificações de jogos antigos)
         const matchStartTime = match.startTime
           ? new Date(match.startTime)
           : null;
@@ -783,18 +782,28 @@ async function checkAndNotify() {
         // Só notifica se terminou há pouco tempo (< 150 minutos desde o início)
         const recentlyFinished = minutesSinceStart <= 150;
 
+        // Notificar fim de jogo se estava monitorando
         if (notifiedMatchStarts.has(matchId)) {
           console.log(
             `[Monitor] 🏁 Fim de jogo: ${match.homeTeam} ${match.homeScore} x ${match.awayScore} ${match.awayTeam}`
           );
           await notifyMatchEnded(match);
-          
-          // Processar palpites para este jogo finalizado
+        } else if (recentlyFinished) {
+          console.log(
+            `[Monitor] ⏭️ Fim de jogo detectado (não monitorado): ${match.homeTeam} vs ${match.awayTeam} (${minutesSinceStart}min desde início)`
+          );
+        }
+
+        // SEMPRE processar palpites para jogos finalizados recentemente
+        // Isso garante que palpites sejam processados mesmo se o servidor reiniciou
+        if (recentlyFinished) {
           try {
             const completedMatch = {
               id: matchId,
               homeScore: match.homeScore,
               awayScore: match.awayScore,
+              homeTeam: match.homeTeam,
+              awayTeam: match.awayTeam,
             };
             const result = await processPredictions([completedMatch]);
             if (result.processed > 0) {
@@ -805,11 +814,8 @@ async function checkAndNotify() {
           } catch (predError) {
             console.error("[Monitor] Erro ao processar palpites:", predError.message);
           }
-        } else if (recentlyFinished) {
-          console.log(
-            `[Monitor] ⏭️ Fim de jogo detectado mas não estava monitorando: ${match.homeTeam} vs ${match.awayTeam} (${minutesSinceStart}min desde início)`
-          );
         }
+        
         notifiedMatchEnds.add(matchId);
       }
     }

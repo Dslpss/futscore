@@ -4,6 +4,42 @@ const { sendPushToUser } = require("./pushNotifications");
 const User = require("../models/User");
 
 /**
+ * Normalize team name for comparison
+ */
+function normalizeTeamName(name) {
+  if (!name) return "";
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // Remove accents
+    .replace(/[^a-z0-9]/g, "") // Remove non-alphanumeric
+    .replace(/fc|sc|ac|cf|rc|real|atletico|club|esporte|clube|futebol/g, "")
+    .trim();
+}
+
+/**
+ * Check if two team names match
+ */
+function teamsMatch(name1, name2) {
+  const n1 = normalizeTeamName(name1);
+  const n2 = normalizeTeamName(name2);
+  
+  if (n1 === n2) return true;
+  if (n1.includes(n2) || n2.includes(n1)) return true;
+  
+  // Calculate similarity
+  const maxLen = Math.max(n1.length, n2.length);
+  if (maxLen === 0) return false;
+  
+  let matches = 0;
+  for (let i = 0; i < Math.min(n1.length, n2.length); i++) {
+    if (n1[i] === n2[i]) matches++;
+  }
+  
+  return (matches / maxLen) > 0.7;
+}
+
+/**
  * Process predictions for completed matches
  * This should be called periodically or after match results are fetched
  */
@@ -15,11 +51,36 @@ async function processPredictions(completedMatches) {
   
   for (const match of completedMatches) {
     try {
-      // Find pending predictions for this match
-      const predictions = await Prediction.find({
+      // First try to find by exact matchId
+      let predictions = await Prediction.find({
         matchId: match.id,
         "result.type": "pending",
       });
+      
+      // If no predictions found by ID and we have team names, search by team names
+      if (predictions.length === 0 && match.homeTeam && match.awayTeam) {
+        console.log(`[PredictionService] No predictions found for matchId ${match.id}, searching by team names...`);
+        
+        // Get all pending predictions from today onwards
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 2);
+        
+        const allPendingPredictions = await Prediction.find({
+          "result.type": "pending",
+          matchDate: { $gte: yesterday },
+        });
+        
+        // Filter by team names
+        predictions = allPendingPredictions.filter(pred => {
+          const homeMatch = teamsMatch(pred.homeTeam.name, match.homeTeam);
+          const awayMatch = teamsMatch(pred.awayTeam.name, match.awayTeam);
+          return homeMatch && awayMatch;
+        });
+        
+        if (predictions.length > 0) {
+          console.log(`[PredictionService] Found ${predictions.length} predictions by team name matching`);
+        }
+      }
       
       if (predictions.length === 0) continue;
       
@@ -56,10 +117,8 @@ async function processPredictions(completedMatches) {
         pointsAwarded += finalPoints;
         processed++;
         
-        // Send push notification for results
-        if (points > 0) {
-          await notifyPredictionResult(prediction.userId, prediction, finalPoints, type);
-        }
+        // Send push notification for results (now also notifies for misses)
+        await notifyPredictionResult(prediction.userId, prediction, finalPoints, type);
         
         console.log(`[PredictionService] User ${prediction.userId} earned ${finalPoints} points (${type})`);
       }
@@ -72,6 +131,7 @@ async function processPredictions(completedMatches) {
   return { processed, pointsAwarded };
 }
 
+
 /**
  * Send push notification for prediction result
  */
@@ -80,10 +140,18 @@ async function notifyPredictionResult(userId, prediction, points, type) {
     const user = await User.findById(userId).select("pushToken");
     if (!user?.pushToken) return;
     
-    const emoji = type === "exact" ? "🎯" : type === "partial" ? "👏" : "✅";
-    const typeText = type === "exact" ? "Placar exato!" : type === "partial" ? "Diferença de gols!" : "Resultado certo!";
+    const emoji = type === "exact" ? "🎯" : type === "partial" ? "👏" : type === "result" ? "✅" : "❌";
+    const typeText = type === "exact" 
+      ? "Placar exato!" 
+      : type === "partial" 
+      ? "Diferença de gols!" 
+      : type === "result" 
+      ? "Resultado certo!" 
+      : "Não foi dessa vez!";
     
-    const title = `${emoji} +${points} pontos!`;
+    const title = points > 0 
+      ? `${emoji} +${points} pontos!` 
+      : `${emoji} ${typeText}`;
     const body = `${typeText}\n${prediction.homeTeam.name} ${prediction.result.actualHomeScore}x${prediction.result.actualAwayScore} ${prediction.awayTeam.name}`;
     
     await sendPushToUser(user.pushToken, title, body, {
