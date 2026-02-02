@@ -94,10 +94,18 @@ async function fetchMSNUpcomingMatches() {
           // Pegar apenas partidas que ainda não terminaram
           const isFinished = gameStatus === "final" || gameStatus === "post" || gameStatus === "ft";
           
-          // Verificar se é partida dentro dos próximos 7 dias
-          const now = Date.now();
-          const sevenDaysFromNow = now + 7 * 24 * 60 * 60 * 1000;
-          const isInRange = matchTime >= now && matchTime <= sevenDaysFromNow;
+          // Verificar se é partida de HOJE (mesma data UTC-3)
+          const now = new Date();
+          const matchDate = new Date(matchTime);
+          
+          // Comparar apenas data (ignorar hora)
+          const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+          const todayEnd = todayStart + 24 * 60 * 60 * 1000;
+          const isToday = matchTime >= todayStart && matchTime < todayEnd;
+          
+          // Também aceitar partidas nas próximas 24 horas (para cobrir jogos que já passaram meia-noite no fuso)
+          const isInNext24h = matchTime >= now.getTime() && matchTime <= now.getTime() + 24 * 60 * 60 * 1000;
+          const isInRange = isToday || isInNext24h;
           
           // Log debug para primeira partida
           if (games.indexOf(game) === 0) {
@@ -200,8 +208,8 @@ router.get("/upcoming", async (req, res) => {
       });
     }
 
-    // Obter previsões da IA (máximo 5 partidas)
-    const predictions = await getMatchesPredictions(matches, 5);
+    // Obter previsões da IA (máximo 3 partidas para resposta rápida)
+    const predictions = await getMatchesPredictions(matches, 3);
 
     console.log(`[AIPredictions] ${predictions.length} previsões geradas`);
 
