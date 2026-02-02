@@ -14,33 +14,9 @@ const MATCHES_CACHE_TTL = 10 * 60 * 1000; // 10 minutos
  */
 async function getUpcomingMatches() {
   try {
-    // Importar função de busca do matchMonitor
-    const { fetchLiveMatches } = require("../services/matchMonitor");
-    
-    if (typeof fetchLiveMatches !== "function") {
-      console.log("[AIPredictions] fetchLiveMatches não disponível, usando MSN API diretamente");
-      return await fetchMSNUpcomingMatches();
-    }
-
-    const allMatches = await fetchLiveMatches();
-    
-    // Filtrar partidas que ainda não começaram
-    const now = Date.now();
-    const twentyFourHours = 24 * 60 * 60 * 1000;
-    
-    const upcoming = allMatches.filter((match) => {
-      const matchTime = new Date(match.startTime).getTime();
-      const isScheduled = match.status === "pre" || match.status === "scheduled";
-      const isWithin24h = matchTime > now && matchTime < now + twentyFourHours;
-      return isScheduled && isWithin24h;
-    });
-
-    // Ordenar por horário
-    upcoming.sort((a, b) => 
-      new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
-    );
-
-    return upcoming;
+    // Usar diretamente o fetchMSNUpcomingMatches que já tem a lógica correta
+    console.log("[AIPredictions] Buscando partidas via fetchMSNUpcomingMatches...");
+    return await fetchMSNUpcomingMatches();
   } catch (error) {
     console.error("[AIPredictions] Erro ao buscar partidas:", error.message);
     return [];
