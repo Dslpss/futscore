@@ -174,10 +174,13 @@ async function getMatchPrediction(match) {
     );
 
     const fullResponse = await parseStreamResponse(response.data);
+    console.log(`[AIPrediction] Raw response length: ${fullResponse.length}, preview: ${fullResponse.substring(0, 200)}`);
+    
     const prediction = extractJSON(fullResponse);
 
     if (!prediction) {
       console.error("[AIPrediction] Não foi possível extrair previsão da resposta");
+      console.error("[AIPrediction] Full response:", fullResponse.substring(0, 500));
       return null;
     }
 
