@@ -275,11 +275,15 @@ export const matchService = {
 
       let allFixtures: Match[] = [];
 
+      // Get today's date string for schedule API
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
       // Try each league: MSN first, then football-data fallback
       for (const league of leagueMapping) {
         let leagueMatches: Match[] = [];
 
-        // 1. Try MSN Sports first
+        // 1. Try MSN Sports getLiveAroundLeague first (for live/upcoming matches)
         try {
           const games = await msnSportsApi.getLiveAroundLeague(
             league.msn,
@@ -291,14 +295,32 @@ export const matchService = {
               transformMsnGameToMatch(game)
             );
             console.log(
-              `[MatchService] ✓ ${league.name}: ${leagueMatches.length} matches from MSN Sports`
+              `[MatchService] ✓ ${league.name}: ${leagueMatches.length} matches from MSN Sports (live)`
             );
           }
         } catch (error) {
-          console.log(`[MatchService] ✗ ${league.name}: MSN Sports failed`);
+          console.log(`[MatchService] ✗ ${league.name}: MSN Sports live failed`);
         }
 
-        // 2. If MSN failed or returned empty, try football-data as fallback
+        // 2. If getLiveAroundLeague returned empty, try getScheduleByDate for today
+        // This is especially important for leagues like Carioca that may have later games
+        if (leagueMatches.length === 0) {
+          try {
+            const scheduleGames = await msnSportsApi.getScheduleByDate(league.msn, todayStr);
+            if (scheduleGames && scheduleGames.length > 0) {
+              leagueMatches = scheduleGames.map((game: any) =>
+                transformMsnGameToMatch({ ...game, seasonId: league.msn })
+              );
+              console.log(
+                `[MatchService] ✓ ${league.name}: ${leagueMatches.length} matches from MSN Sports (schedule)`
+              );
+            }
+          } catch (error) {
+            console.log(`[MatchService] ✗ ${league.name}: MSN Sports schedule failed`);
+          }
+        }
+
+        // 3. If MSN failed or returned empty, try football-data as fallback
         if (leagueMatches.length === 0 && league.fd) {
           try {
             const fixtures = await api.getFixtures(league.fd);

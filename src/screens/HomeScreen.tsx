@@ -1332,6 +1332,11 @@ export const HomeScreen = ({ navigation }: any) => {
         "Soccer_SpainLaLiga", // La Liga
         "Soccer_PortugalPrimeiraLiga",
         "Basketball_NBA",
+        // Campeonatos estaduais brasileiros
+        "Soccer_BrazilCarioca", // Carioca
+        "Soccer_BrazilMineiro", // Mineiro
+        "Soccer_BrazilPaulistaSerieA1", // Paulista
+        "Soccer_BrazilGaucho", // Gaúcho
       ];
 
       const allDates = new Set<string>();
