@@ -648,28 +648,31 @@ export const api = {
     }
   },
 
-  // AI Predictions
-  getAIPredictions: async (forceRefresh: boolean = false): Promise<any[]> => {
+  // AI Predictions - Cache diário no servidor, cliente faz cache de 1 hora
+  getAIPredictions: async (): Promise<any[]> => {
     const cacheKey = "ai_predictions";
 
-    // Skip cache if force refresh
-    if (!forceRefresh) {
-      const cached = await getCachedData<any[]>(cacheKey);
-      if (cached) return cached;
+    // Verificar cache local (1 hora)
+    const cached = await getCachedData<any[]>(cacheKey);
+    if (cached) {
+      console.log("[API] AI predictions from local cache");
+      return cached;
     }
 
     try {
-      console.log("[API] Fetching AI predictions...");
+      console.log("[API] Fetching AI predictions from server...");
       const response = await axios.get(
-        `${CONFIG.BACKEND_URL}/api/ai-predictions/upcoming?refresh=${forceRefresh}`,
+        `${CONFIG.BACKEND_URL}/api/ai-predictions/upcoming`,
       );
 
       if (response.data?.success && response.data?.predictions) {
         const predictions = response.data.predictions;
-        console.log(`[API] Fetched ${predictions.length} AI predictions`);
+        console.log(
+          `[API] Fetched ${predictions.length} AI predictions (cached: ${response.data.cached}, date: ${response.data.cacheDate})`,
+        );
 
-        // Cache for 15 minutes
-        await setCachedData(cacheKey, predictions, 15 * 60 * 1000);
+        // Cache local por 1 hora (servidor já tem cache diário)
+        await setCachedData(cacheKey, predictions, 60 * 60 * 1000);
         return predictions;
       }
 

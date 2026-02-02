@@ -9,6 +9,22 @@ let matchesCache = {
 };
 const MATCHES_CACHE_TTL = 10 * 60 * 1000; // 10 minutos
 
+// Cache de previsões diárias - gerado uma vez por dia para economizar tokens
+let predictionsCache = {
+  data: [],
+  date: "", // formato YYYY-MM-DD
+  generatedAt: null,
+  isGenerating: false, // flag para evitar requisições duplicadas
+};
+
+/**
+ * Retorna a data atual no formato YYYY-MM-DD
+ */
+function getTodayDateString() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
 /**
  * Busca partidas próximas (próximas 24h) do match monitor
  */
@@ -230,6 +246,7 @@ async function fetchMSNUpcomingMatches() {
 /**
  * GET /api/ai-predictions/upcoming
  * Retorna previsões de IA para partidas próximas
+ * Cache diário: gera previsões uma vez por dia para economizar tokens
  */
 router.get("/upcoming", async (req, res) => {
   try {
@@ -245,60 +262,98 @@ router.get("/upcoming", async (req, res) => {
       });
     }
 
-    // Force refresh se cache estiver vazio ou parâmetro refresh=true
-    const forceRefresh = req.query.refresh === "true";
+    const today = getTodayDateString();
+    const forceRefresh = req.query.refresh === "true" && req.query.adminKey === process.env.ADMIN_KEY;
 
-    // Buscar partidas próximas (com cache)
-    let matches = [];
-    const now = Date.now();
-
-    if (
-      !forceRefresh &&
-      matchesCache.data.length > 0 &&
-      now - matchesCache.timestamp < MATCHES_CACHE_TTL
-    ) {
-      matches = matchesCache.data;
-      console.log("[AIPredictions] Usando cache de partidas:", matches.length);
-    } else {
-      console.log("[AIPredictions] Buscando partidas frescas...");
-      matches = await getUpcomingMatches();
-
-      // Só guardar no cache se encontrar partidas
-      if (matches.length > 0) {
-        matchesCache = { data: matches, timestamp: now };
-      }
-      console.log(`[AIPredictions] ${matches.length} partidas encontradas`);
-    }
-
-    if (matches.length === 0) {
-      // Tentar fallback direto
-      console.log(
-        "[AIPredictions] Sem partidas, tentando fetchMSNUpcomingMatches diretamente...",
-      );
-      matches = await fetchMSNUpcomingMatches();
-      console.log(
-        `[AIPredictions] Fallback retornou ${matches.length} partidas`,
-      );
-    }
-
-    if (matches.length === 0) {
+    // Verificar se já temos previsões para hoje no cache
+    if (!forceRefresh && predictionsCache.date === today && predictionsCache.data.length > 0) {
+      console.log(`[AIPredictions] Retornando ${predictionsCache.data.length} previsões do cache diário`);
       return res.json({
         success: true,
-        message: "Nenhuma partida próxima encontrada",
-        predictions: [],
+        predictions: predictionsCache.data,
+        generatedAt: predictionsCache.generatedAt,
+        cached: true,
+        cacheDate: today,
       });
     }
 
-    // Obter previsões da IA para todas as partidas do dia
-    const predictions = await getMatchesPredictions(matches, matches.length);
+    // Se já está gerando, retornar cache atual (mesmo que vazio) para evitar duplicação
+    if (predictionsCache.isGenerating) {
+      console.log("[AIPredictions] Geração em andamento, retornando cache atual");
+      return res.json({
+        success: true,
+        predictions: predictionsCache.data,
+        generatedAt: predictionsCache.generatedAt,
+        generating: true,
+        message: "Previsões estão sendo geradas, tente novamente em alguns minutos",
+      });
+    }
 
-    console.log(`[AIPredictions] ${predictions.length} previsões geradas`);
+    // Marcar que está gerando para evitar requisições duplicadas
+    predictionsCache.isGenerating = true;
+    console.log(`[AIPredictions] Gerando novas previsões para ${today}...`);
 
-    res.json({
-      success: true,
-      predictions,
-      generatedAt: new Date().toISOString(),
-    });
+    try {
+      // Buscar partidas do dia
+      let matches = [];
+      const now = Date.now();
+
+      if (
+        matchesCache.data.length > 0 &&
+        now - matchesCache.timestamp < MATCHES_CACHE_TTL
+      ) {
+        matches = matchesCache.data;
+        console.log("[AIPredictions] Usando cache de partidas:", matches.length);
+      } else {
+        console.log("[AIPredictions] Buscando partidas frescas...");
+        matches = await getUpcomingMatches();
+
+        if (matches.length > 0) {
+          matchesCache = { data: matches, timestamp: now };
+        }
+        console.log(`[AIPredictions] ${matches.length} partidas encontradas`);
+      }
+
+      if (matches.length === 0) {
+        console.log("[AIPredictions] Tentando fallback...");
+        matches = await fetchMSNUpcomingMatches();
+        console.log(`[AIPredictions] Fallback retornou ${matches.length} partidas`);
+      }
+
+      if (matches.length === 0) {
+        predictionsCache.isGenerating = false;
+        return res.json({
+          success: true,
+          message: "Nenhuma partida encontrada para hoje",
+          predictions: [],
+        });
+      }
+
+      // Gerar previsões da IA (UMA VEZ POR DIA)
+      console.log(`[AIPredictions] Gerando previsões para ${matches.length} partidas...`);
+      const predictions = await getMatchesPredictions(matches, matches.length);
+
+      // Salvar no cache diário
+      predictionsCache = {
+        data: predictions,
+        date: today,
+        generatedAt: new Date().toISOString(),
+        isGenerating: false,
+      };
+
+      console.log(`[AIPredictions] ${predictions.length} previsões geradas e cacheadas para ${today}`);
+
+      res.json({
+        success: true,
+        predictions,
+        generatedAt: predictionsCache.generatedAt,
+        cached: false,
+        cacheDate: today,
+      });
+    } catch (genError) {
+      predictionsCache.isGenerating = false;
+      throw genError;
+    }
   } catch (error) {
     console.error("[AIPredictions] Erro:", error.message);
     res.status(500).json({

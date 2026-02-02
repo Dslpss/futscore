@@ -675,8 +675,8 @@ export const HomeScreen = ({ navigation }: any) => {
 
     if (isToday(selectedDate)) {
       await contextRefresh();
-      // Also refresh AI predictions with force refresh
-      fetchAIPredictions(true);
+      // Also refresh AI predictions (servidor tem cache diário)
+      fetchAIPredictions();
     } else {
       await fetchMatchesForDate(selectedDate);
     }
@@ -1073,15 +1073,12 @@ export const HomeScreen = ({ navigation }: any) => {
     // backendFavorites is loaded automatically by FavoritesContext
   }, []);
 
-  // Fetch AI Predictions
-  const fetchAIPredictions = async (forceRefresh: boolean = false) => {
+  // Fetch AI Predictions (cache diário no servidor, economiza tokens)
+  const fetchAIPredictions = async () => {
     setLoadingAIPredictions(true);
     try {
-      console.log(
-        "[HomeScreen] Fetching AI predictions...",
-        forceRefresh ? "(forced refresh)" : "",
-      );
-      const predictions = await api.getAIPredictions(forceRefresh);
+      console.log("[HomeScreen] Fetching AI predictions...");
+      const predictions = await api.getAIPredictions();
       console.log(`[HomeScreen] Got ${predictions.length} AI predictions`);
       setAiPredictions(predictions);
     } catch (error) {
