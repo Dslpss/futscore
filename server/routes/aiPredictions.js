@@ -1,0 +1,228 @@
+const express = require("express");
+const router = express.Router();
+const { getMatchesPredictions } = require("../services/aiPrediction");
+
+// Cache simples para partidas próximas
+let matchesCache = {
+  data: [],
+  timestamp: 0,
+};
+const MATCHES_CACHE_TTL = 10 * 60 * 1000; // 10 minutos
+
+/**
+ * Busca partidas próximas (próximas 24h) do match monitor
+ */
+async function getUpcomingMatches() {
+  try {
+    // Importar função de busca do matchMonitor
+    const { fetchLiveMatches } = require("../services/matchMonitor");
+    
+    if (typeof fetchLiveMatches !== "function") {
+      console.log("[AIPredictions] fetchLiveMatches não disponível, usando MSN API diretamente");
+      return await fetchMSNUpcomingMatches();
+    }
+
+    const allMatches = await fetchLiveMatches();
+    
+    // Filtrar partidas que ainda não começaram
+    const now = Date.now();
+    const twentyFourHours = 24 * 60 * 60 * 1000;
+    
+    const upcoming = allMatches.filter((match) => {
+      const matchTime = new Date(match.startTime).getTime();
+      const isScheduled = match.status === "pre" || match.status === "scheduled";
+      const isWithin24h = matchTime > now && matchTime < now + twentyFourHours;
+      return isScheduled && isWithin24h;
+    });
+
+    // Ordenar por horário
+    upcoming.sort((a, b) => 
+      new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+    );
+
+    return upcoming;
+  } catch (error) {
+    console.error("[AIPredictions] Erro ao buscar partidas:", error.message);
+    return [];
+  }
+}
+
+/**
+ * Busca partidas diretamente da MSN API (fallback)
+ */
+async function fetchMSNUpcomingMatches() {
+  const axios = require("axios");
+  const MSN_API_BASE = "https://api.msn.com/sports";
+  const MSN_API_KEY = "kO1dI4ptCTTylLkPL1ZTHYP8JhLKb8mRDoA5yotmNJ";
+
+  const leagues = [
+    { id: "Soccer_BrazilBrasileiroSerieA", name: "Brasileirão" },
+    { id: "Soccer_InternationalClubsUEFAChampionsLeague", name: "Champions League" },
+    { id: "Soccer_SpainLaLiga", name: "La Liga" },
+    { id: "Soccer_EnglandPremierLeague", name: "Premier League" },
+    { id: "Soccer_BrazilPaulistaSerieA1", name: "Campeonato Paulista" },
+  ];
+
+  const matches = [];
+
+  for (const league of leagues) {
+    try {
+      const now = new Date();
+      const params = new URLSearchParams({
+        version: "1.0",
+        cm: "pt-br",
+        scn: "ANON",
+        it: "web",
+        apikey: MSN_API_KEY,
+        activityId: `ai-pred-${Date.now()}`,
+        id: league.id,
+        sport: "Soccer",
+        datetime: now.toISOString().split(".")[0],
+        tzoffset: Math.floor(-now.getTimezoneOffset() / 60).toString(),
+      });
+
+      const response = await axios.get(
+        `${MSN_API_BASE}/livearoundtheleague?${params}`,
+        {
+          headers: {
+            "User-Agent": "Mozilla/5.0",
+            Accept: "*/*",
+          },
+          timeout: 5000,
+        }
+      );
+
+      const schedules = response.data?.value?.[0]?.schedules || [];
+      
+      for (const schedule of schedules) {
+        const games = schedule.games || [];
+        
+        for (const game of games) {
+          const gameStatus = game.gameState?.gameStatus?.toLowerCase() || "";
+          const isScheduled = gameStatus === "pre" || gameStatus === "scheduled";
+          
+          if (isScheduled) {
+            const homeTeam = game.participants?.[0];
+            const awayTeam = game.participants?.[1];
+            
+            matches.push({
+              id: game.id || game.liveId,
+              homeTeam: homeTeam?.team?.shortName?.rawName || homeTeam?.team?.name?.rawName || "Time Casa",
+              awayTeam: awayTeam?.team?.shortName?.rawName || awayTeam?.team?.name?.rawName || "Time Fora",
+              homeTeamLogo: homeTeam?.team?.image?.id ? 
+                `https://img-s-msn-com.akamaized.net/tenant/amp/entityid/${homeTeam.team.image.id}` : "",
+              awayTeamLogo: awayTeam?.team?.image?.id ?
+                `https://img-s-msn-com.akamaized.net/tenant/amp/entityid/${awayTeam.team.image.id}` : "",
+              startTime: game.startDateTime,
+              league: { name: league.name, logo: "" },
+              status: "scheduled",
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error(`[AIPredictions] Erro ao buscar ${league.name}:`, error.message);
+    }
+  }
+
+  // Ordenar por horário
+  matches.sort((a, b) =>
+    new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+  );
+
+  return matches.slice(0, 10); // Limitar a 10 partidas
+}
+
+/**
+ * GET /api/ai-predictions/upcoming
+ * Retorna previsões de IA para partidas próximas
+ */
+router.get("/upcoming", async (req, res) => {
+  try {
+    console.log("[AIPredictions] Requisição de previsões recebida");
+
+    // Verificar API key
+    if (!process.env.NVIDIA_API_KEY) {
+      console.warn("[AIPredictions] NVIDIA_API_KEY não configurada");
+      return res.json({
+        success: false,
+        message: "API de IA não configurada",
+        predictions: [],
+      });
+    }
+
+    // Buscar partidas próximas (com cache)
+    let matches = [];
+    const now = Date.now();
+
+    if (matchesCache.data.length > 0 && now - matchesCache.timestamp < MATCHES_CACHE_TTL) {
+      matches = matchesCache.data;
+      console.log("[AIPredictions] Usando cache de partidas");
+    } else {
+      matches = await getUpcomingMatches();
+      matchesCache = { data: matches, timestamp: now };
+      console.log(`[AIPredictions] ${matches.length} partidas encontradas`);
+    }
+
+    if (matches.length === 0) {
+      return res.json({
+        success: true,
+        message: "Nenhuma partida próxima encontrada",
+        predictions: [],
+      });
+    }
+
+    // Obter previsões da IA (máximo 5 partidas)
+    const predictions = await getMatchesPredictions(matches, 5);
+
+    console.log(`[AIPredictions] ${predictions.length} previsões geradas`);
+
+    res.json({
+      success: true,
+      predictions,
+      generatedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("[AIPredictions] Erro:", error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      predictions: [],
+    });
+  }
+});
+
+/**
+ * GET /api/ai-predictions/match/:id
+ * Retorna previsão para uma partida específica
+ */
+router.get("/match/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!process.env.NVIDIA_API_KEY) {
+      return res.status(503).json({
+        success: false,
+        error: "API de IA não configurada",
+      });
+    }
+
+    // Buscar dados da partida
+    const { getMatchPrediction } = require("../services/aiPrediction");
+    
+    // TODO: Implementar busca de dados específicos da partida
+    // Por enquanto retorna erro
+    res.status(501).json({
+      success: false,
+      error: "Endpoint em desenvolvimento",
+    });
+  } catch (error) {
+    console.error("[AIPredictions] Erro:", error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+module.exports = router;

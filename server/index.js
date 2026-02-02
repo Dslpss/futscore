@@ -43,6 +43,7 @@ app.use("/api/webhooks", require("./routes/webhooks"));
 app.use("/api/subscription", require("./routes/subscription"));
 app.use("/api/predictions", require("./routes/predictions"));
 app.use("/api/announcements", require("./routes/announcements"));
+app.use("/api/ai-predictions", require("./routes/aiPredictions"));
 
 app.get("/", (req, res) => {
   res.send("FutScore API is running");

@@ -31,6 +31,7 @@ import { useAuth } from "../context/AuthContext";
 import { MatchCard } from "../components/MatchCard";
 import { NextMatchWidget } from "../components/NextMatchWidget";
 import { UpcomingMatchesSlider } from "../components/UpcomingMatchesSlider";
+import { AIPredictionSlider, AIPrediction } from "../components/AIPredictionSlider";
 import { LinearGradient } from "expo-linear-gradient";
 import { WarningCard } from "../components/WarningCard";
 import { UpdateModal } from "../components/UpdateModal";
@@ -602,6 +603,10 @@ export const HomeScreen = ({ navigation }: any) => {
   >([]);
   const [searchingTeams, setSearchingTeams] = useState(false);
 
+  // AI Predictions State
+  const [aiPredictions, setAIPredictions] = useState<AIPrediction[]>([]);
+  const [loadingAIPredictions, setLoadingAIPredictions] = useState(false);
+
   // Ref for league selector ScrollView to maintain position
   const leagueSelectorRef = useRef<ScrollView>(null);
   const leagueScrollPosition = useRef<number>(0);
@@ -1056,8 +1061,26 @@ export const HomeScreen = ({ navigation }: any) => {
     fetchMatchCalendar();
     fetchLeagueLogos();
     checkPremiumModal();
+    fetchAIPredictions();
     // backendFavorites is loaded automatically by FavoritesContext
   }, []);
+
+  // Fetch AI predictions from backend
+  const fetchAIPredictions = async () => {
+    setLoadingAIPredictions(true);
+    try {
+      const response = await axios.get(`${CONFIG.BACKEND_URL}/api/ai-predictions/upcoming`);
+      if (response.data.success && response.data.predictions) {
+        setAIPredictions(response.data.predictions);
+        console.log(`[HomeScreen] Loaded ${response.data.predictions.length} AI predictions`);
+      }
+    } catch (error: any) {
+      console.log("[HomeScreen] AI predictions not available:", error.message);
+      // Silently fail - feature is optional
+    } finally {
+      setLoadingAIPredictions(false);
+    }
+  };
 
   // Check for pending gift and show modal
   useEffect(() => {
@@ -1715,6 +1738,15 @@ export const HomeScreen = ({ navigation }: any) => {
         matches={favoriteNextMatches}
         onPressMatch={(match) => {
           console.log("Next match clicked:", match);
+        }}
+      />
+
+      {/* AI Predictions Slider */}
+      <AIPredictionSlider
+        predictions={aiPredictions}
+        loading={loadingAIPredictions}
+        onPressPrediction={(prediction) => {
+          console.log("AI Prediction clicked:", prediction);
         }}
       />
 
