@@ -125,6 +125,61 @@ function extractJSON(text) {
 }
 
 /**
+ * Faz uma chamada à API NVIDIA com retry
+ */
+async function callNvidiaAPI(prompt, retries = 2) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const response = await axios.post(
+        INVOKE_URL,
+        {
+          model: "moonshotai/kimi-k2.5",
+          messages: [
+            {
+              role: "user",
+              content: prompt,
+            },
+          ],
+          max_tokens: 1024,
+          temperature: 0.6,
+          top_p: 0.95,
+          stream: false,
+          thinking: { type: "disabled" },
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          timeout: 45000, // 45 segundos por tentativa
+        },
+      );
+
+      const content = response.data?.choices?.[0]?.message?.content || "";
+      
+      // Se resposta vazia, tentar novamente
+      if (!content || content.length < 10) {
+        if (attempt < retries) {
+          console.log(`[AIPrediction] Resposta vazia, tentativa ${attempt + 1}/${retries + 1}...`);
+          await new Promise(r => setTimeout(r, 1000)); // Aguardar 1s antes de retry
+          continue;
+        }
+      }
+      
+      return content;
+    } catch (error) {
+      if (attempt < retries) {
+        console.log(`[AIPrediction] Erro na tentativa ${attempt + 1}, retrying: ${error.message}`);
+        await new Promise(r => setTimeout(r, 1500)); // Aguardar 1.5s antes de retry
+        continue;
+      }
+      throw error;
+    }
+  }
+  return "";
+}
+
+/**
  * Obtém previsão para uma partida específica
  */
 async function getMatchPrediction(match) {
@@ -147,34 +202,8 @@ async function getMatchPrediction(match) {
   try {
     console.log(`[AIPrediction] Gerando previsão para ${matchId}...`);
 
-    const response = await axios.post(
-      INVOKE_URL,
-      {
-        model: "moonshotai/kimi-k2.5",
-        messages: [
-          {
-            role: "user",
-            content: generateMatchPrompt(match),
-          },
-        ],
-        max_tokens: 1024,
-        temperature: 0.6, // Instant mode recommended
-        top_p: 0.95,
-        stream: false,
-        // Instant mode - direct response without reasoning traces
-        thinking: { type: "disabled" },
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        timeout: 60000,
-      },
-    );
-
-    // Parse non-streaming response
-    const fullResponse = response.data?.choices?.[0]?.message?.content || "";
+    const fullResponse = await callNvidiaAPI(generateMatchPrompt(match));
+    
     console.log(
       `[AIPrediction] Raw response length: ${fullResponse.length}, preview: ${fullResponse.substring(0, 300)}`,
     );

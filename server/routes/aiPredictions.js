@@ -277,15 +277,40 @@ router.get("/upcoming", async (req, res) => {
       });
     }
 
-    // Se já está gerando, retornar cache atual (mesmo que vazio) para evitar duplicação
+    // Se já está gerando, aguardar um pouco para ver se termina
     if (predictionsCache.isGenerating) {
-      console.log("[AIPredictions] Geração em andamento, retornando cache atual");
+      console.log("[AIPredictions] Geração em andamento, aguardando...");
+      
+      // Aguardar até 30 segundos pela geração terminar
+      const maxWait = 30000;
+      const checkInterval = 2000;
+      let waited = 0;
+      
+      while (predictionsCache.isGenerating && waited < maxWait) {
+        await new Promise(r => setTimeout(r, checkInterval));
+        waited += checkInterval;
+      }
+      
+      // Se terminou, retornar os dados
+      if (!predictionsCache.isGenerating && predictionsCache.data.length > 0) {
+        console.log(`[AIPredictions] Geração terminou, retornando ${predictionsCache.data.length} previsões`);
+        return res.json({
+          success: true,
+          predictions: predictionsCache.data,
+          generatedAt: predictionsCache.generatedAt,
+          cached: true,
+          cacheDate: today,
+        });
+      }
+      
+      // Se ainda está gerando ou terminou vazio, retornar status
+      console.log("[AIPredictions] Timeout aguardando geração, retornando status");
       return res.json({
         success: true,
         predictions: predictionsCache.data,
         generatedAt: predictionsCache.generatedAt,
-        generating: true,
-        message: "Previsões estão sendo geradas, tente novamente em alguns minutos",
+        generating: predictionsCache.isGenerating,
+        message: "Previsões estão sendo geradas, tente novamente em alguns segundos",
       });
     }
 
