@@ -149,31 +149,31 @@ async function getMatchPrediction(match) {
     const response = await axios.post(
       INVOKE_URL,
       {
-        model: "moonshotai/kimi-k2.5",
+        model: "nvidia/llama-3.1-nemotron-70b-instruct",
         messages: [
+          {
+            role: "system",
+            content: "Você é um analista de futebol especializado. Responda sempre em JSON válido, sem texto adicional."
+          },
           {
             role: "user",
             content: generateMatchPrompt(match),
           },
         ],
-        max_tokens: 500,
-        temperature: 0.7,
-        top_p: 1.0,
-        stream: true,
-        chat_template_kwargs: { thinking: true },
+        max_tokens: 300,
+        temperature: 0.5,
+        stream: false,
       },
       {
         headers: {
           Authorization: `Bearer ${API_KEY}`,
-          Accept: "text/event-stream",
           "Content-Type": "application/json",
         },
-        responseType: "stream",
-        timeout: 60000, // 60 segundos timeout
+        timeout: 30000,
       }
     );
 
-    const fullResponse = await parseStreamResponse(response.data);
+    const fullResponse = response.data?.choices?.[0]?.message?.content || "";
     console.log(`[AIPrediction] Raw response length: ${fullResponse.length}, preview: ${fullResponse.substring(0, 200)}`);
     
     const prediction = extractJSON(fullResponse);
