@@ -1,8 +1,8 @@
 const axios = require("axios");
 
-// NVIDIA API Configuration
-const INVOKE_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
-const API_KEY = process.env.NVIDIA_API_KEY;
+// Perplexity API Configuration
+const PERPLEXITY_URL = "https://api.perplexity.ai/chat/completions";
+const API_KEY = process.env.PERPLEXITY_API_KEY;
 
 // Cache para previsões (evita requisições excessivas)
 const predictionCache = new Map();
@@ -53,59 +53,6 @@ IMPORTANTE: As 3 probabilidades devem somar exatamente 100.`;
 }
 
 /**
- * Faz parse da resposta em stream da API NVIDIA
- */
-async function parseStreamResponse(stream) {
-  return new Promise((resolve, reject) => {
-    let fullContent = "";
-    let thinkingComplete = false;
-
-    stream.on("data", (chunk) => {
-      const lines = chunk.toString().split("\n");
-
-      for (const line of lines) {
-        if (line.startsWith("data: ")) {
-          const data = line.slice(6);
-          if (data === "[DONE]") continue;
-
-          try {
-            const parsed = JSON.parse(data);
-            const content = parsed.choices?.[0]?.delta?.content;
-
-            // Ignorar blocos de "thinking"
-            if (content) {
-              // Detectar fim do thinking
-              if (content.includes("</think>")) {
-                thinkingComplete = true;
-              }
-              // Só adicionar conteúdo após o thinking
-              if (thinkingComplete || !content.includes("<think>")) {
-                // Remover tags de thinking
-                const cleanContent = content
-                  .replace(/<think>[\s\S]*?<\/think>/g, "")
-                  .replace(/<think>/g, "")
-                  .replace(/<\/think>/g, "");
-                fullContent += cleanContent;
-              }
-            }
-          } catch (e) {
-            // Ignorar linhas que não são JSON
-          }
-        }
-      }
-    });
-
-    stream.on("end", () => {
-      resolve(fullContent.trim());
-    });
-
-    stream.on("error", (err) => {
-      reject(err);
-    });
-  });
-}
-
-/**
  * Extrai JSON da resposta da IA
  */
 function extractJSON(text) {
@@ -125,33 +72,34 @@ function extractJSON(text) {
 }
 
 /**
- * Faz uma chamada à API NVIDIA com retry
+ * Faz uma chamada à API Perplexity com retry
  */
-async function callNvidiaAPI(prompt, retries = 2) {
+async function callPerplexityAPI(prompt, retries = 2) {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const response = await axios.post(
-        INVOKE_URL,
+        PERPLEXITY_URL,
         {
-          model: "moonshotai/kimi-k2.5",
+          model: "llama-3.1-sonar-small-128k-online",
           messages: [
+            {
+              role: "system",
+              content: "Você é um analista de futebol especializado em estatísticas e previsões. Responda sempre em JSON válido.",
+            },
             {
               role: "user",
               content: prompt,
             },
           ],
-          max_tokens: 1024,
-          temperature: 0.6,
-          top_p: 0.95,
-          stream: false,
-          thinking: { type: "disabled" },
+          max_tokens: 500,
+          temperature: 0.5,
         },
         {
           headers: {
             Authorization: `Bearer ${API_KEY}`,
             "Content-Type": "application/json",
           },
-          timeout: 60000, // 60 segundos por tentativa
+          timeout: 30000, // 30 segundos
         },
       );
 
@@ -161,7 +109,7 @@ async function callNvidiaAPI(prompt, retries = 2) {
       if (!content || content.length < 10) {
         if (attempt < retries) {
           console.log(`[AIPrediction] Resposta vazia, tentativa ${attempt + 1}/${retries + 1}...`);
-          await new Promise(r => setTimeout(r, 1000)); // Aguardar 1s antes de retry
+          await new Promise(r => setTimeout(r, 1000));
           continue;
         }
       }
@@ -170,7 +118,7 @@ async function callNvidiaAPI(prompt, retries = 2) {
     } catch (error) {
       if (attempt < retries) {
         console.log(`[AIPrediction] Erro na tentativa ${attempt + 1}, retrying: ${error.message}`);
-        await new Promise(r => setTimeout(r, 1500)); // Aguardar 1.5s antes de retry
+        await new Promise(r => setTimeout(r, 1500));
         continue;
       }
       throw error;
@@ -184,7 +132,7 @@ async function callNvidiaAPI(prompt, retries = 2) {
  */
 async function getMatchPrediction(match) {
   if (!API_KEY) {
-    console.error("[AIPrediction] NVIDIA_API_KEY não configurada");
+    console.error("[AIPrediction] PERPLEXITY_API_KEY não configurada");
     return null;
   }
 
@@ -202,7 +150,7 @@ async function getMatchPrediction(match) {
   try {
     console.log(`[AIPrediction] Gerando previsão para ${matchId}...`);
 
-    const fullResponse = await callNvidiaAPI(generateMatchPrompt(match));
+    const fullResponse = await callPerplexityAPI(generateMatchPrompt(match));
     
     console.log(
       `[AIPrediction] Raw response length: ${fullResponse.length}, preview: ${fullResponse.substring(0, 300)}`,
