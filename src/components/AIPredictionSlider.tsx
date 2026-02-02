@@ -69,7 +69,7 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
           duration: 1500,
           useNativeDriver: true,
         }),
-      ])
+      ]),
     );
     animation.start();
     return () => animation.stop();
@@ -82,7 +82,7 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
         toValue: 1,
         duration: 2000,
         useNativeDriver: true,
-      })
+      }),
     );
     animation.start();
     return () => animation.stop();
@@ -136,7 +136,19 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
 
   const formatMatchTime = (dateString: string) => {
     try {
-      const date = new Date(dateString);
+      // Handle numeric timestamp strings (e.g., "1770062400000")
+      let date: Date;
+      if (/^\d+$/.test(dateString)) {
+        date = new Date(parseInt(dateString, 10));
+      } else {
+        date = new Date(dateString);
+      }
+
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return "--:--";
+      }
+
       return date.toLocaleTimeString("pt-BR", {
         hour: "2-digit",
         minute: "2-digit",
@@ -175,15 +187,10 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
       <View style={styles.sectionHeader}>
         <View style={styles.sectionTitleContainer}>
           <Animated.View
-            style={[
-              styles.iconWrapper,
-              { transform: [{ scale: pulseAnim }] },
-            ]}
-          >
+            style={[styles.iconWrapper, { transform: [{ scale: pulseAnim }] }]}>
             <LinearGradient
               colors={["#a855f7", "#6366f1"]}
-              style={styles.iconGradient}
-            >
+              style={styles.iconGradient}>
               <Brain size={18} color="#ffffff" />
             </LinearGradient>
           </Animated.View>
@@ -205,21 +212,18 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
         decelerationRate="fast"
         contentContainerStyle={styles.scrollContent}
         onScroll={handleScroll}
-        scrollEventThrottle={16}
-      >
+        scrollEventThrottle={16}>
         {predictions.map((prediction, index) => (
           <TouchableOpacity
             key={prediction.matchId}
             activeOpacity={0.9}
             onPress={() => onPressPrediction?.(prediction)}
-            style={styles.cardWrapper}
-          >
+            style={styles.cardWrapper}>
             <LinearGradient
               colors={["#1e1b4b", "#312e81", "#1e1b4b"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={styles.card}
-            >
+              style={styles.card}>
               {/* Header */}
               <View style={styles.cardHeader}>
                 <View style={styles.leagueInfo}>
@@ -247,7 +251,11 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
                   <View style={styles.teamLogoContainer}>
                     <View style={styles.teamLogoGlow} />
                     <Image
-                      source={{ uri: prediction.homeTeam.logo || "https://via.placeholder.com/50" }}
+                      source={{
+                        uri:
+                          prediction.homeTeam.logo ||
+                          "https://via.placeholder.com/50",
+                      }}
                       style={styles.teamLogo}
                     />
                   </View>
@@ -276,7 +284,11 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
                   <View style={styles.teamLogoContainer}>
                     <View style={styles.teamLogoGlow} />
                     <Image
-                      source={{ uri: prediction.awayTeam.logo || "https://via.placeholder.com/50" }}
+                      source={{
+                        uri:
+                          prediction.awayTeam.logo ||
+                          "https://via.placeholder.com/50",
+                      }}
                       style={styles.teamLogo}
                     />
                   </View>
@@ -321,15 +333,18 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
                   <View
                     style={[
                       styles.confidenceDot,
-                      { backgroundColor: getConfidenceColor(prediction.confidence) },
+                      {
+                        backgroundColor: getConfidenceColor(
+                          prediction.confidence,
+                        ),
+                      },
                     ]}
                   />
                   <Text
                     style={[
                       styles.confidenceText,
                       { color: getConfidenceColor(prediction.confidence) },
-                    ]}
-                  >
+                    ]}>
                     {getConfidenceText(prediction.confidence)}
                   </Text>
                 </View>
