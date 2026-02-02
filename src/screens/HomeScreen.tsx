@@ -658,14 +658,22 @@ export const HomeScreen = ({ navigation }: any) => {
         today.getMonth() + 1,
       ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
-      // Clear calendar caches
+      // Clear calendar caches and live_around caches
       for (const leagueId of leagueIds) {
         await AsyncStorage.removeItem(
           `msn_sports_cache_calendar_v2_${leagueId}_${todayStr}`,
         );
+        // Also clear live_around cache
+        await AsyncStorage.removeItem(
+          `msn_sports_cache_live_around_${leagueId}`,
+        );
+        // Clear schedule cache for today
+        await AsyncStorage.removeItem(
+          `msn_sports_cache_schedule_v3_${leagueId}_${todayStr}`,
+        );
       }
 
-      console.log("[HomeScreen] Cleared calendar caches, refetching...");
+      console.log("[HomeScreen] Cleared all caches, refetching...");
 
       // Refetch calendar with fresh data
       await fetchMatchCalendar();

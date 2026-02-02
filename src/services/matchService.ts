@@ -279,6 +279,19 @@ export const matchService = {
       const now = new Date();
       const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
+      // Helper function to check if a match is from today
+      const isMatchFromToday = (match: Match): boolean => {
+        const matchDate = new Date(match.fixture.date);
+        const matchDateStr = `${matchDate.getFullYear()}-${String(matchDate.getMonth() + 1).padStart(2, "0")}-${String(matchDate.getDate()).padStart(2, "0")}`;
+        return matchDateStr === todayStr;
+      };
+
+      // Helper function to check if a match is not finished
+      const isMatchNotFinished = (match: Match): boolean => {
+        const status = match.fixture.status?.short?.toUpperCase() || "";
+        return !["FT", "AET", "PEN", "PST", "CANC", "ABD", "AWD", "WO"].includes(status);
+      };
+
       // Try each league: MSN first, then football-data fallback
       for (const league of leagueMapping) {
         let leagueMatches: Match[] = [];
@@ -291,18 +304,46 @@ export const matchService = {
           );
 
           if (games && games.length > 0) {
-            leagueMatches = games.map((game: any) =>
+            const allMatches = games.map((game: any) =>
               transformMsnGameToMatch(game)
             );
-            console.log(
-              `[MatchService] ✓ ${league.name}: ${leagueMatches.length} matches from MSN Sports (live)`
+            
+            // Filter to keep only today's matches that are not finished
+            const todayActiveMatches = allMatches.filter(
+              (m: Match) => isMatchFromToday(m) && isMatchNotFinished(m)
             );
+            
+            // Also include live/in-progress matches even if from previous days
+            const liveMatches = allMatches.filter(
+              (m: Match) => {
+                const status = m.fixture.status?.short?.toUpperCase() || "";
+                return ["1H", "2H", "HT", "ET", "P", "BT", "LIVE"].includes(status);
+              }
+            );
+            
+            // Combine: today's active + any live matches (deduplicated)
+            const matchIds = new Set<number>();
+            leagueMatches = [...todayActiveMatches, ...liveMatches].filter((m: Match) => {
+              if (matchIds.has(m.fixture.id)) return false;
+              matchIds.add(m.fixture.id);
+              return true;
+            });
+            
+            if (leagueMatches.length > 0) {
+              console.log(
+                `[MatchService] ✓ ${league.name}: ${leagueMatches.length} active matches from MSN Sports (live)`
+              );
+            } else {
+              console.log(
+                `[MatchService] ○ ${league.name}: ${allMatches.length} matches found but none active for today`
+              );
+            }
           }
         } catch (error) {
           console.log(`[MatchService] ✗ ${league.name}: MSN Sports live failed`);
         }
 
-        // 2. If getLiveAroundLeague returned empty, try getScheduleByDate for today
+        // 2. If getLiveAroundLeague returned no active matches for today, try getScheduleByDate
         // This is especially important for leagues like Carioca that may have later games
         if (leagueMatches.length === 0) {
           try {
