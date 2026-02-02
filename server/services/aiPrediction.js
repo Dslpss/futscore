@@ -157,9 +157,11 @@ async function getMatchPrediction(match) {
           },
         ],
         max_tokens: 1024,
-        temperature: 0.7,
-        top_p: 1.0,
-        stream: false,  // Non-streaming for simpler parsing
+        temperature: 0.6,  // Instant mode recommended
+        top_p: 0.95,
+        stream: false,
+        // Instant mode - direct response without reasoning traces
+        thinking: { type: "disabled" },
       },
       {
         headers: {
