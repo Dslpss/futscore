@@ -649,15 +649,19 @@ export const api = {
   },
 
   // AI Predictions
-  getAIPredictions: async (): Promise<any[]> => {
+  getAIPredictions: async (forceRefresh: boolean = false): Promise<any[]> => {
     const cacheKey = "ai_predictions";
-    const cached = await getCachedData<any[]>(cacheKey);
-    if (cached) return cached;
+
+    // Skip cache if force refresh
+    if (!forceRefresh) {
+      const cached = await getCachedData<any[]>(cacheKey);
+      if (cached) return cached;
+    }
 
     try {
       console.log("[API] Fetching AI predictions...");
       const response = await axios.get(
-        `${CONFIG.BACKEND_URL}/api/ai-predictions/upcoming`,
+        `${CONFIG.BACKEND_URL}/api/ai-predictions/upcoming?refresh=${forceRefresh}`,
       );
 
       if (response.data?.success && response.data?.predictions) {
