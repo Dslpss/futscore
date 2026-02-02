@@ -61,13 +61,18 @@ async function fetchMSNUpcomingMatches() {
     { id: "Soccer_SpainLaLiga", name: "La Liga" },
     { id: "Soccer_EnglandPremierLeague", name: "Premier League" },
     { id: "Soccer_BrazilPaulistaSerieA1", name: "Campeonato Paulista" },
+    { id: "Soccer_ItalySerieA", name: "Serie A" },
+    { id: "Soccer_GermanyBundesliga", name: "Bundesliga" },
   ];
 
   const matches = [];
+  const now = new Date();
+  const tomorrow = new Date(now.getTime() + 48 * 60 * 60 * 1000); // próximas 48h
 
   for (const league of leagues) {
     try {
-      const now = new Date();
+      console.log(`[AIPredictions] Buscando partidas de ${league.name}...`);
+      
       const params = new URLSearchParams({
         version: "1.0",
         cm: "pt-br",
@@ -78,45 +83,53 @@ async function fetchMSNUpcomingMatches() {
         id: league.id,
         sport: "Soccer",
         datetime: now.toISOString().split(".")[0],
-        tzoffset: Math.floor(-now.getTimezoneOffset() / 60).toString(),
+        tzoffset: "-3",
       });
 
       const response = await axios.get(
         `${MSN_API_BASE}/livearoundtheleague?${params}`,
         {
           headers: {
-            "User-Agent": "Mozilla/5.0",
-            Accept: "*/*",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            Accept: "application/json",
           },
-          timeout: 5000,
+          timeout: 10000,
         }
       );
 
       const schedules = response.data?.value?.[0]?.schedules || [];
+      console.log(`[AIPredictions] ${league.name}: ${schedules.length} schedules encontrados`);
       
       for (const schedule of schedules) {
         const games = schedule.games || [];
         
         for (const game of games) {
           const gameStatus = game.gameState?.gameStatus?.toLowerCase() || "";
-          const isScheduled = gameStatus === "pre" || gameStatus === "scheduled";
+          const startDateTime = game.startDateTime;
           
-          if (isScheduled) {
+          // Verificar se é uma partida futura (pre ou scheduled)
+          const isScheduled = gameStatus === "pre" || gameStatus === "scheduled" || gameStatus === "";
+          const matchTime = new Date(startDateTime).getTime();
+          const isFuture = matchTime > now.getTime() && matchTime < tomorrow.getTime();
+          
+          if (isScheduled && isFuture) {
             const homeTeam = game.participants?.[0];
             const awayTeam = game.participants?.[1];
             
-            matches.push({
-              id: game.id || game.liveId,
-              homeTeam: homeTeam?.team?.shortName?.rawName || homeTeam?.team?.name?.rawName || "Time Casa",
-              awayTeam: awayTeam?.team?.shortName?.rawName || awayTeam?.team?.name?.rawName || "Time Fora",
-              homeTeamLogo: homeTeam?.team?.image?.id ? 
-                `https://img-s-msn-com.akamaized.net/tenant/amp/entityid/${homeTeam.team.image.id}` : "",
-              awayTeamLogo: awayTeam?.team?.image?.id ?
-                `https://img-s-msn-com.akamaized.net/tenant/amp/entityid/${awayTeam.team.image.id}` : "",
-              startTime: game.startDateTime,
-              league: { name: league.name, logo: "" },
-              status: "scheduled",
-            });
+            if (homeTeam && awayTeam) {
+              matches.push({
+                id: game.id || game.liveId || `${homeTeam?.team?.id}-${awayTeam?.team?.id}`,
+                homeTeam: homeTeam?.team?.shortName?.rawName || homeTeam?.team?.name?.rawName || "Time Casa",
+                awayTeam: awayTeam?.team?.shortName?.rawName || awayTeam?.team?.name?.rawName || "Time Fora",
+                homeTeamLogo: homeTeam?.team?.image?.id ? 
+                  `https://img-s-msn-com.akamaized.net/tenant/amp/entityid/${homeTeam.team.image.id}` : "",
+                awayTeamLogo: awayTeam?.team?.image?.id ?
+                  `https://img-s-msn-com.akamaized.net/tenant/amp/entityid/${awayTeam.team.image.id}` : "",
+                startTime: startDateTime,
+                league: { name: league.name, logo: "" },
+                status: "scheduled",
+              });
+            }
           }
         }
       }
@@ -124,6 +137,8 @@ async function fetchMSNUpcomingMatches() {
       console.error(`[AIPredictions] Erro ao buscar ${league.name}:`, error.message);
     }
   }
+
+  console.log(`[AIPredictions] Total de partidas encontradas: ${matches.length}`);
 
   // Ordenar por horário
   matches.sort((a, b) =>
