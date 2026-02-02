@@ -80,7 +80,7 @@ async function callPerplexityAPI(prompt, retries = 2) {
       const response = await axios.post(
         PERPLEXITY_URL,
         {
-          model: "llama-3.1-sonar-small-128k-online",
+          model: "sonar",
           messages: [
             {
               role: "system",
