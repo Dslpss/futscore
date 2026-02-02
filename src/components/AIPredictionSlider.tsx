@@ -594,9 +594,15 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
                       <Sparkles size={16} color="#a855f7" />
                       <Text style={styles.modalAnalysisTitle}>Análise</Text>
                     </View>
-                    <Text style={styles.modalAnalysisText}>
-                      {selectedPrediction.analysis}
-                    </Text>
+                    <ScrollView 
+                      style={styles.modalAnalysisScroll}
+                      showsVerticalScrollIndicator={true}
+                      nestedScrollEnabled={true}
+                    >
+                      <Text style={styles.modalAnalysisText}>
+                        {selectedPrediction.analysis}
+                      </Text>
+                    </ScrollView>
                   </View>
 
                   {/* Confidence */}
@@ -1055,6 +1061,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     marginBottom: 10,
+  },
+  modalAnalysisScroll: {
+    maxHeight: 120,
   },
   modalAnalysisTitle: {
     color: "#a855f7",

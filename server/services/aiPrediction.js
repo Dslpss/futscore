@@ -60,34 +60,34 @@ REGRAS:
  * Limpa o texto da análise removendo citações, referências e caracteres indesejados
  */
 function cleanAnalysisText(text) {
-  if (!text || typeof text !== 'string') return 'Análise indisponível';
-  
+  if (!text || typeof text !== "string") return "Análise indisponível";
+
   let cleaned = text
     // Remove citações no formato [1], [2], etc
-    .replace(/\[\d+\]/g, '')
+    .replace(/\[\d+\]/g, "")
     // Remove URLs
-    .replace(/https?:\/\/[^\s]+/g, '')
+    .replace(/https?:\/\/[^\s]+/g, "")
     // Remove "Fonte:", "Ref:", etc
-    .replace(/\b(fonte|ref|referência|according to|source)s?:?\s*/gi, '')
+    .replace(/\b(fonte|ref|referência|according to|source)s?:?\s*/gi, "")
     // Remove aspas duplas e simples extras
-    .replace(/["""'']/g, '')
+    .replace(/["""'']/g, "")
     // Remove espaços múltiplos
-    .replace(/\s+/g, ' ')
+    .replace(/\s+/g, " ")
     // Remove pontuação repetida
-    .replace(/\.{2,}/g, '.')
+    .replace(/\.{2,}/g, ".")
     .trim();
-  
+
   // Garante que começa com letra maiúscula
   if (cleaned.length > 0) {
     cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
   }
-  
+
   // Limita tamanho
   if (cleaned.length > 200) {
-    cleaned = cleaned.substring(0, 197) + '...';
+    cleaned = cleaned.substring(0, 197) + "...";
   }
-  
-  return cleaned || 'Análise indisponível';
+
+  return cleaned || "Análise indisponível";
 }
 
 /**
