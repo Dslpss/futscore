@@ -46,13 +46,13 @@ Responda APENAS em JSON válido:
   "drawProbability": <número inteiro de 0 a 100>,
   "awayWinProbability": <número inteiro de 0 a 100>,
   "confidence": "high" ou "medium" ou "low",
-  "analysis": "<texto direto e objetivo sobre a partida, em português, entre 80 e 150 caracteres>"
+  "analysis": "<análise CURTA em português, MÁXIMO 80 caracteres>"
 }
 
 REGRAS:
 1. As 3 probabilidades devem somar exatamente 100
-2. A análise deve ser direta, sem citações ou referências
-3. Foque em: momento dos times, confronto direto e fator casa
+2. A análise deve ser MUITO curta e direta (máximo 80 caracteres)
+3. Foque no essencial: quem é favorito e por quê
 4. Não use aspas dentro do texto da análise`;
 }
 
@@ -83,8 +83,11 @@ function cleanAnalysisText(text) {
   }
 
   // Limita tamanho
-  if (cleaned.length > 200) {
-    cleaned = cleaned.substring(0, 197) + "...";
+  if (cleaned.length > 120) {
+    // Corta na última palavra completa antes do limite
+    const truncated = cleaned.substring(0, 117);
+    const lastSpace = truncated.lastIndexOf(' ');
+    cleaned = (lastSpace > 80 ? truncated.substring(0, lastSpace) : truncated) + '...';
   }
 
   return cleaned || "Análise indisponível";

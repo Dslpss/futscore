@@ -67,6 +67,7 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
   const [selectedPrediction, setSelectedPrediction] =
     useState<AIPrediction | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [analysisExpanded, setAnalysisExpanded] = useState(false);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const shimmerAnim = useRef(new Animated.Value(0)).current;
 
@@ -473,10 +474,10 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
         visible={modalVisible}
         transparent
         animationType="fade"
-        onRequestClose={() => setModalVisible(false)}>
+        onRequestClose={() => { setModalVisible(false); setAnalysisExpanded(false); }}>
         <Pressable
           style={styles.modalOverlay}
-          onPress={() => setModalVisible(false)}>
+          onPress={() => { setModalVisible(false); setAnalysisExpanded(false); }}>
           <Pressable
             style={styles.modalContent}
             onPress={(e) => e.stopPropagation()}>
@@ -492,7 +493,7 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
                   <Text style={styles.modalTitle}>Análise da IA</Text>
                 </View>
                 <TouchableOpacity
-                  onPress={() => setModalVisible(false)}
+                  onPress={() => { setModalVisible(false); setAnalysisExpanded(false); }}
                   style={styles.modalCloseButton}>
                   <X size={20} color="#ffffff" />
                 </TouchableOpacity>
@@ -594,15 +595,23 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
                       <Sparkles size={16} color="#a855f7" />
                       <Text style={styles.modalAnalysisTitle}>Análise</Text>
                     </View>
-                    <ScrollView 
-                      style={styles.modalAnalysisScroll}
-                      showsVerticalScrollIndicator={true}
-                      nestedScrollEnabled={true}
+                    <Text 
+                      style={styles.modalAnalysisText} 
+                      selectable={true}
+                      numberOfLines={analysisExpanded ? undefined : 3}
                     >
-                      <Text style={styles.modalAnalysisText}>
-                        {selectedPrediction.analysis}
-                      </Text>
-                    </ScrollView>
+                      {selectedPrediction.analysis}
+                    </Text>
+                    {selectedPrediction.analysis && selectedPrediction.analysis.length > 100 && (
+                      <TouchableOpacity 
+                        onPress={() => setAnalysisExpanded(!analysisExpanded)}
+                        style={styles.expandButton}
+                      >
+                        <Text style={styles.expandButtonText}>
+                          {analysisExpanded ? "Ver menos ▲" : "Ver mais ▼"}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
 
                   {/* Confidence */}
@@ -1062,9 +1071,6 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 10,
   },
-  modalAnalysisScroll: {
-    maxHeight: 120,
-  },
   modalAnalysisTitle: {
     color: "#a855f7",
     fontSize: 14,
@@ -1074,6 +1080,17 @@ const styles = StyleSheet.create({
     color: "#e4e4e7",
     fontSize: 14,
     lineHeight: 22,
+  },
+  expandButton: {
+    marginTop: 8,
+    alignSelf: "center",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  expandButtonText: {
+    color: "#a855f7",
+    fontSize: 13,
+    fontWeight: "600",
   },
   modalConfidenceContainer: {
     flexDirection: "row",
