@@ -9,9 +9,11 @@ import {
   Dimensions,
   Animated,
   ActivityIndicator,
+  Modal,
+  Pressable,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Brain, Sparkles, TrendingUp, ChevronRight } from "lucide-react-native";
+import { Brain, Sparkles, TrendingUp, ChevronRight, X } from "lucide-react-native";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width * 0.85;
@@ -52,8 +54,16 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
 }) => {
   const scrollViewRef = useRef<ScrollView>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [selectedPrediction, setSelectedPrediction] = useState<AIPrediction | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const shimmerAnim = useRef(new Animated.Value(0)).current;
+
+  const handlePredictionPress = (prediction: AIPrediction) => {
+    setSelectedPrediction(prediction);
+    setModalVisible(true);
+    onPressPrediction?.(prediction);
+  };
 
   // Animação de pulse para o ícone
   useEffect(() => {
@@ -217,7 +227,7 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
           <TouchableOpacity
             key={prediction.matchId}
             activeOpacity={0.9}
-            onPress={() => onPressPrediction?.(prediction)}
+            onPress={() => handlePredictionPress(prediction)}
             style={styles.cardWrapper}>
             <LinearGradient
               colors={["#1e1b4b", "#312e81", "#1e1b4b"]}
@@ -383,6 +393,169 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
           ))}
         </View>
       )}
+
+      {/* Modal de Detalhes */}
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setModalVisible(false)}>
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setModalVisible(false)}>
+          <Pressable
+            style={styles.modalContent}
+            onPress={(e) => e.stopPropagation()}>
+            <LinearGradient
+              colors={["#1e1b4b", "#312e81", "#1e1b4b"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.modalGradient}>
+              {/* Header */}
+              <View style={styles.modalHeader}>
+                <View style={styles.modalTitleContainer}>
+                  <Brain size={20} color="#a855f7" />
+                  <Text style={styles.modalTitle}>Análise da IA</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => setModalVisible(false)}
+                  style={styles.modalCloseButton}>
+                  <X size={20} color="#ffffff" />
+                </TouchableOpacity>
+              </View>
+
+              {selectedPrediction && (
+                <>
+                  {/* League */}
+                  <Text style={styles.modalLeague}>
+                    {selectedPrediction.league.name}
+                  </Text>
+
+                  {/* Teams */}
+                  <View style={styles.modalTeamsContainer}>
+                    <View style={styles.modalTeamSection}>
+                      {selectedPrediction.homeTeam.logo ? (
+                        <Image
+                          source={{ uri: selectedPrediction.homeTeam.logo }}
+                          style={styles.modalTeamLogo}
+                          resizeMode="contain"
+                        />
+                      ) : (
+                        <View style={styles.modalTeamLogoPlaceholder}>
+                          <Text style={styles.modalTeamLogoPlaceholderText}>⚽</Text>
+                        </View>
+                      )}
+                      <Text style={styles.modalTeamName} numberOfLines={2}>
+                        {selectedPrediction.homeTeam.name}
+                      </Text>
+                      <View style={styles.modalProbabilityBadge}>
+                        <Text style={styles.modalProbabilityText}>
+                          {selectedPrediction.homeTeam.winProbability}%
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.modalVsContainer}>
+                      <Text style={styles.modalVsText}>VS</Text>
+                      <View style={styles.modalDrawBadge}>
+                        <Text style={styles.modalDrawLabel}>Empate</Text>
+                        <Text style={styles.modalDrawValue}>
+                          {selectedPrediction.drawProbability}%
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.modalTeamSection}>
+                      {selectedPrediction.awayTeam.logo ? (
+                        <Image
+                          source={{ uri: selectedPrediction.awayTeam.logo }}
+                          style={styles.modalTeamLogo}
+                          resizeMode="contain"
+                        />
+                      ) : (
+                        <View style={styles.modalTeamLogoPlaceholder}>
+                          <Text style={styles.modalTeamLogoPlaceholderText}>⚽</Text>
+                        </View>
+                      )}
+                      <Text style={styles.modalTeamName} numberOfLines={2}>
+                        {selectedPrediction.awayTeam.name}
+                      </Text>
+                      <View style={styles.modalProbabilityBadge}>
+                        <Text style={styles.modalProbabilityText}>
+                          {selectedPrediction.awayTeam.winProbability}%
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Probability Bar */}
+                  <View style={styles.modalProbabilityBar}>
+                    <View
+                      style={[
+                        styles.modalProbBarHome,
+                        { flex: selectedPrediction.homeTeam.winProbability },
+                      ]}
+                    />
+                    <View
+                      style={[
+                        styles.modalProbBarDraw,
+                        { flex: selectedPrediction.drawProbability },
+                      ]}
+                    />
+                    <View
+                      style={[
+                        styles.modalProbBarAway,
+                        { flex: selectedPrediction.awayTeam.winProbability },
+                      ]}
+                    />
+                  </View>
+
+                  {/* Analysis */}
+                  <View style={styles.modalAnalysisContainer}>
+                    <View style={styles.modalAnalysisHeader}>
+                      <Sparkles size={16} color="#a855f7" />
+                      <Text style={styles.modalAnalysisTitle}>Análise</Text>
+                    </View>
+                    <Text style={styles.modalAnalysisText}>
+                      {selectedPrediction.analysis}
+                    </Text>
+                  </View>
+
+                  {/* Confidence */}
+                  <View style={styles.modalConfidenceContainer}>
+                    <Text style={styles.modalConfidenceLabel}>
+                      Confiança da previsão:
+                    </Text>
+                    <View
+                      style={[
+                        styles.modalConfidenceBadge,
+                        selectedPrediction.confidence === "high" &&
+                          styles.confidenceHigh,
+                        selectedPrediction.confidence === "medium" &&
+                          styles.confidenceMedium,
+                        selectedPrediction.confidence === "low" &&
+                          styles.confidenceLow,
+                      ]}>
+                      <Text style={styles.modalConfidenceText}>
+                        {selectedPrediction.confidence === "high"
+                          ? "Alta"
+                          : selectedPrediction.confidence === "medium"
+                            ? "Média"
+                            : "Baixa"}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Match Time */}
+                  <Text style={styles.modalMatchTime}>
+                    🕐 {formatMatchTime(selectedPrediction.matchDate)}
+                  </Text>
+                </>
+              )}
+            </LinearGradient>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 };
@@ -656,6 +829,199 @@ const styles = StyleSheet.create({
   paginationDotActive: {
     width: 20,
     backgroundColor: "#a855f7",
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  modalContent: {
+    width: "100%",
+    maxWidth: 400,
+    borderRadius: 24,
+    overflow: "hidden",
+  },
+  modalGradient: {
+    padding: 20,
+    borderWidth: 1,
+    borderColor: "rgba(168, 85, 247, 0.4)",
+    borderRadius: 24,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  modalTitleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  modalTitle: {
+    color: "#ffffff",
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  modalLeague: {
+    color: "#a1a1aa",
+    fontSize: 13,
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  modalTeamsContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 16,
+  },
+  modalTeamSection: {
+    flex: 1,
+    alignItems: "center",
+    gap: 8,
+  },
+  modalTeamLogo: {
+    width: 60,
+    height: 60,
+    resizeMode: "contain",
+  },
+  modalTeamLogoPlaceholder: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "rgba(168, 85, 247, 0.3)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalTeamLogoPlaceholderText: {
+    fontSize: 28,
+  },
+  modalTeamName: {
+    color: "#ffffff",
+    fontSize: 13,
+    fontWeight: "600",
+    textAlign: "center",
+    maxWidth: 100,
+  },
+  modalProbabilityBadge: {
+    backgroundColor: "rgba(99, 102, 241, 0.4)",
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  modalProbabilityText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  modalVsContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 8,
+  },
+  modalVsText: {
+    color: "#52525b",
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 8,
+  },
+  modalDrawBadge: {
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  modalDrawLabel: {
+    color: "#71717a",
+    fontSize: 10,
+    fontWeight: "500",
+  },
+  modalDrawValue: {
+    color: "#a1a1aa",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  modalProbabilityBar: {
+    flexDirection: "row",
+    height: 6,
+    borderRadius: 3,
+    overflow: "hidden",
+    marginBottom: 20,
+  },
+  modalProbBarHome: {
+    backgroundColor: "#6366f1",
+  },
+  modalProbBarDraw: {
+    backgroundColor: "#71717a",
+  },
+  modalProbBarAway: {
+    backgroundColor: "#a855f7",
+  },
+  modalAnalysisContainer: {
+    backgroundColor: "rgba(168, 85, 247, 0.1)",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "rgba(168, 85, 247, 0.2)",
+  },
+  modalAnalysisHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 10,
+  },
+  modalAnalysisTitle: {
+    color: "#a855f7",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  modalAnalysisText: {
+    color: "#e4e4e7",
+    fontSize: 14,
+    lineHeight: 22,
+  },
+  modalConfidenceContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    marginBottom: 12,
+  },
+  modalConfidenceLabel: {
+    color: "#a1a1aa",
+    fontSize: 13,
+  },
+  modalConfidenceBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  confidenceHigh: {
+    backgroundColor: "rgba(34, 197, 94, 0.3)",
+  },
+  confidenceMedium: {
+    backgroundColor: "rgba(234, 179, 8, 0.3)",
+  },
+  confidenceLow: {
+    backgroundColor: "rgba(239, 68, 68, 0.3)",
+  },
+  modalConfidenceText: {
+    color: "#ffffff",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  modalMatchTime: {
+    color: "#71717a",
+    fontSize: 12,
+    textAlign: "center",
   },
 });
 
