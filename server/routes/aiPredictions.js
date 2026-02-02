@@ -56,18 +56,17 @@ async function fetchMSNUpcomingMatches() {
   const MSN_API_KEY = "kO1dI4ptCTTylLkPL1ZTHYP8JhLKb8mRDoA5yotmNJ";
 
   const leagues = [
-    { id: "Soccer_BrazilBrasileiroSerieA", name: "Brasileirão" },
-    { id: "Soccer_InternationalClubsUEFAChampionsLeague", name: "Champions League" },
-    { id: "Soccer_SpainLaLiga", name: "La Liga" },
     { id: "Soccer_EnglandPremierLeague", name: "Premier League" },
-    { id: "Soccer_BrazilPaulistaSerieA1", name: "Campeonato Paulista" },
+    { id: "Soccer_SpainLaLiga", name: "La Liga" },
     { id: "Soccer_ItalySerieA", name: "Serie A" },
     { id: "Soccer_GermanyBundesliga", name: "Bundesliga" },
+    { id: "Soccer_InternationalClubsUEFAChampionsLeague", name: "Champions League" },
+    { id: "Soccer_BrazilBrasileiroSerieA", name: "Brasileirão" },
+    { id: "Soccer_BrazilPaulistaSerieA1", name: "Campeonato Paulista" },
   ];
 
   const matches = [];
   const now = new Date();
-  const tomorrow = new Date(now.getTime() + 48 * 60 * 60 * 1000); // próximas 48h
 
   for (const league of leagues) {
     try {
@@ -98,27 +97,32 @@ async function fetchMSNUpcomingMatches() {
       );
 
       const schedules = response.data?.value?.[0]?.schedules || [];
-      console.log(`[AIPredictions] ${league.name}: ${schedules.length} schedules encontrados`);
+      console.log(`[AIPredictions] ${league.name}: ${schedules.length} schedules`);
       
       for (const schedule of schedules) {
         const games = schedule.games || [];
         
         for (const game of games) {
-          const gameStatus = game.gameState?.gameStatus?.toLowerCase() || "";
           const startDateTime = game.startDateTime;
-          
-          // Verificar se é uma partida futura (pre ou scheduled)
-          const isScheduled = gameStatus === "pre" || gameStatus === "scheduled" || gameStatus === "";
           const matchTime = new Date(startDateTime).getTime();
-          const isFuture = matchTime > now.getTime() && matchTime < tomorrow.getTime();
+          const gameStatus = game.gameState?.gameStatus?.toLowerCase() || "";
           
-          if (isScheduled && isFuture) {
+          // Pegar apenas partidas que ainda não terminaram (não são "final" ou "post")
+          const isFinished = gameStatus === "final" || gameStatus === "post" || gameStatus === "ft";
+          
+          // Verificar se é partida de hoje ou amanhã
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const dayAfterTomorrow = new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000);
+          const isInRange = matchTime >= today.getTime() && matchTime < dayAfterTomorrow.getTime();
+          
+          if (!isFinished && isInRange) {
             const homeTeam = game.participants?.[0];
             const awayTeam = game.participants?.[1];
             
             if (homeTeam && awayTeam) {
               matches.push({
-                id: game.id || game.liveId || `${homeTeam?.team?.id}-${awayTeam?.team?.id}`,
+                id: game.id || game.liveId || `${Date.now()}-${matches.length}`,
                 homeTeam: homeTeam?.team?.shortName?.rawName || homeTeam?.team?.name?.rawName || "Time Casa",
                 awayTeam: awayTeam?.team?.shortName?.rawName || awayTeam?.team?.name?.rawName || "Time Fora",
                 homeTeamLogo: homeTeam?.team?.image?.id ? 
@@ -127,12 +131,18 @@ async function fetchMSNUpcomingMatches() {
                   `https://img-s-msn-com.akamaized.net/tenant/amp/entityid/${awayTeam.team.image.id}` : "",
                 startTime: startDateTime,
                 league: { name: league.name, logo: "" },
-                status: "scheduled",
+                status: gameStatus || "scheduled",
               });
+              
+              console.log(`[AIPredictions] + ${homeTeam?.team?.shortName?.rawName} vs ${awayTeam?.team?.shortName?.rawName} (${gameStatus || 'scheduled'})`);
             }
           }
         }
       }
+      
+      // Parar após encontrar 10 partidas
+      if (matches.length >= 10) break;
+      
     } catch (error) {
       console.error(`[AIPredictions] Erro ao buscar ${league.name}:`, error.message);
     }
@@ -145,7 +155,7 @@ async function fetchMSNUpcomingMatches() {
     new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
   );
 
-  return matches.slice(0, 10); // Limitar a 10 partidas
+  return matches.slice(0, 10);
 }
 
 /**
