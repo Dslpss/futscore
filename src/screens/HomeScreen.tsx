@@ -1069,7 +1069,10 @@ export const HomeScreen = ({ navigation }: any) => {
   const fetchAIPredictions = async () => {
     setLoadingAIPredictions(true);
     try {
-      const response = await axios.get(`${CONFIG.BACKEND_URL}/api/ai-predictions/upcoming`);
+      // AI predictions can take 30+ seconds (5 predictions * ~5 sec each)
+      const response = await axios.get(`${CONFIG.BACKEND_URL}/api/ai-predictions/upcoming`, {
+        timeout: 90000, // 90 seconds timeout
+      });
       if (response.data.success && response.data.predictions) {
         setAIPredictions(response.data.predictions);
         console.log(`[HomeScreen] Loaded ${response.data.predictions.length} AI predictions`);

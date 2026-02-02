@@ -240,22 +240,28 @@ async function getMatchPrediction(match) {
 }
 
 /**
- * Obtém previsões para múltiplas partidas
+ * Obtém previsões para múltiplas partidas (processamento paralelo)
  */
 async function getMatchesPredictions(matches, limit = 5) {
-  const predictions = [];
-  
   // Limitar quantidade para não sobrecarregar a API
   const matchesToAnalyze = matches.slice(0, limit);
   
-  for (const match of matchesToAnalyze) {
-    const prediction = await getMatchPrediction(match);
-    if (prediction) {
-      predictions.push(prediction);
-    }
+  // Processar em paralelo (3 de cada vez para não sobrecarregar)
+  const batchSize = 3;
+  const predictions = [];
+  
+  for (let i = 0; i < matchesToAnalyze.length; i += batchSize) {
+    const batch = matchesToAnalyze.slice(i, i + batchSize);
+    const batchResults = await Promise.all(
+      batch.map(match => getMatchPrediction(match))
+    );
     
-    // Pequeno delay entre requisições
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    predictions.push(...batchResults.filter(p => p !== null));
+    
+    // Pequeno delay entre batches
+    if (i + batchSize < matchesToAnalyze.length) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
   }
   
   return predictions;
