@@ -13,7 +13,13 @@ import {
   Pressable,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Brain, Sparkles, TrendingUp, ChevronRight, X } from "lucide-react-native";
+import {
+  Brain,
+  Sparkles,
+  TrendingUp,
+  ChevronRight,
+  X,
+} from "lucide-react-native";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width * 0.85;
@@ -58,7 +64,8 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
 }) => {
   const scrollViewRef = useRef<ScrollView>(null);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [selectedPrediction, setSelectedPrediction] = useState<AIPrediction | null>(null);
+  const [selectedPrediction, setSelectedPrediction] =
+    useState<AIPrediction | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const shimmerAnim = useRef(new Animated.Value(0)).current;
@@ -66,39 +73,41 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
   // Validate and filter predictions to ensure all required fields exist
   const validPredictions = useMemo(() => {
     if (!predictions || !Array.isArray(predictions)) return [];
-    
-    return predictions.filter((p) => {
-      // Check required fields exist
-      if (!p || typeof p !== 'object') return false;
-      if (!p.matchId) return false;
-      if (!p.homeTeam || typeof p.homeTeam !== 'object') return false;
-      if (!p.awayTeam || typeof p.awayTeam !== 'object') return false;
-      if (typeof p.homeTeam.winProbability !== 'number') return false;
-      if (typeof p.awayTeam.winProbability !== 'number') return false;
-      if (typeof p.drawProbability !== 'number') return false;
-      return true;
-    }).map((p) => ({
-      ...p,
-      // Ensure all optional fields have defaults
-      homeTeam: {
-        name: p.homeTeam?.name || 'Time Casa',
-        logo: p.homeTeam?.logo || '',
-        winProbability: p.homeTeam?.winProbability ?? 33,
-      },
-      awayTeam: {
-        name: p.awayTeam?.name || 'Time Fora',
-        logo: p.awayTeam?.logo || '',
-        winProbability: p.awayTeam?.winProbability ?? 33,
-      },
-      drawProbability: p.drawProbability ?? 34,
-      analysis: p.analysis || 'Análise não disponível',
-      confidence: p.confidence || 'medium',
-      matchDate: p.matchDate || new Date().toISOString(),
-      league: {
-        name: p.league?.name || '',
-        logo: p.league?.logo || '',
-      },
-    }));
+
+    return predictions
+      .filter((p) => {
+        // Check required fields exist
+        if (!p || typeof p !== "object") return false;
+        if (!p.matchId) return false;
+        if (!p.homeTeam || typeof p.homeTeam !== "object") return false;
+        if (!p.awayTeam || typeof p.awayTeam !== "object") return false;
+        if (typeof p.homeTeam.winProbability !== "number") return false;
+        if (typeof p.awayTeam.winProbability !== "number") return false;
+        if (typeof p.drawProbability !== "number") return false;
+        return true;
+      })
+      .map((p) => ({
+        ...p,
+        // Ensure all optional fields have defaults
+        homeTeam: {
+          name: p.homeTeam?.name || "Time Casa",
+          logo: p.homeTeam?.logo || "",
+          winProbability: p.homeTeam?.winProbability ?? 33,
+        },
+        awayTeam: {
+          name: p.awayTeam?.name || "Time Fora",
+          logo: p.awayTeam?.logo || "",
+          winProbability: p.awayTeam?.winProbability ?? 33,
+        },
+        drawProbability: p.drawProbability ?? 34,
+        analysis: p.analysis || "Análise não disponível",
+        confidence: p.confidence || "medium",
+        matchDate: p.matchDate || new Date().toISOString(),
+        league: {
+          name: p.league?.name || "",
+          logo: p.league?.logo || "",
+        },
+      }));
   }, [predictions]);
 
   const handlePredictionPress = (prediction: AIPrediction) => {
@@ -507,7 +516,9 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
                         />
                       ) : (
                         <View style={styles.modalTeamLogoPlaceholder}>
-                          <Text style={styles.modalTeamLogoPlaceholderText}>⚽</Text>
+                          <Text style={styles.modalTeamLogoPlaceholderText}>
+                            ⚽
+                          </Text>
                         </View>
                       )}
                       <Text style={styles.modalTeamName} numberOfLines={2}>
@@ -539,7 +550,9 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
                         />
                       ) : (
                         <View style={styles.modalTeamLogoPlaceholder}>
-                          <Text style={styles.modalTeamLogoPlaceholderText}>⚽</Text>
+                          <Text style={styles.modalTeamLogoPlaceholderText}>
+                            ⚽
+                          </Text>
                         </View>
                       )}
                       <Text style={styles.modalTeamName} numberOfLines={2}>

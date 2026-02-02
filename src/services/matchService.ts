@@ -84,7 +84,7 @@ function shouldNotifyMatch(
   match: Match,
   favoriteTeams: number[],
   favoriteMatches: FavoriteMatchData[],
-  settings: NotificationSettings
+  settings: NotificationSettings,
 ): boolean {
   // Se allMatches está habilitado, notificar tudo
   if (settings.allMatches) {
@@ -108,14 +108,14 @@ function shouldNotifyMatch(
 // Helper para verificar se partida é favorita (por fixtureId ou msnGameId)
 function isMatchFavorited(
   match: Match,
-  favoriteMatches: FavoriteMatchData[]
+  favoriteMatches: FavoriteMatchData[],
 ): boolean {
   const fixtureId = match.fixture.id;
   const msnGameId = match.fixture.msnGameId;
 
   return favoriteMatches.some(
     (fav) =>
-      fav.fixtureId === fixtureId || (msnGameId && fav.msnGameId === msnGameId)
+      fav.fixtureId === fixtureId || (msnGameId && fav.msnGameId === msnGameId),
   );
 }
 
@@ -126,7 +126,10 @@ export const matchService = {
    * @param favoriteTeams List of favorite team IDs
    * @returns List of live matches
    */
-  checkMatchesAndNotify: async (favoriteTeams: number[] = [], forceRefresh: boolean = false) => {
+  checkMatchesAndNotify: async (
+    favoriteTeams: number[] = [],
+    forceRefresh: boolean = false,
+  ) => {
     // Proteção contra chamadas simultâneas/muito frequentes
     const now = Date.now();
     if (isCheckingMatches) {
@@ -139,19 +142,20 @@ export const matchService = {
       // Verificação em memória (rápida)
       if (now - lastCheckTime < MIN_CHECK_INTERVAL) {
         console.log(
-          "[MatchService] Called too soon (memory check), skipping to avoid duplicates..."
+          "[MatchService] Called too soon (memory check), skipping to avoid duplicates...",
         );
         return null; // Retorna null para indicar que a chamada foi ignorada
       }
 
       // Verificação persistente (evita duplicatas ao reabrir app)
       try {
-        const lastCheckPersisted = await AsyncStorage.getItem(LAST_CHECK_TIME_KEY);
+        const lastCheckPersisted =
+          await AsyncStorage.getItem(LAST_CHECK_TIME_KEY);
         if (lastCheckPersisted) {
           const lastCheckTimePersisted = parseInt(lastCheckPersisted, 10);
           if (now - lastCheckTimePersisted < MIN_CHECK_INTERVAL) {
             console.log(
-              "[MatchService] Called too soon (persistent check), skipping to avoid duplicates..."
+              "[MatchService] Called too soon (persistent check), skipping to avoid duplicates...",
             );
             // Atualizar a variável em memória para próximas verificações
             lastCheckTime = lastCheckTimePersisted;
@@ -159,10 +163,15 @@ export const matchService = {
           }
         }
       } catch (error) {
-        console.log("[MatchService] Error reading persistent check time:", error);
+        console.log(
+          "[MatchService] Error reading persistent check time:",
+          error,
+        );
       }
     } else {
-      console.log("[MatchService] Force refresh enabled, skipping time checks...");
+      console.log(
+        "[MatchService] Force refresh enabled, skipping time checks...",
+      );
     }
 
     isCheckingMatches = true;
@@ -177,13 +186,12 @@ export const matchService = {
 
     try {
       console.log(
-        "[MatchService] Checking matches with PRIORITY API (MSN → football-data)..."
+        "[MatchService] Checking matches with PRIORITY API (MSN → football-data)...",
       );
 
       const { msnSportsApi } = await import("./msnSportsApi");
-      const { transformMsnGameToMatch } = await import(
-        "../utils/msnTransformer"
-      );
+      const { transformMsnGameToMatch } =
+        await import("../utils/msnTransformer");
 
       // Define league mapping: MSN ID → football-data ID
       const leagueMapping = [
@@ -289,7 +297,16 @@ export const matchService = {
       // Helper function to check if a match is not finished
       const isMatchNotFinished = (match: Match): boolean => {
         const status = match.fixture.status?.short?.toUpperCase() || "";
-        return !["FT", "AET", "PEN", "PST", "CANC", "ABD", "AWD", "WO"].includes(status);
+        return ![
+          "FT",
+          "AET",
+          "PEN",
+          "PST",
+          "CANC",
+          "ABD",
+          "AWD",
+          "WO",
+        ].includes(status);
       };
 
       // Try each league: MSN first, then football-data fallback
@@ -300,64 +317,73 @@ export const matchService = {
         try {
           const games = await msnSportsApi.getLiveAroundLeague(
             league.msn,
-            league.sport
+            league.sport,
           );
 
           if (games && games.length > 0) {
             const allMatches = games.map((game: any) =>
-              transformMsnGameToMatch(game)
+              transformMsnGameToMatch(game),
             );
-            
+
             // Filter to keep only today's matches that are not finished
             const todayActiveMatches = allMatches.filter(
-              (m: Match) => isMatchFromToday(m) && isMatchNotFinished(m)
+              (m: Match) => isMatchFromToday(m) && isMatchNotFinished(m),
             );
-            
+
             // Also include live/in-progress matches even if from previous days
-            const liveMatches = allMatches.filter(
-              (m: Match) => {
-                const status = m.fixture.status?.short?.toUpperCase() || "";
-                return ["1H", "2H", "HT", "ET", "P", "BT", "LIVE"].includes(status);
-              }
-            );
-            
+            const liveMatches = allMatches.filter((m: Match) => {
+              const status = m.fixture.status?.short?.toUpperCase() || "";
+              return ["1H", "2H", "HT", "ET", "P", "BT", "LIVE"].includes(
+                status,
+              );
+            });
+
             // Combine: today's active + any live matches (deduplicated)
             const matchIds = new Set<number>();
-            leagueMatches = [...todayActiveMatches, ...liveMatches].filter((m: Match) => {
-              if (matchIds.has(m.fixture.id)) return false;
-              matchIds.add(m.fixture.id);
-              return true;
-            });
-            
+            leagueMatches = [...todayActiveMatches, ...liveMatches].filter(
+              (m: Match) => {
+                if (matchIds.has(m.fixture.id)) return false;
+                matchIds.add(m.fixture.id);
+                return true;
+              },
+            );
+
             if (leagueMatches.length > 0) {
               console.log(
-                `[MatchService] ✓ ${league.name}: ${leagueMatches.length} active matches from MSN Sports (live)`
+                `[MatchService] ✓ ${league.name}: ${leagueMatches.length} active matches from MSN Sports (live)`,
               );
             } else {
               console.log(
-                `[MatchService] ○ ${league.name}: ${allMatches.length} matches found but none active for today`
+                `[MatchService] ○ ${league.name}: ${allMatches.length} matches found but none active for today`,
               );
             }
           }
         } catch (error) {
-          console.log(`[MatchService] ✗ ${league.name}: MSN Sports live failed`);
+          console.log(
+            `[MatchService] ✗ ${league.name}: MSN Sports live failed`,
+          );
         }
 
         // 2. If getLiveAroundLeague returned no active matches for today, try getScheduleByDate
         // This is especially important for leagues like Carioca that may have later games
         if (leagueMatches.length === 0) {
           try {
-            const scheduleGames = await msnSportsApi.getScheduleByDate(league.msn, todayStr);
+            const scheduleGames = await msnSportsApi.getScheduleByDate(
+              league.msn,
+              todayStr,
+            );
             if (scheduleGames && scheduleGames.length > 0) {
               leagueMatches = scheduleGames.map((game: any) =>
-                transformMsnGameToMatch({ ...game, seasonId: league.msn })
+                transformMsnGameToMatch({ ...game, seasonId: league.msn }),
               );
               console.log(
-                `[MatchService] ✓ ${league.name}: ${leagueMatches.length} matches from MSN Sports (schedule)`
+                `[MatchService] ✓ ${league.name}: ${leagueMatches.length} matches from MSN Sports (schedule)`,
               );
             }
           } catch (error) {
-            console.log(`[MatchService] ✗ ${league.name}: MSN Sports schedule failed`);
+            console.log(
+              `[MatchService] ✗ ${league.name}: MSN Sports schedule failed`,
+            );
           }
         }
 
@@ -368,7 +394,7 @@ export const matchService = {
             if (fixtures && fixtures.length > 0) {
               leagueMatches = fixtures;
               console.log(
-                `[MatchService] ✓ ${league.name}: ${leagueMatches.length} matches from football-data fallback`
+                `[MatchService] ✓ ${league.name}: ${leagueMatches.length} matches from football-data fallback`,
               );
             }
           } catch (error) {
@@ -386,19 +412,24 @@ export const matchService = {
       try {
         const { espnApi } = await import("./espnApi");
         const espnEvents = await espnApi.getIntercontinentalCupEvents();
-        
+
         if (espnEvents && espnEvents.length > 0) {
           // Transform ESPN events to Match format
           const intercontinentalMatches: Match[] = espnEvents.map((event) => {
-            const homeCompetitor = event.competitors?.find((c: any) => c.homeAway === "home");
-            const awayCompetitor = event.competitors?.find((c: any) => c.homeAway === "away");
-            
+            const homeCompetitor = event.competitors?.find(
+              (c: any) => c.homeAway === "home",
+            );
+            const awayCompetitor = event.competitors?.find(
+              (c: any) => c.homeAway === "away",
+            );
+
             // Map ESPN status to our format
             let statusShort = "NS";
             let statusLong = "Não Iniciado";
             if (event.status === "in") {
               statusShort = event.period === 1 ? "1H" : "2H";
-              statusLong = event.period === 1 ? "Primeiro Tempo" : "Segundo Tempo";
+              statusLong =
+                event.period === 1 ? "Primeiro Tempo" : "Segundo Tempo";
             } else if (event.status === "post") {
               statusShort = "FT";
               statusLong = "Encerrado";
@@ -408,7 +439,8 @@ export const matchService = {
             if (homeCompetitor?.scoringSummary) {
               homeCompetitor.scoringSummary.forEach((s: any) => {
                 scoringSummary.push({
-                  player: s.athlete?.shortName || s.athlete?.displayName || "Unknown",
+                  player:
+                    s.athlete?.shortName || s.athlete?.displayName || "Unknown",
                   minute: s.displayValue || "",
                   team: "home",
                 });
@@ -417,13 +449,14 @@ export const matchService = {
             if (awayCompetitor?.scoringSummary) {
               awayCompetitor.scoringSummary.forEach((s: any) => {
                 scoringSummary.push({
-                  player: s.athlete?.shortName || s.athlete?.displayName || "Unknown",
+                  player:
+                    s.athlete?.shortName || s.athlete?.displayName || "Unknown",
                   minute: s.displayValue || "",
                   team: "away",
                 });
               });
             }
-            
+
             return {
               fixture: {
                 id: parseInt(event.id) || Math.floor(Math.random() * 1000000),
@@ -433,7 +466,9 @@ export const matchService = {
                   long: statusLong,
                   elapsed: event.clock ? parseInt(event.clock) : undefined,
                 },
-                venue: event.location ? { name: event.location, city: "" } : undefined,
+                venue: event.location
+                  ? { name: event.location, city: "" }
+                  : undefined,
               },
               league: {
                 id: "FIC",
@@ -458,25 +493,39 @@ export const matchService = {
                 },
               },
               goals: {
-                home: homeCompetitor?.score ? parseInt(homeCompetitor.score) : null,
-                away: awayCompetitor?.score ? parseInt(awayCompetitor.score) : null,
+                home: homeCompetitor?.score
+                  ? parseInt(homeCompetitor.score)
+                  : null,
+                away: awayCompetitor?.score
+                  ? parseInt(awayCompetitor.score)
+                  : null,
               },
               score: {
                 halftime: { home: null, away: null },
-                fulltime: { 
-                  home: homeCompetitor?.score ? parseInt(homeCompetitor.score) : null, 
-                  away: awayCompetitor?.score ? parseInt(awayCompetitor.score) : null,
+                fulltime: {
+                  home: homeCompetitor?.score
+                    ? parseInt(homeCompetitor.score)
+                    : null,
+                  away: awayCompetitor?.score
+                    ? parseInt(awayCompetitor.score)
+                    : null,
                 },
               },
-              scoringSummary: scoringSummary.length > 0 ? scoringSummary : undefined,
+              scoringSummary:
+                scoringSummary.length > 0 ? scoringSummary : undefined,
             };
           });
-          
+
           allFixtures = [...allFixtures, ...intercontinentalMatches];
-          console.log(`[MatchService] ✓ Copa Intercontinental: ${intercontinentalMatches.length} matches from ESPN`);
+          console.log(
+            `[MatchService] ✓ Copa Intercontinental: ${intercontinentalMatches.length} matches from ESPN`,
+          );
         }
       } catch (error) {
-        console.log("[MatchService] ✗ Copa Intercontinental: ESPN fetch failed", error);
+        console.log(
+          "[MatchService] ✗ Copa Intercontinental: ESPN fetch failed",
+          error,
+        );
       }
 
       console.log(`[MatchService] Total unique matches: ${allFixtures.length}`);
@@ -493,7 +542,7 @@ export const matchService = {
         const status = m.fixture.status.short;
         return (
           ["1H", "2H", "HT", "ET", "P", "BT", "Q1", "Q2", "Q3", "Q4"].includes(
-            status
+            status,
           ) || status.startsWith("OT")
         );
       });
@@ -505,10 +554,10 @@ export const matchService = {
       const notificationSettings = await loadNotificationSettings();
 
       console.log(
-        `[MatchService] Notification settings: allMatches=${notificationSettings.allMatches}, favoritesOnly=${notificationSettings.favoritesOnly}, goals=${notificationSettings.goals}, matchStart=${notificationSettings.matchStart}`
+        `[MatchService] Notification settings: allMatches=${notificationSettings.allMatches}, favoritesOnly=${notificationSettings.favoritesOnly}, goals=${notificationSettings.goals}, matchStart=${notificationSettings.matchStart}`,
       );
       console.log(
-        `[MatchService] Favorite teams: ${favoriteTeams.length}, Favorite matches: ${favoriteMatches.length}`
+        `[MatchService] Favorite teams: ${favoriteTeams.length}, Favorite matches: ${favoriteMatches.length}`,
       );
 
       // Check for matches that just STARTED (notify all users)
@@ -517,7 +566,7 @@ export const matchService = {
           liveMatches,
           favoriteTeams,
           favoriteMatches,
-          notificationSettings
+          notificationSettings,
         );
       }
 
@@ -527,7 +576,7 @@ export const matchService = {
           liveMatches,
           favoriteTeams,
           favoriteMatches,
-          notificationSettings
+          notificationSettings,
         );
       }
 
@@ -537,20 +586,20 @@ export const matchService = {
           liveMatches,
           favoriteTeams,
           favoriteMatches,
-          notificationSettings
+          notificationSettings,
         );
       }
 
       // Check for FINISHED matches (notify all users)
       const finishedMatches = filteredFixtures.filter((m) =>
-        ["FT", "AET", "PEN"].includes(m.fixture.status.short)
+        ["FT", "AET", "PEN"].includes(m.fixture.status.short),
       );
       if (finishedMatches.length > 0) {
         await checkMatchFinished(
           finishedMatches,
           favoriteTeams,
           favoriteMatches,
-          notificationSettings
+          notificationSettings,
         );
       }
 
@@ -559,7 +608,7 @@ export const matchService = {
 
       // Schedule start notifications ONLY for relevant matches (based on settings)
       const upcomingMatches = filteredFixtures.filter((m) =>
-        ["NS", "TBD"].includes(m.fixture.status.short)
+        ["NS", "TBD"].includes(m.fixture.status.short),
       );
 
       // Filtrar apenas partidas que devem ser notificadas
@@ -571,7 +620,7 @@ export const matchService = {
             match,
             favoriteTeams,
             favoriteMatches,
-            notificationSettings
+            notificationSettings,
           )
         ) {
           await scheduleMatchStartNotification(match);
@@ -597,7 +646,7 @@ async function checkMatchStarted(
   currentMatches: Match[],
   favoriteTeams: number[],
   favoriteMatches: FavoriteMatchData[],
-  settings: NotificationSettings
+  settings: NotificationSettings,
 ) {
   // Se matchStart está desabilitado, não notificar
   if (!settings.matchStart) return;
@@ -608,7 +657,9 @@ async function checkMatchStarted(
       ? JSON.parse(notifiedJson)
       : [];
 
-    console.log(`[MatchService] Already notified matches in cache: ${notifiedMatches.length}`);
+    console.log(
+      `[MatchService] Already notified matches in cache: ${notifiedMatches.length}`,
+    );
 
     let hasChanges = false;
     const updatedNotified = [...notifiedMatches];
@@ -651,7 +702,7 @@ async function checkMatchStarted(
     if (hasChanges) {
       await AsyncStorage.setItem(
         NOTIFIED_MATCHES_KEY,
-        JSON.stringify(trimmedNotified)
+        JSON.stringify(trimmedNotified),
       );
     }
   } catch (error) {
@@ -663,7 +714,7 @@ async function checkScoreChanges(
   currentMatches: Match[],
   favoriteTeams: number[],
   favoriteMatches: FavoriteMatchData[],
-  settings: NotificationSettings
+  settings: NotificationSettings,
 ) {
   // Se goals está desabilitado, não notificar
   if (!settings.goals) return;
@@ -687,7 +738,9 @@ async function checkScoreChanges(
     let hasScoreChanges = false;
     let hasGoalChanges = false;
 
-    console.log(`[MatchService] Already notified goals in cache: ${notifiedGoals.length}`);
+    console.log(
+      `[MatchService] Already notified goals in cache: ${notifiedGoals.length}`,
+    );
 
     for (const match of currentMatches) {
       const matchId = match.fixture.id;
@@ -735,7 +788,7 @@ async function checkScoreChanges(
       } else {
         // Primeira vez vendo este jogo - apenas salvar o placar atual SEM notificar
         console.log(
-          `[MatchService] First time seeing match ${matchId}, saving score without notification`
+          `[MatchService] First time seeing match ${matchId}, saving score without notification`,
         );
       }
 
@@ -754,7 +807,7 @@ async function checkScoreChanges(
     if (hasScoreChanges) {
       await AsyncStorage.setItem(
         LAST_KNOWN_SCORES_KEY,
-        JSON.stringify(newScores)
+        JSON.stringify(newScores),
       );
     }
 
@@ -763,7 +816,7 @@ async function checkScoreChanges(
       const trimmedGoals = updatedNotifiedGoals.slice(-500);
       await AsyncStorage.setItem(
         NOTIFIED_GOALS_KEY,
-        JSON.stringify(trimmedGoals)
+        JSON.stringify(trimmedGoals),
       );
     }
   } catch (error) {
@@ -776,7 +829,7 @@ async function checkHalfTime(
   currentMatches: Match[],
   favoriteTeams: number[],
   favoriteMatches: FavoriteMatchData[],
-  settings: NotificationSettings
+  settings: NotificationSettings,
 ) {
   try {
     const notifiedJson = await AsyncStorage.getItem(NOTIFIED_HALFTIME_KEY);
@@ -822,7 +875,7 @@ async function checkHalfTime(
     if (hasChanges) {
       await AsyncStorage.setItem(
         NOTIFIED_HALFTIME_KEY,
-        JSON.stringify(trimmedNotified)
+        JSON.stringify(trimmedNotified),
       );
     }
   } catch (error) {
@@ -835,7 +888,7 @@ async function checkMatchFinished(
   finishedMatches: Match[],
   favoriteTeams: number[],
   favoriteMatches: FavoriteMatchData[],
-  settings: NotificationSettings
+  settings: NotificationSettings,
 ) {
   try {
     const notifiedJson = await AsyncStorage.getItem(NOTIFIED_FINISHED_KEY);
@@ -880,7 +933,7 @@ async function checkMatchFinished(
     if (hasChanges) {
       await AsyncStorage.setItem(
         NOTIFIED_FINISHED_KEY,
-        JSON.stringify(trimmedNotified)
+        JSON.stringify(trimmedNotified),
       );
     }
   } catch (error) {

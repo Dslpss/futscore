@@ -75,7 +75,9 @@ async function fetchMSNUpcomingMatches() {
 
   // Usar horário de Brasília (UTC-3) para garantir consistência
   const brasiliaOffset = -3 * 60; // -3 horas em minutos
-  const brasiliaTime = new Date(now.getTime() + (brasiliaOffset + now.getTimezoneOffset()) * 60000);
+  const brasiliaTime = new Date(
+    now.getTime() + (brasiliaOffset + now.getTimezoneOffset()) * 60000,
+  );
 
   // Gerar data no formato YYYY-MM-DD usando horário de Brasília
   const year = brasiliaTime.getFullYear();
@@ -83,7 +85,9 @@ async function fetchMSNUpcomingMatches() {
   const day = String(brasiliaTime.getDate()).padStart(2, "0");
   const dateStr = `${year}-${month}-${day}`;
 
-  console.log(`[AIPredictions] Buscando partidas para ${dateStr} (Brasília)...`);
+  console.log(
+    `[AIPredictions] Buscando partidas para ${dateStr} (Brasília)...`,
+  );
 
   // Buscar todas as ligas em paralelo para maior velocidade
   const leaguePromises = leagues.map(async (league) => {
@@ -166,7 +170,10 @@ async function fetchMSNUpcomingMatches() {
         // Filtrar por data usando horário de Brasília
         const gameDate = new Date(matchTime);
         // Converter para horário de Brasília
-        const gameBrasiliaTime = new Date(gameDate.getTime() + (brasiliaOffset + gameDate.getTimezoneOffset()) * 60000);
+        const gameBrasiliaTime = new Date(
+          gameDate.getTime() +
+            (brasiliaOffset + gameDate.getTimezoneOffset()) * 60000,
+        );
         const gameDateStr = `${gameBrasiliaTime.getFullYear()}-${String(gameBrasiliaTime.getMonth() + 1).padStart(2, "0")}-${String(gameBrasiliaTime.getDate()).padStart(2, "0")}`;
 
         if (gameDateStr !== dateStr) {
@@ -269,11 +276,19 @@ router.get("/upcoming", async (req, res) => {
     }
 
     const today = getTodayDateString();
-    const forceRefresh = req.query.refresh === "true" && req.query.adminKey === process.env.ADMIN_KEY;
+    const forceRefresh =
+      req.query.refresh === "true" &&
+      req.query.adminKey === process.env.ADMIN_KEY;
 
     // Verificar se já temos previsões para hoje no cache
-    if (!forceRefresh && predictionsCache.date === today && predictionsCache.data.length > 0) {
-      console.log(`[AIPredictions] Retornando ${predictionsCache.data.length} previsões do cache diário`);
+    if (
+      !forceRefresh &&
+      predictionsCache.date === today &&
+      predictionsCache.data.length > 0
+    ) {
+      console.log(
+        `[AIPredictions] Retornando ${predictionsCache.data.length} previsões do cache diário`,
+      );
       return res.json({
         success: true,
         predictions: predictionsCache.data,
@@ -286,20 +301,22 @@ router.get("/upcoming", async (req, res) => {
     // Se já está gerando, aguardar um pouco para ver se termina
     if (predictionsCache.isGenerating) {
       console.log("[AIPredictions] Geração em andamento, aguardando...");
-      
+
       // Aguardar até 30 segundos pela geração terminar
       const maxWait = 30000;
       const checkInterval = 2000;
       let waited = 0;
-      
+
       while (predictionsCache.isGenerating && waited < maxWait) {
-        await new Promise(r => setTimeout(r, checkInterval));
+        await new Promise((r) => setTimeout(r, checkInterval));
         waited += checkInterval;
       }
-      
+
       // Se terminou, retornar os dados
       if (!predictionsCache.isGenerating && predictionsCache.data.length > 0) {
-        console.log(`[AIPredictions] Geração terminou, retornando ${predictionsCache.data.length} previsões`);
+        console.log(
+          `[AIPredictions] Geração terminou, retornando ${predictionsCache.data.length} previsões`,
+        );
         return res.json({
           success: true,
           predictions: predictionsCache.data,
@@ -308,15 +325,18 @@ router.get("/upcoming", async (req, res) => {
           cacheDate: today,
         });
       }
-      
+
       // Se ainda está gerando ou terminou vazio, retornar status
-      console.log("[AIPredictions] Timeout aguardando geração, retornando status");
+      console.log(
+        "[AIPredictions] Timeout aguardando geração, retornando status",
+      );
       return res.json({
         success: true,
         predictions: predictionsCache.data,
         generatedAt: predictionsCache.generatedAt,
         generating: predictionsCache.isGenerating,
-        message: "Previsões estão sendo geradas, tente novamente em alguns segundos",
+        message:
+          "Previsões estão sendo geradas, tente novamente em alguns segundos",
       });
     }
 
@@ -334,7 +354,10 @@ router.get("/upcoming", async (req, res) => {
         now - matchesCache.timestamp < MATCHES_CACHE_TTL
       ) {
         matches = matchesCache.data;
-        console.log("[AIPredictions] Usando cache de partidas:", matches.length);
+        console.log(
+          "[AIPredictions] Usando cache de partidas:",
+          matches.length,
+        );
       } else {
         console.log("[AIPredictions] Buscando partidas frescas...");
         matches = await getUpcomingMatches();
@@ -348,7 +371,9 @@ router.get("/upcoming", async (req, res) => {
       if (matches.length === 0) {
         console.log("[AIPredictions] Tentando fallback...");
         matches = await fetchMSNUpcomingMatches();
-        console.log(`[AIPredictions] Fallback retornou ${matches.length} partidas`);
+        console.log(
+          `[AIPredictions] Fallback retornou ${matches.length} partidas`,
+        );
       }
 
       if (matches.length === 0) {
@@ -361,7 +386,9 @@ router.get("/upcoming", async (req, res) => {
       }
 
       // Gerar previsões da IA (UMA VEZ POR DIA)
-      console.log(`[AIPredictions] Gerando previsões para ${matches.length} partidas...`);
+      console.log(
+        `[AIPredictions] Gerando previsões para ${matches.length} partidas...`,
+      );
       const predictions = await getMatchesPredictions(matches, matches.length);
 
       // Salvar no cache diário
@@ -372,7 +399,9 @@ router.get("/upcoming", async (req, res) => {
         isGenerating: false,
       };
 
-      console.log(`[AIPredictions] ${predictions.length} previsões geradas e cacheadas para ${today}`);
+      console.log(
+        `[AIPredictions] ${predictions.length} previsões geradas e cacheadas para ${today}`,
+      );
 
       res.json({
         success: true,

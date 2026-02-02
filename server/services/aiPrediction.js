@@ -33,23 +33,61 @@ function generateMatchPrompt(match) {
   const homeForm = match.homeForm || match.teams?.home?.form || "";
   const awayForm = match.awayForm || match.teams?.away?.form || "";
 
-  return `Analise esta partida de futebol e forneça probabilidades de resultado:
+  return `Analise esta partida de futebol e forneça previsão:
 
 Partida: ${homeTeam} vs ${awayTeam}
 Competição: ${league}
-${homeForm ? `Forma recente ${homeTeam}: ${homeForm}` : ""}
-${awayForm ? `Forma recente ${awayTeam}: ${awayForm}` : ""}
+${homeForm ? `Últimos jogos ${homeTeam}: ${homeForm}` : ""}
+${awayForm ? `Últimos jogos ${awayTeam}: ${awayForm}` : ""}
 
-Responda APENAS em formato JSON válido, sem texto adicional:
+Responda APENAS em JSON válido:
 {
-  "homeWinProbability": <número de 0 a 100>,
-  "drawProbability": <número de 0 a 100>,
-  "awayWinProbability": <número de 0 a 100>,
-  "confidence": "<high|medium|low>",
-  "analysis": "<análise curta em português, máximo 100 caracteres>"
+  "homeWinProbability": <número inteiro de 0 a 100>,
+  "drawProbability": <número inteiro de 0 a 100>,
+  "awayWinProbability": <número inteiro de 0 a 100>,
+  "confidence": "high" ou "medium" ou "low",
+  "analysis": "<texto direto e objetivo sobre a partida, em português, entre 80 e 150 caracteres>"
 }
 
-IMPORTANTE: As 3 probabilidades devem somar exatamente 100.`;
+REGRAS:
+1. As 3 probabilidades devem somar exatamente 100
+2. A análise deve ser direta, sem citações ou referências
+3. Foque em: momento dos times, confronto direto e fator casa
+4. Não use aspas dentro do texto da análise`;
+}
+
+/**
+ * Limpa o texto da análise removendo citações, referências e caracteres indesejados
+ */
+function cleanAnalysisText(text) {
+  if (!text || typeof text !== 'string') return 'Análise indisponível';
+  
+  let cleaned = text
+    // Remove citações no formato [1], [2], etc
+    .replace(/\[\d+\]/g, '')
+    // Remove URLs
+    .replace(/https?:\/\/[^\s]+/g, '')
+    // Remove "Fonte:", "Ref:", etc
+    .replace(/\b(fonte|ref|referência|according to|source)s?:?\s*/gi, '')
+    // Remove aspas duplas e simples extras
+    .replace(/["""'']/g, '')
+    // Remove espaços múltiplos
+    .replace(/\s+/g, ' ')
+    // Remove pontuação repetida
+    .replace(/\.{2,}/g, '.')
+    .trim();
+  
+  // Garante que começa com letra maiúscula
+  if (cleaned.length > 0) {
+    cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+  }
+  
+  // Limita tamanho
+  if (cleaned.length > 200) {
+    cleaned = cleaned.substring(0, 197) + '...';
+  }
+  
+  return cleaned || 'Análise indisponível';
 }
 
 /**
@@ -84,7 +122,8 @@ async function callPerplexityAPI(prompt, retries = 2) {
           messages: [
             {
               role: "system",
-              content: "Você é um analista de futebol especializado em estatísticas e previsões. Responda sempre em JSON válido.",
+              content:
+                "Você é um analista de futebol especializado em estatísticas e previsões. Responda sempre em JSON válido.",
             },
             {
               role: "user",
@@ -104,21 +143,25 @@ async function callPerplexityAPI(prompt, retries = 2) {
       );
 
       const content = response.data?.choices?.[0]?.message?.content || "";
-      
+
       // Se resposta vazia, tentar novamente
       if (!content || content.length < 10) {
         if (attempt < retries) {
-          console.log(`[AIPrediction] Resposta vazia, tentativa ${attempt + 1}/${retries + 1}...`);
-          await new Promise(r => setTimeout(r, 1000));
+          console.log(
+            `[AIPrediction] Resposta vazia, tentativa ${attempt + 1}/${retries + 1}...`,
+          );
+          await new Promise((r) => setTimeout(r, 1000));
           continue;
         }
       }
-      
+
       return content;
     } catch (error) {
       if (attempt < retries) {
-        console.log(`[AIPrediction] Erro na tentativa ${attempt + 1}, retrying: ${error.message}`);
-        await new Promise(r => setTimeout(r, 1500));
+        console.log(
+          `[AIPrediction] Erro na tentativa ${attempt + 1}, retrying: ${error.message}`,
+        );
+        await new Promise((r) => setTimeout(r, 1500));
         continue;
       }
       throw error;
@@ -151,7 +194,7 @@ async function getMatchPrediction(match) {
     console.log(`[AIPrediction] Gerando previsão para ${matchId}...`);
 
     const fullResponse = await callPerplexityAPI(generateMatchPrompt(match));
-    
+
     console.log(
       `[AIPrediction] Raw response length: ${fullResponse.length}, preview: ${fullResponse.substring(0, 300)}`,
     );
@@ -202,7 +245,7 @@ async function getMatchPrediction(match) {
         winProbability: prediction.awayWinProbability || 33,
       },
       drawProbability: prediction.drawProbability || 34,
-      analysis: prediction.analysis || "Análise indisponível",
+      analysis: cleanAnalysisText(prediction.analysis),
       confidence: prediction.confidence || "medium",
       matchDate:
         match.startTime || match.fixture?.date || new Date().toISOString(),
