@@ -151,7 +151,7 @@ async function callNvidiaAPI(prompt, retries = 2) {
             Authorization: `Bearer ${API_KEY}`,
             "Content-Type": "application/json",
           },
-          timeout: 45000, // 45 segundos por tentativa
+          timeout: 60000, // 60 segundos por tentativa
         },
       );
 

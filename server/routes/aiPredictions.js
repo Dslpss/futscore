@@ -73,13 +73,17 @@ async function fetchMSNUpcomingMatches() {
   const matches = [];
   const now = new Date();
 
-  // Gerar data no formato YYYY-MM-DD (mesma lógica do HomeScreen)
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
+  // Usar horário de Brasília (UTC-3) para garantir consistência
+  const brasiliaOffset = -3 * 60; // -3 horas em minutos
+  const brasiliaTime = new Date(now.getTime() + (brasiliaOffset + now.getTimezoneOffset()) * 60000);
+
+  // Gerar data no formato YYYY-MM-DD usando horário de Brasília
+  const year = brasiliaTime.getFullYear();
+  const month = String(brasiliaTime.getMonth() + 1).padStart(2, "0");
+  const day = String(brasiliaTime.getDate()).padStart(2, "0");
   const dateStr = `${year}-${month}-${day}`;
 
-  console.log(`[AIPredictions] Buscando partidas para ${dateStr}...`);
+  console.log(`[AIPredictions] Buscando partidas para ${dateStr} (Brasília)...`);
 
   // Buscar todas as ligas em paralelo para maior velocidade
   const leaguePromises = leagues.map(async (league) => {
@@ -159,9 +163,11 @@ async function fetchMSNUpcomingMatches() {
           matchTime = new Date(startDateTime).getTime();
         }
 
-        // Filtrar por data (mesmo que o HomeScreen faz)
+        // Filtrar por data usando horário de Brasília
         const gameDate = new Date(matchTime);
-        const gameDateStr = `${gameDate.getFullYear()}-${String(gameDate.getMonth() + 1).padStart(2, "0")}-${String(gameDate.getDate()).padStart(2, "0")}`;
+        // Converter para horário de Brasília
+        const gameBrasiliaTime = new Date(gameDate.getTime() + (brasiliaOffset + gameDate.getTimezoneOffset()) * 60000);
+        const gameDateStr = `${gameBrasiliaTime.getFullYear()}-${String(gameBrasiliaTime.getMonth() + 1).padStart(2, "0")}-${String(gameBrasiliaTime.getDate()).padStart(2, "0")}`;
 
         if (gameDateStr !== dateStr) {
           continue; // Pular jogos de outras datas
