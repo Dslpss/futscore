@@ -31,7 +31,10 @@ import { useAuth } from "../context/AuthContext";
 import { MatchCard } from "../components/MatchCard";
 import { NextMatchWidget } from "../components/NextMatchWidget";
 import { UpcomingMatchesSlider } from "../components/UpcomingMatchesSlider";
-import { AIPredictionSlider, AIPrediction } from "../components/AIPredictionSlider";
+import {
+  AIPredictionSlider,
+  AIPrediction,
+} from "../components/AIPredictionSlider";
 import { LinearGradient } from "expo-linear-gradient";
 import { WarningCard } from "../components/WarningCard";
 import { UpdateModal } from "../components/UpdateModal";
@@ -41,8 +44,6 @@ import { PremiumFeaturesModal } from "../components/PremiumFeaturesModal";
 import { WorldCupModal } from "../components/WorldCupModal";
 import { TeamSearchBar } from "../components/TeamSearchBar";
 import { TVCardsSection } from "../components/TVCardsSection";
-import { AnnouncementCard } from "../components/AnnouncementCard";
-import { FavoriteLeaguesModal } from "../components/FavoriteLeaguesModal";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   Bell,
@@ -70,10 +71,6 @@ import {
 } from "../utils/matchHelpers";
 import { inferMsnTeamId } from "../utils/teamIdMapper";
 import { MSN_LEAGUE_MAP } from "../utils/msnTransformer";
-import { useSubscription } from "../hooks/useSubscription";
-import { PremiumTrialModal } from "../components/PremiumTrialModal";
-import { GiftPremiumModal } from "../components/GiftPremiumModal";
-import { Crown } from "lucide-react-native";
 
 const { width } = Dimensions.get("window");
 
@@ -91,7 +88,7 @@ interface TeamSearchInputProps {
   isFavoriteTeam: (id: number) => boolean;
   toggleFavoriteTeam: (
     id: number,
-    info: { name: string; logo: string; country: string; msnId?: string }
+    info: { name: string; logo: string; country: string; msnId?: string },
   ) => void;
 }
 
@@ -308,7 +305,7 @@ const TeamSearchInput = React.memo(
         </View>
       </View>
     );
-  }
+  },
 );
 
 const teamSearchStyles = StyleSheet.create({
@@ -531,7 +528,20 @@ interface Warning {
 }
 
 const WEEKDAYS = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"];
-const MONTHS = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
+const MONTHS = [
+  "JAN",
+  "FEV",
+  "MAR",
+  "ABR",
+  "MAI",
+  "JUN",
+  "JUL",
+  "AGO",
+  "SET",
+  "OUT",
+  "NOV",
+  "DEZ",
+];
 
 const getWeekday = (date: Date): string => WEEKDAYS[date.getDay()];
 const getMonthShort = (date: Date): string => MONTHS[date.getMonth()];
@@ -552,14 +562,11 @@ export const HomeScreen = ({ navigation }: any) => {
   } = useMatches();
   const {
     favoriteTeams,
-    favoriteLeagues,
     backendFavorites,
     toggleFavoriteTeam,
-    toggleFavoriteLeague,
     isFavoriteTeam,
   } = useFavorites();
   const { user, signOut } = useAuth();
-  const { isPremium, hasTrialAvailable, refreshSubscription, pendingGift, claimGift, claimingGift } = useSubscription();
   const [selectedLeague, setSelectedLeague] = useState<string>("ALL");
   const [warnings, setWarnings] = useState<Warning[]>([]);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
@@ -567,16 +574,13 @@ export const HomeScreen = ({ navigation }: any) => {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [showWorldCupModal, setShowWorldCupModal] = useState(false);
-  const [showTrialModal, setShowTrialModal] = useState(false);
-  const [showGiftModal, setShowGiftModal] = useState(false);
-  const [showFavoriteLeaguesModal, setShowFavoriteLeaguesModal] = useState(false);
 
   // Date Selection State
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [customMatches, setCustomMatches] = useState<Match[]>([]);
   const [loadingCustom, setLoadingCustom] = useState(false);
   const [daysWithMatches, setDaysWithMatches] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
 
   // League logos cache
@@ -587,6 +591,10 @@ export const HomeScreen = ({ navigation }: any) => {
     Array<{ teamId: number; match: Match }>
   >([]);
   const [loadingFavorites, setLoadingFavorites] = useState(false);
+
+  // AI Predictions State
+  const [aiPredictions, setAiPredictions] = useState<AIPrediction[]>([]);
+  const [loadingAIPredictions, setLoadingAIPredictions] = useState(false);
 
   // Team Search State
   const [teamSearchQuery, setTeamSearchQuery] = useState("");
@@ -602,10 +610,6 @@ export const HomeScreen = ({ navigation }: any) => {
     }>
   >([]);
   const [searchingTeams, setSearchingTeams] = useState(false);
-
-  // AI Predictions State
-  const [aiPredictions, setAIPredictions] = useState<AIPrediction[]>([]);
-  const [loadingAIPredictions, setLoadingAIPredictions] = useState(false);
 
   // Ref for league selector ScrollView to maintain position
   const leagueSelectorRef = useRef<ScrollView>(null);
@@ -642,6 +646,7 @@ export const HomeScreen = ({ navigation }: any) => {
         "Soccer_FranceLigue1",
         "Soccer_SpainLaLiga",
         "Soccer_PortugalPrimeiraLiga",
+        "Basketball_NBA",
         "Soccer_BrazilCarioca",
         "Soccer_BrazilMineiro",
         "Soccer_BrazilPaulistaSerieA1",
@@ -650,13 +655,13 @@ export const HomeScreen = ({ navigation }: any) => {
 
       const today = new Date();
       const todayStr = `${today.getFullYear()}-${String(
-        today.getMonth() + 1
+        today.getMonth() + 1,
       ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
       // Clear calendar caches
       for (const leagueId of leagueIds) {
         await AsyncStorage.removeItem(
-          `msn_sports_cache_calendar_v2_${leagueId}_${todayStr}`
+          `msn_sports_cache_calendar_v2_${leagueId}_${todayStr}`,
         );
       }
 
@@ -670,6 +675,8 @@ export const HomeScreen = ({ navigation }: any) => {
 
     if (isToday(selectedDate)) {
       await contextRefresh();
+      // Also refresh AI predictions
+      fetchAIPredictions();
     } else {
       await fetchMatchesForDate(selectedDate);
     }
@@ -698,6 +705,7 @@ export const HomeScreen = ({ navigation }: any) => {
           "Soccer_FranceLigue1",
           "Soccer_SpainLaLiga",
           "Soccer_PortugalPrimeiraLiga",
+          "Basketball_NBA",
           "Soccer_BrazilCarioca",
           "Soccer_BrazilMineiro",
           "Soccer_BrazilPaulistaSerieA1",
@@ -707,7 +715,7 @@ export const HomeScreen = ({ navigation }: any) => {
         // Clear schedule cache for selected date
         for (const leagueId of leagueIds) {
           await AsyncStorage.removeItem(
-            `msn_sports_cache_schedule_v3_${leagueId}_${dateStr}`
+            `msn_sports_cache_schedule_v3_${leagueId}_${dateStr}`,
           );
         }
         console.log(`[HomeScreen] Cleared schedule cache for ${dateStr}`);
@@ -721,7 +729,7 @@ export const HomeScreen = ({ navigation }: any) => {
   const fetchMatchesForDate = async (date: Date) => {
     setLoadingCustom(true);
     console.log(
-      `[HomeScreen] ========== fetchMatchesForDate STARTED ==========`
+      `[HomeScreen] ========== fetchMatchesForDate STARTED ==========`,
     );
     try {
       // Construct date string using local time to avoid timezone shifts
@@ -736,9 +744,8 @@ export const HomeScreen = ({ navigation }: any) => {
 
       // 2. Fetch from MSN Sports API using getScheduleByDate for specific date
       const { msnSportsApi } = await import("../services/msnSportsApi");
-      const { transformMsnGameToMatch } = await import(
-        "../utils/msnTransformer"
-      );
+      const { transformMsnGameToMatch } =
+        await import("../utils/msnTransformer");
 
       const msnLeagueIds = [
         "Soccer_BrazilBrasileiroSerieA", // Brasileirão
@@ -751,6 +758,7 @@ export const HomeScreen = ({ navigation }: any) => {
         "Soccer_FranceLigue1",
         "Soccer_SpainLaLiga", // La Liga
         "Soccer_PortugalPrimeiraLiga",
+        "Basketball_NBA",
         "Soccer_BrazilCarioca",
         "Soccer_BrazilMineiro",
         "Soccer_BrazilPaulistaSerieA1",
@@ -761,7 +769,7 @@ export const HomeScreen = ({ navigation }: any) => {
 
       // Fetch all leagues in parallel for faster loading
       console.log(
-        `[HomeScreen] Fetching ${msnLeagueIds.length} leagues in parallel for ${dateStr}...`
+        `[HomeScreen] Fetching ${msnLeagueIds.length} leagues in parallel for ${dateStr}...`,
       );
 
       const leaguePromises = msnLeagueIds.map(async (leagueId) => {
@@ -772,19 +780,19 @@ export const HomeScreen = ({ navigation }: any) => {
           if (leagueId === "Soccer_BrazilCopaDoBrasil") {
             console.log(`[HomeScreen] ⚽ COPA DO BRASIL - Date: ${dateStr}`);
             console.log(
-              `[HomeScreen] ⚽ COPA DO BRASIL - Games fetched: ${games.length}`
+              `[HomeScreen] ⚽ COPA DO BRASIL - Games fetched: ${games.length}`,
             );
           }
 
           const transformedGames = games.map((game: any) =>
-            transformMsnGameToMatch({ ...game, seasonId: leagueId })
+            transformMsnGameToMatch({ ...game, seasonId: leagueId }),
           );
 
           return transformedGames;
         } catch (error) {
           console.error(
             `[HomeScreen] Error fetching MSN Sports for ${leagueId}:`,
-            error
+            error,
           );
           return [];
         }
@@ -796,7 +804,7 @@ export const HomeScreen = ({ navigation }: any) => {
       });
 
       console.log(
-        `[HomeScreen] Fetched ${msnMatches.length} total MSN matches for ${dateStr}`
+        `[HomeScreen] Fetched ${msnMatches.length} total MSN matches for ${dateStr}`,
       );
 
       // 3. SPECIAL: Fetch FIFA Intercontinental Cup from ESPN (not available in MSN)
@@ -816,16 +824,16 @@ export const HomeScreen = ({ navigation }: any) => {
           });
 
           console.log(
-            `[HomeScreen] ⚽ ESPN Intercontinental: ${filtered.length}/${espnEvents.length} games for ${dateStr}`
+            `[HomeScreen] ⚽ ESPN Intercontinental: ${filtered.length}/${espnEvents.length} games for ${dateStr}`,
           );
 
           // Transform ESPN events to Match format
           const intercontinentalMatches: Match[] = filtered.map((event) => {
             const homeCompetitor = event.competitors?.find(
-              (c: any) => c.homeAway === "home"
+              (c: any) => c.homeAway === "home",
             );
             const awayCompetitor = event.competitors?.find(
-              (c: any) => c.homeAway === "away"
+              (c: any) => c.homeAway === "away",
             );
 
             let statusShort = "NS";
@@ -924,14 +932,14 @@ export const HomeScreen = ({ navigation }: any) => {
           if (intercontinentalMatches.length > 0) {
             msnMatches = [...msnMatches, ...intercontinentalMatches];
             console.log(
-              `[HomeScreen] ✓ Copa Intercontinental: ${intercontinentalMatches.length} matches from ESPN`
+              `[HomeScreen] ✓ Copa Intercontinental: ${intercontinentalMatches.length} matches from ESPN`,
             );
           }
         }
       } catch (error) {
         console.log(
           "[HomeScreen] ✗ Copa Intercontinental: ESPN fetch failed",
-          error
+          error,
         );
       }
 
@@ -942,10 +950,10 @@ export const HomeScreen = ({ navigation }: any) => {
       const copaDoBrasilBeforeDedupe = allMatches.filter(
         (m) =>
           m.league.name === "Copa do Brasil" ||
-          m.league.id?.toString().includes("CopaDoBrasil")
+          m.league.id?.toString().includes("CopaDoBrasil"),
       );
       console.log(
-        `[HomeScreen] ⚽ COPA DO BRASIL in allMatches (before dedupe): ${copaDoBrasilBeforeDedupe.length}`
+        `[HomeScreen] ⚽ COPA DO BRASIL in allMatches (before dedupe): ${copaDoBrasilBeforeDedupe.length}`,
       );
 
       // Remove duplicates based on team names
@@ -954,7 +962,7 @@ export const HomeScreen = ({ navigation }: any) => {
         return (
           index ===
           self.findIndex(
-            (m) => `${m.teams.home.name}-${m.teams.away.name}` === key
+            (m) => `${m.teams.home.name}-${m.teams.away.name}` === key,
           )
         );
       });
@@ -963,10 +971,10 @@ export const HomeScreen = ({ navigation }: any) => {
       const copaDoBrasilAfterDedupe = uniqueMatches.filter(
         (m) =>
           m.league.name === "Copa do Brasil" ||
-          m.league.id?.toString().includes("CopaDoBrasil")
+          m.league.id?.toString().includes("CopaDoBrasil"),
       );
       console.log(
-        `[HomeScreen] ⚽ COPA DO BRASIL in uniqueMatches (after dedupe): ${copaDoBrasilAfterDedupe.length}`
+        `[HomeScreen] ⚽ COPA DO BRASIL in uniqueMatches (after dedupe): ${copaDoBrasilAfterDedupe.length}`,
       );
       if (copaDoBrasilAfterDedupe.length > 0) {
         copaDoBrasilAfterDedupe.forEach((match, idx) => {
@@ -977,7 +985,7 @@ export const HomeScreen = ({ navigation }: any) => {
               away: match.teams.away.name,
               leagueName: match.league.name,
               leagueId: match.league.id,
-            }
+            },
           );
         });
       }
@@ -1024,7 +1032,7 @@ export const HomeScreen = ({ navigation }: any) => {
 
       setCustomMatches(matchesWithLogos);
       console.log(
-        `[HomeScreen] Fetched ${uniqueMatches.length} matches for ${dateStr}`
+        `[HomeScreen] Fetched ${uniqueMatches.length} matches for ${dateStr}`,
       );
     } catch (error) {
       console.error("Error fetching custom matches", error);
@@ -1065,40 +1073,27 @@ export const HomeScreen = ({ navigation }: any) => {
     // backendFavorites is loaded automatically by FavoritesContext
   }, []);
 
-  // Fetch AI predictions from backend
+  // Fetch AI Predictions
   const fetchAIPredictions = async () => {
     setLoadingAIPredictions(true);
     try {
-      // AI predictions can take 30+ seconds (5 predictions * ~5 sec each)
-      const response = await axios.get(`${CONFIG.BACKEND_URL}/api/ai-predictions/upcoming`, {
-        timeout: 90000, // 90 seconds timeout
-      });
-      if (response.data.success && response.data.predictions) {
-        setAIPredictions(response.data.predictions);
-        console.log(`[HomeScreen] Loaded ${response.data.predictions.length} AI predictions`);
-      }
-    } catch (error: any) {
-      console.log("[HomeScreen] AI predictions not available:", error.message);
-      // Silently fail - feature is optional
+      console.log("[HomeScreen] Fetching AI predictions...");
+      const predictions = await api.getAIPredictions();
+      console.log(`[HomeScreen] Got ${predictions.length} AI predictions`);
+      setAiPredictions(predictions);
+    } catch (error) {
+      console.error("[HomeScreen] Error fetching AI predictions:", error);
     } finally {
       setLoadingAIPredictions(false);
     }
   };
-
-  // Check for pending gift and show modal
-  useEffect(() => {
-    if (pendingGift && pendingGift.days > 0) {
-      console.log(`[HomeScreen] Pending gift found: ${pendingGift.days} days`);
-      setShowGiftModal(true);
-    }
-  }, [pendingGift]);
 
   useEffect(() => {
     // Use backend favorites if available (from context, updates automatically)
     if (backendFavorites.length > 0) {
       console.log(
         `[HomeScreen] Using ${backendFavorites.length} favorites from context:`,
-        backendFavorites.map((f) => f.name)
+        backendFavorites.map((f) => f.name),
       );
       fetchNextMatchesForFavorites(backendFavorites);
     } else if (favoriteTeams.length > 0) {
@@ -1116,7 +1111,7 @@ export const HomeScreen = ({ navigation }: any) => {
   }, [backendFavorites, favoriteTeams, todaysMatches, liveMatches]);
 
   const fetchNextMatchesForFavorites = async (
-    favorites: Array<{ id: number; name?: string; msnId?: string }>
+    favorites: Array<{ id: number; name?: string; msnId?: string }>,
   ) => {
     if (favorites.length === 0) {
       setFavoriteNextMatches([]);
@@ -1127,9 +1122,8 @@ export const HomeScreen = ({ navigation }: any) => {
     try {
       const results: Array<{ teamId: number; match: Match }> = [];
       const { msnSportsApi } = await import("../services/msnSportsApi");
-      const { transformMsnGameToMatch } = await import(
-        "../utils/msnTransformer"
-      );
+      const { transformMsnGameToMatch } =
+        await import("../utils/msnTransformer");
 
       // 1. Check if we already have the match in today's list or live list
       const availableMatches = [...liveMatches, ...todaysMatches];
@@ -1141,12 +1135,12 @@ export const HomeScreen = ({ navigation }: any) => {
           console.log(
             `[HomeScreen] Processing favorite team: ${teamId} (${
               fav.name || "unknown"
-            })`
+            })`,
           );
 
           // Check local first
           const localMatch = availableMatches.find(
-            (m) => m.teams.home.id === teamId || m.teams.away.id === teamId
+            (m) => m.teams.home.id === teamId || m.teams.away.id === teamId,
           );
 
           if (localMatch) {
@@ -1168,7 +1162,7 @@ export const HomeScreen = ({ navigation }: any) => {
             console.log(
               `[HomeScreen] Team ${teamId} MSN ID: ${
                 msnId || "NOT FOUND"
-              } (stored: ${!!fav.msnId})`
+              } (stored: ${!!fav.msnId})`,
             );
 
             if (msnId) {
@@ -1176,7 +1170,7 @@ export const HomeScreen = ({ navigation }: any) => {
               console.log(
                 `[HomeScreen] Team ${teamId} MSN games fetched: ${
                   msnGames?.length || 0
-                }`
+                }`,
               );
 
               // If no games found via team schedule, try fetching from league and filtering
@@ -1186,13 +1180,13 @@ export const HomeScreen = ({ navigation }: any) => {
                 if (leagueMatch) {
                   const leagueId = `Soccer_${leagueMatch[1]}`;
                   console.log(
-                    `[HomeScreen] Team ${teamId} trying league fallback: ${leagueId}`
+                    `[HomeScreen] Team ${teamId} trying league fallback: ${leagueId}`,
                   );
 
                   try {
                     const leagueGames = await msnSportsApi.getLiveAroundLeague(
                       leagueId,
-                      "Soccer"
+                      "Soccer",
                     );
                     // Filter games where this team is playing (by team name)
                     const teamName = fav.name?.toLowerCase() || "";
@@ -1216,13 +1210,13 @@ export const HomeScreen = ({ navigation }: any) => {
                     if (teamGames.length > 0) {
                       msnGames = teamGames;
                       console.log(
-                        `[HomeScreen] Team ${teamId} found ${teamGames.length} games via league fallback`
+                        `[HomeScreen] Team ${teamId} found ${teamGames.length} games via league fallback`,
                       );
                     }
                   } catch (leagueError) {
                     console.log(
                       `[HomeScreen] Team ${teamId} league fallback failed:`,
-                      leagueError
+                      leagueError,
                     );
                   }
                 }
@@ -1231,25 +1225,25 @@ export const HomeScreen = ({ navigation }: any) => {
               if (msnGames && msnGames.length > 0) {
                 // Find next upcoming game
                 const upcomingGame = msnGames.find(
-                  (game: any) => game.gameState?.gameStatus === "PreGame"
+                  (game: any) => game.gameState?.gameStatus === "PreGame",
                 );
 
                 if (upcomingGame) {
                   const match = transformMsnGameToMatch(upcomingGame);
                   console.log(
-                    `[HomeScreen] Team ${teamId} next match: ${match.teams.home.name} vs ${match.teams.away.name}`
+                    `[HomeScreen] Team ${teamId} next match: ${match.teams.home.name} vs ${match.teams.away.name}`,
                   );
                   results.push({ teamId, match });
                 } else {
                   console.log(
-                    `[HomeScreen] Team ${teamId} no upcoming PreGame found`
+                    `[HomeScreen] Team ${teamId} no upcoming PreGame found`,
                   );
                 }
               }
             } else {
               // Fallback to football-data.org (limited)
               console.log(
-                `[HomeScreen] Team ${teamId} using football-data.org fallback`
+                `[HomeScreen] Team ${teamId} using football-data.org fallback`,
               );
               const fallbackData = await api.getTeamUpcomingMatches(teamId, 1);
               if (fallbackData && fallbackData.length > 0) {
@@ -1258,24 +1252,24 @@ export const HomeScreen = ({ navigation }: any) => {
                 results.push({ teamId, match });
               } else {
                 console.log(
-                  `[HomeScreen] Team ${teamId} no fallback match found`
+                  `[HomeScreen] Team ${teamId} no fallback match found`,
                 );
               }
             }
           } catch (err) {
             console.log(
               `[HomeScreen] Error fetching next match for team ${teamId}`,
-              err
+              err,
             );
           }
-        })
+        }),
       );
 
       // Sort by date soonest first
       results.sort(
         (a, b) =>
           new Date(a.match.fixture.date).getTime() -
-          new Date(b.match.fixture.date).getTime()
+          new Date(b.match.fixture.date).getTime(),
       );
 
       setFavoriteNextMatches(results);
@@ -1307,14 +1301,14 @@ export const HomeScreen = ({ navigation }: any) => {
           const imageUrl = msnSportsApi.getLeagueImageUrl(league.image.id);
           logos[league.sportWithLeague] = imageUrl;
           console.log(
-            `[HomeScreen] Logo for ${league.sportWithLeague}: ${imageUrl}`
+            `[HomeScreen] Logo for ${league.sportWithLeague}: ${imageUrl}`,
           );
         }
       });
 
       setLeagueLogos(logos);
       console.log(
-        `[HomeScreen] Loaded ${Object.keys(logos).length} league logos`
+        `[HomeScreen] Loaded ${Object.keys(logos).length} league logos`,
       );
     } catch (error) {
       console.error("Error fetching league logos:", error);
@@ -1337,13 +1331,14 @@ export const HomeScreen = ({ navigation }: any) => {
         "Soccer_FranceLigue1",
         "Soccer_SpainLaLiga", // La Liga
         "Soccer_PortugalPrimeiraLiga",
+        "Basketball_NBA",
       ];
 
       const allDates = new Set<string>();
 
       // Fetch calendars in parallel
       const calendarPromises = leagueIds.map((id) =>
-        msnSportsApi.getLeagueCalendar(id).catch(() => ({ dates: [] }))
+        msnSportsApi.getLeagueCalendar(id).catch(() => ({ dates: [] })),
       );
 
       const results = await Promise.all(calendarPromises);
@@ -1355,7 +1350,7 @@ export const HomeScreen = ({ navigation }: any) => {
       setDaysWithMatches(allDates);
       console.log(
         `[HomeScreen] Found ${allDates.size} days with matches:`,
-        Array.from(allDates).slice(0, 10)
+        Array.from(allDates).slice(0, 10),
       );
     } catch (error) {
       console.error("Error fetching match calendar:", error);
@@ -1367,7 +1362,7 @@ export const HomeScreen = ({ navigation }: any) => {
       const response = await axios.get(`${CONFIG.BACKEND_URL}/admin/warnings`);
       // Deduplicate warnings
       const uniqueWarnings = Array.from(
-        new Map(response.data.map((w: Warning) => [w._id, w])).values()
+        new Map(response.data.map((w: Warning) => [w._id, w])).values(),
       );
       setWarnings(uniqueWarnings as Warning[]);
     } catch (error) {
@@ -1397,7 +1392,6 @@ export const HomeScreen = ({ navigation }: any) => {
   const leagues = [
     { code: "ALL", name: "Todos", icon: "🌍" },
     { code: "FAV", name: "Favoritos", icon: "⭐" },
-    { code: "MYLIG", name: "Minhas Ligas", icon: "🏆" },
     { code: "BSA", name: "Brasileirão", icon: "🇧🇷" },
     { code: "CDB", name: "Copa do Brasil", icon: "🏆" },
     { code: "CAR", name: "Carioca", icon: "🏟️" },
@@ -1410,6 +1404,7 @@ export const HomeScreen = ({ navigation }: any) => {
     { code: "SA", name: "Serie A", icon: "🇮🇹" },
     { code: "FL1", name: "Ligue 1", icon: "🇫🇷" },
     { code: "PPL", name: "Portugal", icon: "🇵🇹" },
+    { code: "NBA", name: "NBA", icon: "🏀" },
     { code: "FINISHED", name: "Finalizados", icon: "✅" },
   ];
 
@@ -1450,6 +1445,7 @@ export const HomeScreen = ({ navigation }: any) => {
           sport: "Soccer",
           country: "Portugal",
         },
+        { id: "Basketball_NBA", sport: "Basketball", country: "USA" },
         { id: "Soccer_BrazilCarioca", sport: "Soccer", country: "Brazil" },
         { id: "Soccer_BrazilMineiro", sport: "Soccer", country: "Brazil" },
         {
@@ -1478,7 +1474,7 @@ export const HomeScreen = ({ navigation }: any) => {
           try {
             const games = await msnSportsApi.getLiveAroundLeague(
               league.id,
-              league.sport
+              league.sport,
             );
             games.forEach((game: any) => {
               game.participants?.forEach((participant: any) => {
@@ -1507,7 +1503,7 @@ export const HomeScreen = ({ navigation }: any) => {
           } catch (error) {
             // Ignore errors for individual leagues
           }
-        })
+        }),
       );
 
       setSearchResults(Array.from(teamsMap.values()).slice(0, 10)); // Limit to 10 results
@@ -1744,15 +1740,6 @@ export const HomeScreen = ({ navigation }: any) => {
         }}
       />
 
-      {/* AI Predictions Slider */}
-      <AIPredictionSlider
-        predictions={aiPredictions}
-        loading={loadingAIPredictions}
-        onPressPrediction={(prediction) => {
-          console.log("AI Prediction clicked:", prediction);
-        }}
-      />
-
       {/* Upcoming Matches Slider - Games starting soon */}
       <UpcomingMatchesSlider
         matches={
@@ -1765,11 +1752,19 @@ export const HomeScreen = ({ navigation }: any) => {
         }}
       />
 
+      {/* AI Predictions Slider */}
+      {isToday(selectedDate) && (
+        <AIPredictionSlider
+          predictions={aiPredictions}
+          loading={loadingAIPredictions}
+          onPressPrediction={(prediction) => {
+            console.log("AI Prediction clicked:", prediction);
+          }}
+        />
+      )}
+
       {/* ESPN, OndeAssistir, and News Cards - Fully isolated component */}
       <TVCardsSection />
-
-      {/* Announcements */}
-      <AnnouncementCard onNavigate={(screen) => navigation.navigate(screen)} />
 
       {/* Action Buttons - Premium Card Container */}
       <View style={styles.actionButtonsWrapper}>
@@ -1786,7 +1781,7 @@ export const HomeScreen = ({ navigation }: any) => {
               <Text style={styles.actionButtonsTitle}>Ações Rápidas</Text>
             </View>
             <View style={styles.actionCountBadge}>
-              <Text style={styles.actionCountText}>10 atalhos</Text>
+              <Text style={styles.actionCountText}>8 atalhos</Text>
             </View>
           </View>
 
@@ -1869,6 +1864,7 @@ export const HomeScreen = ({ navigation }: any) => {
                   SA: "Soccer_ItalySerieA",
                   FL1: "Soccer_FranceLigue1",
                   PPL: "Soccer_PortugalPrimeiraLiga",
+                  NBA: "Basketball_NBA",
                 };
 
                 const targetLeague =
@@ -2019,84 +2015,6 @@ export const HomeScreen = ({ navigation }: any) => {
                 </View>
               </LinearGradient>
             </TouchableOpacity>
-
-            {/* Predictions Button - NEW */}
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => {
-                // Pass upcoming matches to predictions screen
-                const upcomingForPredictions = [
-                  ...liveMatches,
-                  ...todaysMatches,
-                  ...customMatches,
-                ]
-                  .filter(m => ["NS", "TBD", "TIMED"].includes(m.fixture.status.short))
-                  .slice(0, 20)
-                  .map(m => ({
-                    id: m.fixture.id.toString(),
-                    homeTeam: {
-                      name: m.teams.home.name,
-                      logo: m.teams.home.logo,
-                      id: m.teams.home.id?.toString(),
-                    },
-                    awayTeam: {
-                      name: m.teams.away.name,
-                      logo: m.teams.away.logo,
-                      id: m.teams.away.id?.toString(),
-                    },
-                    competition: {
-                      name: m.league.name,
-                      logo: m.league.logo,
-                    },
-                    date: m.fixture.date,
-                    status: m.fixture.status.short,
-                  }));
-
-                navigation.navigate("Predictions", { matches: upcomingForPredictions });
-              }}
-              activeOpacity={0.85}>
-              <LinearGradient
-                colors={["#1e4a3f", "#1a1a2e"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.actionButtonGradient}>
-                <View style={styles.actionButtonIconWrapper}>
-                  <LinearGradient
-                    colors={["#34d399", "#10b981"]}
-                    style={styles.actionIconGradient}>
-                    <Text style={styles.actionButtonIcon}>🎯</Text>
-                  </LinearGradient>
-                </View>
-                <View style={styles.actionButtonTextContainer}>
-                  <Text style={styles.actionButtonText}>Palpites</Text>
-                  <Text style={styles.actionButtonSubtext}>Aposte</Text>
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
-
-            {/* Second Screen Button - NEW */}
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => navigation.navigate("SecondScreen")}
-              activeOpacity={0.85}>
-              <LinearGradient
-                colors={["#1a1a3e", "#1a1a2e"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.actionButtonGradient}>
-                <View style={styles.actionButtonIconWrapper}>
-                  <LinearGradient
-                    colors={["#60a5fa", "#3b82f6"]}
-                    style={styles.actionIconGradient}>
-                    <Text style={styles.actionButtonIcon}>📺</Text>
-                  </LinearGradient>
-                </View>
-                <View style={styles.actionButtonTextContainer}>
-                  <Text style={styles.actionButtonText}>2ª Tela</Text>
-                  <Text style={styles.actionButtonSubtext}>Minimalista</Text>
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
           </ScrollView>
         </View>
       </View>
@@ -2145,7 +2063,6 @@ export const HomeScreen = ({ navigation }: any) => {
               const isSelected = selectedLeague === league.code;
               const isFirst = index === 0;
               const isLast = index === leagues.length - 1;
-              const isMYLIG = league.code === "MYLIG";
 
               return (
                 <TouchableOpacity
@@ -2156,21 +2073,7 @@ export const HomeScreen = ({ navigation }: any) => {
                     isLast && styles.leagueChipLast,
                     isSelected && styles.leagueChipActive,
                   ]}
-                  onPress={() => {
-                    if (isMYLIG) {
-                      // Toque sempre abre o modal para gerenciar ligas favoritas
-                      console.log("[HomeScreen] Abrindo modal de ligas favoritas...");
-                      setShowFavoriteLeaguesModal(true);
-                    } else {
-                      setSelectedLeague(league.code);
-                    }
-                  }}
-                  onLongPress={() => {
-                    if (isMYLIG) {
-                      // Long press também abre o modal
-                      setShowFavoriteLeaguesModal(true);
-                    }
-                  }}
+                  onPress={() => setSelectedLeague(league.code)}
                   activeOpacity={0.8}>
                   {isSelected && (
                     <LinearGradient
@@ -2200,15 +2103,13 @@ export const HomeScreen = ({ navigation }: any) => {
                       </Text>
                     </View>
 
-                    {/* Text with count for MYLIG */}
+                    {/* Text */}
                     <Text
                       style={[
                         styles.leagueChipText,
                         isSelected && styles.leagueChipTextActive,
                       ]}>
-                      {isMYLIG && favoriteLeagues.length > 0 
-                        ? `${league.name} (${favoriteLeagues.length})`
-                        : league.name}
+                      {league.name}
                     </Text>
                   </View>
 
@@ -2244,7 +2145,7 @@ export const HomeScreen = ({ navigation }: any) => {
       selectedLeague,
       loadingFavorites,
       favoriteNextMatches,
-    ]
+    ],
   );
 
   // Filter matches by selected league
@@ -2260,43 +2161,11 @@ export const HomeScreen = ({ navigation }: any) => {
       matches = sourceMatches.filter(
         (m) =>
           favoriteTeams.includes(m.teams.home.id) ||
-          favoriteTeams.includes(m.teams.away.id)
+          favoriteTeams.includes(m.teams.away.id),
       );
-    } else if (selectedLeague === "MYLIG") {
-      // Filtrar por ligas favoritas do usuário
-      const msnMapping: Record<string, string> = {
-        BSA: "BrazilBrasileiroSerieA",
-        BSB: "BrazilBrasileiroSerieB",
-        CDB: "BrazilCopaDoBrasil",
-        CAR: "BrazilCarioca",
-        SPA: "BrazilPaulistaSerieA1",
-        MIN: "BrazilMineiro",
-        GAU: "BrazilGaucho",
-        CL: "InternationalClubsUEFAChampionsLeague",
-        EL: "UEFAEuropaLeague",
-        PL: "EnglandPremierLeague",
-        PD: "SpainLaLiga",
-        BL1: "GermanyBundesliga",
-        SA: "ItalySerieA",
-        FL1: "FranceLigue1",
-        PPL: "PortugalPrimeiraLiga",
-        ARG: "ArgentinaPrimeraDivision",
-        LIB: "CONMEBOLLibertadores",
-        SUL: "CONMEBOLSudamericana",
-      };
-      
-      matches = sourceMatches.filter((m) => {
-        const leagueId = m.league.id?.toString() || "";
-        // Verificar se a liga está nas favoritas
-        return favoriteLeagues.some((favLeagueCode) => {
-          if (leagueId === favLeagueCode) return true;
-          if (msnMapping[favLeagueCode] && leagueId.includes(msnMapping[favLeagueCode])) return true;
-          return false;
-        });
-      });
     } else if (selectedLeague === "FINISHED") {
       matches = sourceMatches.filter((m) =>
-        ["FT", "AET", "PEN"].includes(m.fixture.status.short)
+        ["FT", "AET", "PEN"].includes(m.fixture.status.short),
       );
     } else {
       // Handle both API formats:
@@ -2322,6 +2191,7 @@ export const HomeScreen = ({ navigation }: any) => {
           SA: "ItalySerieA",
           FL1: "FranceLigue1",
           PPL: "PortugalPrimeiraLiga",
+          NBA: "Basketball_NBA",
         };
 
         if (msnMapping[selectedLeague]) {
@@ -2337,8 +2207,8 @@ export const HomeScreen = ({ navigation }: any) => {
       new Map(
         matches
           .filter((item) => item?.fixture?.id)
-          .map((item) => [item.fixture.id, item])
-      ).values()
+          .map((item) => [item.fixture.id, item]),
+      ).values(),
     );
 
     // Filter by team search query
@@ -2347,7 +2217,7 @@ export const HomeScreen = ({ navigation }: any) => {
       return uniqueMatches.filter(
         (m) =>
           m.teams.home.name.toLowerCase().includes(query) ||
-          m.teams.away.name.toLowerCase().includes(query)
+          m.teams.away.name.toLowerCase().includes(query),
       );
     }
 
@@ -2356,10 +2226,10 @@ export const HomeScreen = ({ navigation }: any) => {
 
   // Group matches
   const finishedMatches = filteredMatches.filter((m) =>
-    ["FT", "AET", "PEN"].includes(m.fixture.status.short)
+    ["FT", "AET", "PEN"].includes(m.fixture.status.short),
   );
   const scheduledMatches = filteredMatches.filter((m) =>
-    ["NS", "TBD", "TIMED"].includes(m.fixture.status.short)
+    ["NS", "TBD", "TIMED"].includes(m.fixture.status.short),
   );
   const live = filteredMatches.filter((m) => {
     const status = m.fixture.status.short;
@@ -2367,7 +2237,7 @@ export const HomeScreen = ({ navigation }: any) => {
     // Include basketball statuses: Q1, Q2, Q3, Q4, and OT (Overtime)
     return (
       ["1H", "2H", "HT", "ET", "BT", "P", "Q1", "Q2", "Q3", "Q4"].includes(
-        status
+        status,
       ) || status.startsWith("OT")
     );
   });
@@ -2384,6 +2254,7 @@ export const HomeScreen = ({ navigation }: any) => {
     FL1: "Soccer_FranceLigue1",
     PD: "Soccer_SpainLaLiga",
     PPL: "Soccer_PortugalPrimeiraLiga",
+    NBA: "Basketball_NBA",
     CAR: "Soccer_BrazilCarioca",
     // Full IDs (in case match.league.id comes in this format)
     Soccer_BrazilBrasileiroSerieA: "Soccer_BrazilBrasileiroSerieA",
@@ -2396,6 +2267,7 @@ export const HomeScreen = ({ navigation }: any) => {
     Soccer_FranceLigue1: "Soccer_FranceLigue1",
     Soccer_SpainLaLiga: "Soccer_SpainLaLiga",
     Soccer_PortugalPrimeiraLiga: "Soccer_PortugalPrimeiraLiga",
+    Basketball_NBA: "Basketball_NBA",
     Soccer_BrazilCarioca: "Soccer_BrazilCarioca",
     MIN: "Soccer_BrazilMineiro",
     Soccer_BrazilMineiro: "Soccer_BrazilMineiro",
@@ -2458,7 +2330,7 @@ export const HomeScreen = ({ navigation }: any) => {
             match.league.name
           }, ID: ${leagueId}, SportWith: ${sportWithLeague}, CachedLogo: ${
             cachedLogo ? "YES" : "NO"
-          }`
+          }`,
         );
 
         grouped[leagueId] = {
@@ -2480,11 +2352,11 @@ export const HomeScreen = ({ navigation }: any) => {
   // Use useMemo to recalculate when leagueLogos changes
   const scheduledByLeague = useMemo(
     () => groupMatchesByLeague(scheduledMatches),
-    [scheduledMatches, leagueLogos]
+    [scheduledMatches, leagueLogos],
   );
   const finishedByLeague = useMemo(
     () => groupMatchesByLeague(finishedMatches),
-    [finishedMatches, leagueLogos]
+    [finishedMatches, leagueLogos],
   );
 
   const sections = [
@@ -2555,7 +2427,7 @@ export const HomeScreen = ({ navigation }: any) => {
                                   console.log(
                                     "[Image Error]",
                                     league.name,
-                                    e.nativeEvent.error
+                                    e.nativeEvent.error,
                                   )
                                 }
                               />
@@ -2687,23 +2559,6 @@ export const HomeScreen = ({ navigation }: any) => {
                   {user?.name || "Usuário"}
                 </Text>
                 <Text style={styles.profileEmail}>{user?.email || ""}</Text>
-                {/* Premium Badge */}
-                <TouchableOpacity
-                  style={[styles.premiumBadge, isPremium ? styles.premiumBadgeActive : styles.premiumBadgeInactive]}
-                  onPress={() => {
-                    setShowProfileModal(false);
-                    if (!isPremium && hasTrialAvailable) {
-                      setShowTrialModal(true);
-                    } else {
-                      navigation.navigate('Subscription');
-                    }
-                  }}
-                  activeOpacity={0.8}>
-                  <Crown size={14} color={isPremium ? "#fbbf24" : "#71717a"} />
-                  <Text style={[styles.premiumBadgeText, isPremium && styles.premiumBadgeTextActive]}>
-                    {isPremium ? 'Premium' : hasTrialAvailable ? '7 Dias Grátis' : 'Seja Premium'}
-                  </Text>
-                </TouchableOpacity>
               </View>
 
               <View style={styles.profileModalDivider} />
@@ -2783,47 +2638,6 @@ export const HomeScreen = ({ navigation }: any) => {
         visible={showWorldCupModal}
         onClose={() => setShowWorldCupModal(false)}
       />
-
-      {/* Favorite Leagues Modal */}
-      <FavoriteLeaguesModal
-        visible={showFavoriteLeaguesModal}
-        onClose={() => setShowFavoriteLeaguesModal(false)}
-      />
-
-      {/* Premium Trial Modal */}
-      <PremiumTrialModal
-        visible={showTrialModal}
-        onClose={() => setShowTrialModal(false)}
-        onTrialActivated={() => {
-          setShowTrialModal(false);
-          refreshSubscription();
-        }}
-        featureName="Recursos Premium"
-      />
-
-      {/* Gift Premium Modal */}
-      {pendingGift && (
-        <GiftPremiumModal
-          visible={showGiftModal}
-          onClose={() => setShowGiftModal(false)}
-          onClaim={async () => {
-            const result = await claimGift();
-            if (result.success) {
-              setShowGiftModal(false);
-              Alert.alert(
-                "🎉 Presente Ativado!",
-                result.message,
-                [{ text: "OK", style: "default" }]
-              );
-            } else {
-              Alert.alert("Erro", result.message);
-            }
-          }}
-          days={pendingGift.days}
-          message={pendingGift.message}
-          loading={claimingGift}
-        />
-      )}
     </View>
   );
 };
@@ -4015,31 +3829,5 @@ const styles = StyleSheet.create({
     fontSize: 7,
     fontWeight: "900",
     letterSpacing: 0.2,
-  },
-  premiumBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginTop: 8,
-    gap: 6,
-    borderWidth: 1,
-  },
-  premiumBadgeActive: {
-    backgroundColor: 'rgba(251, 191, 36, 0.1)',
-    borderColor: 'rgba(251, 191, 36, 0.3)',
-  },
-  premiumBadgeInactive: {
-    backgroundColor: 'rgba(113, 113, 122, 0.1)',
-    borderColor: 'rgba(113, 113, 122, 0.3)',
-  },
-  premiumBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#71717a',
-  },
-  premiumBadgeTextActive: {
-    color: '#fbbf24',
   },
 });

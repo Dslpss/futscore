@@ -62,17 +62,17 @@ async function parseStreamResponse(stream) {
 
     stream.on("data", (chunk) => {
       const lines = chunk.toString().split("\n");
-      
+
       for (const line of lines) {
         if (line.startsWith("data: ")) {
           const data = line.slice(6);
           if (data === "[DONE]") continue;
-          
+
           try {
             const parsed = JSON.parse(data);
             const content = parsed.choices?.[0]?.delta?.content;
-            
-            // Ignorar blocos de "thinking" 
+
+            // Ignorar blocos de "thinking"
             if (content) {
               // Detectar fim do thinking
               if (content.includes("</think>")) {
@@ -111,7 +111,7 @@ async function parseStreamResponse(stream) {
 function extractJSON(text) {
   // Remove possíveis blocos de código markdown
   let cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "");
-  
+
   // Tenta encontrar o JSON na resposta
   const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
   if (jsonMatch) {
@@ -133,7 +133,8 @@ async function getMatchPrediction(match) {
     return null;
   }
 
-  const matchId = match.id || match.fixture?.id || `${match.homeTeam}-${match.awayTeam}`;
+  const matchId =
+    match.id || match.fixture?.id || `${match.homeTeam}-${match.awayTeam}`;
   const cacheKey = `prediction_${matchId}`;
 
   // Verificar cache
@@ -157,7 +158,7 @@ async function getMatchPrediction(match) {
           },
         ],
         max_tokens: 1024,
-        temperature: 0.6,  // Instant mode recommended
+        temperature: 0.6, // Instant mode recommended
         top_p: 0.95,
         stream: false,
         // Instant mode - direct response without reasoning traces
@@ -169,32 +170,45 @@ async function getMatchPrediction(match) {
           "Content-Type": "application/json",
         },
         timeout: 60000,
-      }
+      },
     );
 
     // Parse non-streaming response
     const fullResponse = response.data?.choices?.[0]?.message?.content || "";
-    console.log(`[AIPrediction] Raw response length: ${fullResponse.length}, preview: ${fullResponse.substring(0, 300)}`);
-    
+    console.log(
+      `[AIPrediction] Raw response length: ${fullResponse.length}, preview: ${fullResponse.substring(0, 300)}`,
+    );
+
     const prediction = extractJSON(fullResponse);
 
     if (!prediction) {
-      console.error("[AIPrediction] Não foi possível extrair previsão da resposta");
-      console.error("[AIPrediction] Full response:", fullResponse.substring(0, 500));
+      console.error(
+        "[AIPrediction] Não foi possível extrair previsão da resposta",
+      );
+      console.error(
+        "[AIPrediction] Full response:",
+        fullResponse.substring(0, 500),
+      );
       return null;
     }
 
     // Validar e normalizar probabilidades
-    const total = (prediction.homeWinProbability || 0) + 
-                  (prediction.drawProbability || 0) + 
-                  (prediction.awayWinProbability || 0);
-    
+    const total =
+      (prediction.homeWinProbability || 0) +
+      (prediction.drawProbability || 0) +
+      (prediction.awayWinProbability || 0);
+
     if (total > 0 && total !== 100) {
       // Normalizar para 100%
       const factor = 100 / total;
-      prediction.homeWinProbability = Math.round(prediction.homeWinProbability * factor);
-      prediction.drawProbability = Math.round(prediction.drawProbability * factor);
-      prediction.awayWinProbability = 100 - prediction.homeWinProbability - prediction.drawProbability;
+      prediction.homeWinProbability = Math.round(
+        prediction.homeWinProbability * factor,
+      );
+      prediction.drawProbability = Math.round(
+        prediction.drawProbability * factor,
+      );
+      prediction.awayWinProbability =
+        100 - prediction.homeWinProbability - prediction.drawProbability;
     }
 
     // Estruturar resultado final
@@ -213,7 +227,8 @@ async function getMatchPrediction(match) {
       drawProbability: prediction.drawProbability || 34,
       analysis: prediction.analysis || "Análise indisponível",
       confidence: prediction.confidence || "medium",
-      matchDate: match.startTime || match.fixture?.date || new Date().toISOString(),
+      matchDate:
+        match.startTime || match.fixture?.date || new Date().toISOString(),
       league: {
         name: match.league?.name || match.league || "",
         logo: match.league?.logo || "",
@@ -242,28 +257,28 @@ async function getMatchPrediction(match) {
 /**
  * Obtém previsões para múltiplas partidas (processamento paralelo)
  */
-async function getMatchesPredictions(matches, limit = 5) {
+async function getMatchesPredictions(matches, limit = 50) {
   // Limitar quantidade para não sobrecarregar a API
   const matchesToAnalyze = matches.slice(0, limit);
-  
-  // Processar em paralelo (3 de cada vez para não sobrecarregar)
-  const batchSize = 3;
+
+  // Processar em paralelo (5 de cada vez para maior velocidade)
+  const batchSize = 5;
   const predictions = [];
-  
+
   for (let i = 0; i < matchesToAnalyze.length; i += batchSize) {
     const batch = matchesToAnalyze.slice(i, i + batchSize);
     const batchResults = await Promise.all(
-      batch.map(match => getMatchPrediction(match))
+      batch.map((match) => getMatchPrediction(match)),
     );
-    
-    predictions.push(...batchResults.filter(p => p !== null));
-    
+
+    predictions.push(...batchResults.filter((p) => p !== null));
+
     // Pequeno delay entre batches
     if (i + batchSize < matchesToAnalyze.length) {
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
     }
   }
-  
+
   return predictions;
 }
 

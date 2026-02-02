@@ -15,7 +15,9 @@ const MATCHES_CACHE_TTL = 10 * 60 * 1000; // 10 minutos
 async function getUpcomingMatches() {
   try {
     // Usar diretamente o fetchMSNUpcomingMatches que já tem a lógica correta
-    console.log("[AIPredictions] Buscando partidas via fetchMSNUpcomingMatches...");
+    console.log(
+      "[AIPredictions] Buscando partidas via fetchMSNUpcomingMatches...",
+    );
     return await fetchMSNUpcomingMatches();
   } catch (error) {
     console.error("[AIPredictions] Erro ao buscar partidas:", error.message);
@@ -24,134 +26,205 @@ async function getUpcomingMatches() {
 }
 
 /**
- * Busca partidas diretamente da MSN API (fallback)
+ * Busca partidas diretamente da MSN API usando o mesmo endpoint da HomeScreen
  */
 async function fetchMSNUpcomingMatches() {
   const axios = require("axios");
   const MSN_API_BASE = "https://api.msn.com/sports";
   const MSN_API_KEY = "kO1dI4ptCTTylLkPL1ZTHYP8JhLKb8mRDoA5yotmNJ";
 
+  // Usar as mesmas ligas do HomeScreen para consistência
   const leagues = [
-    { id: "Soccer_EnglandPremierLeague", name: "Premier League" },
-    { id: "Soccer_SpainLaLiga", name: "La Liga" },
-    { id: "Soccer_ItalySerieA", name: "Serie A" },
-    { id: "Soccer_GermanyBundesliga", name: "Bundesliga" },
-    { id: "Soccer_InternationalClubsUEFAChampionsLeague", name: "Champions League" },
     { id: "Soccer_BrazilBrasileiroSerieA", name: "Brasileirão" },
+    { id: "Soccer_BrazilCopaDoBrasil", name: "Copa do Brasil" },
+    {
+      id: "Soccer_InternationalClubsUEFAChampionsLeague",
+      name: "Champions League",
+    },
+    { id: "Soccer_UEFAEuropaLeague", name: "Europa League" },
+    { id: "Soccer_EnglandPremierLeague", name: "Premier League" },
+    { id: "Soccer_GermanyBundesliga", name: "Bundesliga" },
+    { id: "Soccer_ItalySerieA", name: "Serie A" },
+    { id: "Soccer_FranceLigue1", name: "Ligue 1" },
+    { id: "Soccer_SpainLaLiga", name: "La Liga" },
+    { id: "Soccer_PortugalPrimeiraLiga", name: "Liga Portugal" },
+    { id: "Soccer_BrazilCarioca", name: "Campeonato Carioca" },
+    { id: "Soccer_BrazilMineiro", name: "Campeonato Mineiro" },
     { id: "Soccer_BrazilPaulistaSerieA1", name: "Campeonato Paulista" },
+    { id: "Soccer_BrazilGaucho", name: "Campeonato Gaúcho" },
   ];
 
   const matches = [];
   const now = new Date();
 
-  for (const league of leagues) {
+  // Gerar data no formato YYYY-MM-DD (mesma lógica do HomeScreen)
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const dateStr = `${year}-${month}-${day}`;
+
+  console.log(`[AIPredictions] Buscando partidas para ${dateStr}...`);
+
+  // Buscar todas as ligas em paralelo para maior velocidade
+  const leaguePromises = leagues.map(async (league) => {
     try {
       console.log(`[AIPredictions] Buscando partidas de ${league.name}...`);
-      
+
+      // Usar o mesmo endpoint /liveschedules que a HomeScreen
+      const tzoffset = Math.floor(-now.getTimezoneOffset() / 60).toString();
       const params = new URLSearchParams({
         version: "1.0",
         cm: "pt-br",
         scn: "ANON",
         it: "web",
         apikey: MSN_API_KEY,
-        activityId: `ai-pred-${Date.now()}`,
-        id: league.id,
-        sport: "Soccer",
-        datetime: now.toISOString().split(".")[0],
-        tzoffset: "-3",
+        activityId: `ai-pred-${Date.now()}-${league.id}`,
+        ids: league.id,
+        date: dateStr,
+        withcalendar: "true",
+        type: "LeagueSchedule",
+        tzoffset: tzoffset,
+        ocid: "sports-league-schedule",
       });
 
       const response = await axios.get(
-        `${MSN_API_BASE}/livearoundtheleague?${params}`,
+        `${MSN_API_BASE}/liveschedules?${params}`,
         {
           headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            Accept: "application/json",
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            Accept: "*/*",
           },
-          timeout: 10000,
-        }
+          timeout: 15000,
+        },
       );
 
-      const schedules = response.data?.value?.[0]?.schedules || [];
-      console.log(`[AIPredictions] ${league.name}: ${schedules.length} schedules`);
-      
-      for (const schedule of schedules) {
-        const games = schedule.games || [];
-        
-        for (const game of games) {
-          const startDateTime = game.startDateTime;
-          // Handle numeric strings, numbers, and ISO strings
-          let matchTime;
-          if (typeof startDateTime === 'number') {
-            matchTime = startDateTime;
-          } else if (typeof startDateTime === 'string' && /^\d+$/.test(startDateTime)) {
-            matchTime = parseInt(startDateTime, 10);
-          } else {
-            matchTime = new Date(startDateTime).getTime();
+      const data = response.data?.value?.[0];
+      if (!data) {
+        console.log(`[AIPredictions] Sem dados para ${league.name}`);
+        return [];
+      }
+
+      const leagueMatches = [];
+
+      // Extrair jogos do formato de resposta (mesmo padrão do msnSportsApi)
+      const allGames = [];
+
+      // 1. Verificar array de games no topo
+      if (data.games && Array.isArray(data.games)) {
+        allGames.push(...data.games);
+      }
+
+      // 2. Verificar games dentro de schedules
+      if (data.schedules && Array.isArray(data.schedules)) {
+        data.schedules.forEach((schedule) => {
+          if (schedule.games && Array.isArray(schedule.games)) {
+            allGames.push(...schedule.games);
           }
-          const gameStatus = (game.gameState?.gameStatus || "").toLowerCase();
-          
-          // Pegar apenas partidas que ainda não terminaram
-          const isFinished = gameStatus === "final" || gameStatus === "post" || gameStatus === "ft";
-          
-          // Verificar se é partida de HOJE (mesma data UTC-3)
-          const now = new Date();
-          const matchDate = new Date(matchTime);
-          
-          // Comparar apenas data (ignorar hora)
-          const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-          const todayEnd = todayStart + 24 * 60 * 60 * 1000;
-          const isToday = matchTime >= todayStart && matchTime < todayEnd;
-          
-          // Também aceitar partidas nas próximas 24 horas (para cobrir jogos que já passaram meia-noite no fuso)
-          const isInNext24h = matchTime >= now.getTime() && matchTime <= now.getTime() + 24 * 60 * 60 * 1000;
-          const isInRange = isToday || isInNext24h;
-          
-          // Log debug para primeira partida
-          if (games.indexOf(game) === 0) {
-            console.log(`[AIPredictions] Sample: ${game.participants?.[0]?.team?.shortName?.rawName} status=${gameStatus} time=${matchTime} now=${now} inRange=${isInRange}`);
-          }
-          
-          if (!isFinished && isInRange) {
-            const homeTeam = game.participants?.[0];
-            const awayTeam = game.participants?.[1];
-            
-            if (homeTeam && awayTeam) {
-              matches.push({
-                id: game.id || game.liveId || `${Date.now()}-${matches.length}`,
-                homeTeam: homeTeam?.team?.shortName?.rawName || homeTeam?.team?.name?.rawName || "Time Casa",
-                awayTeam: awayTeam?.team?.shortName?.rawName || awayTeam?.team?.name?.rawName || "Time Fora",
-                homeTeamLogo: homeTeam?.team?.image?.id ? 
-                  `https://img-s-msn-com.akamaized.net/tenant/amp/entityid/${homeTeam.team.image.id}` : "",
-                awayTeamLogo: awayTeam?.team?.image?.id ?
-                  `https://img-s-msn-com.akamaized.net/tenant/amp/entityid/${awayTeam.team.image.id}` : "",
-                startTime: typeof startDateTime === 'number' ? new Date(startDateTime).toISOString() : startDateTime,
-                league: { name: league.name, logo: "" },
-                status: gameStatus || "pregame",
-              });
-              
-              console.log(`[AIPredictions] + ${homeTeam?.team?.shortName?.rawName} vs ${awayTeam?.team?.shortName?.rawName} (${gameStatus || 'pregame'})`);
-            }
+        });
+      }
+
+      console.log(
+        `[AIPredictions] ${league.name}: ${allGames.length} jogos encontrados`,
+      );
+
+      for (const game of allGames) {
+        const startDateTime = game.startDateTime;
+        // Handle numeric strings, numbers, and ISO strings
+        let matchTime;
+        if (typeof startDateTime === "number") {
+          matchTime = startDateTime;
+        } else if (
+          typeof startDateTime === "string" &&
+          /^\d+$/.test(startDateTime)
+        ) {
+          matchTime = parseInt(startDateTime, 10);
+        } else {
+          matchTime = new Date(startDateTime).getTime();
+        }
+
+        // Filtrar por data (mesmo que o HomeScreen faz)
+        const gameDate = new Date(matchTime);
+        const gameDateStr = `${gameDate.getFullYear()}-${String(gameDate.getMonth() + 1).padStart(2, "0")}-${String(gameDate.getDate()).padStart(2, "0")}`;
+
+        if (gameDateStr !== dateStr) {
+          continue; // Pular jogos de outras datas
+        }
+
+        const gameStatus = (game.gameState?.gameStatus || "").toLowerCase();
+
+        // Pegar apenas partidas que ainda não terminaram
+        const isFinished =
+          gameStatus === "final" ||
+          gameStatus === "post" ||
+          gameStatus === "ft";
+
+        if (!isFinished) {
+          const homeTeam = game.participants?.[0];
+          const awayTeam = game.participants?.[1];
+
+          if (homeTeam && awayTeam) {
+            leagueMatches.push({
+              id:
+                game.id ||
+                game.liveId ||
+                `${Date.now()}-${leagueMatches.length}`,
+              homeTeam:
+                homeTeam?.team?.shortName?.rawName ||
+                homeTeam?.team?.name?.rawName ||
+                "Time Casa",
+              awayTeam:
+                awayTeam?.team?.shortName?.rawName ||
+                awayTeam?.team?.name?.rawName ||
+                "Time Fora",
+              homeTeamLogo: homeTeam?.team?.image?.id
+                ? `https://img-s-msn-com.akamaized.net/tenant/amp/entityid/${homeTeam.team.image.id}`
+                : "",
+              awayTeamLogo: awayTeam?.team?.image?.id
+                ? `https://img-s-msn-com.akamaized.net/tenant/amp/entityid/${awayTeam.team.image.id}`
+                : "",
+              startTime:
+                typeof startDateTime === "number"
+                  ? new Date(startDateTime).toISOString()
+                  : startDateTime,
+              league: { name: league.name, logo: "" },
+              status: gameStatus || "pregame",
+            });
           }
         }
       }
-      
-      // Parar após encontrar 10 partidas
-      if (matches.length >= 10) break;
-      
+
+      console.log(
+        `[AIPredictions] ${league.name}: ${leagueMatches.length} partidas válidas`,
+      );
+      return leagueMatches;
     } catch (error) {
-      console.error(`[AIPredictions] Erro ao buscar ${league.name}:`, error.message);
+      console.error(
+        `[AIPredictions] Erro ao buscar ${league.name}:`,
+        error.message,
+      );
+      return [];
     }
-  }
+  });
 
-  console.log(`[AIPredictions] Total de partidas encontradas: ${matches.length}`);
+  // Aguardar todas as requisições em paralelo
+  const leagueResults = await Promise.all(leaguePromises);
 
-  // Ordenar por horário
-  matches.sort((a, b) =>
-    new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+  // Combinar todos os resultados
+  leagueResults.forEach((leagueMatches) => {
+    matches.push(...leagueMatches);
+  });
+
+  console.log(
+    `[AIPredictions] Total de partidas encontradas: ${matches.length}`,
   );
 
-  return matches.slice(0, 10);
+  // Ordenar por horário
+  matches.sort(
+    (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
+  );
+
+  return matches;
 }
 
 /**
@@ -174,18 +247,22 @@ router.get("/upcoming", async (req, res) => {
 
     // Force refresh se cache estiver vazio ou parâmetro refresh=true
     const forceRefresh = req.query.refresh === "true";
-    
+
     // Buscar partidas próximas (com cache)
     let matches = [];
     const now = Date.now();
 
-    if (!forceRefresh && matchesCache.data.length > 0 && now - matchesCache.timestamp < MATCHES_CACHE_TTL) {
+    if (
+      !forceRefresh &&
+      matchesCache.data.length > 0 &&
+      now - matchesCache.timestamp < MATCHES_CACHE_TTL
+    ) {
       matches = matchesCache.data;
       console.log("[AIPredictions] Usando cache de partidas:", matches.length);
     } else {
       console.log("[AIPredictions] Buscando partidas frescas...");
       matches = await getUpcomingMatches();
-      
+
       // Só guardar no cache se encontrar partidas
       if (matches.length > 0) {
         matchesCache = { data: matches, timestamp: now };
@@ -195,9 +272,13 @@ router.get("/upcoming", async (req, res) => {
 
     if (matches.length === 0) {
       // Tentar fallback direto
-      console.log("[AIPredictions] Sem partidas, tentando fetchMSNUpcomingMatches diretamente...");
+      console.log(
+        "[AIPredictions] Sem partidas, tentando fetchMSNUpcomingMatches diretamente...",
+      );
       matches = await fetchMSNUpcomingMatches();
-      console.log(`[AIPredictions] Fallback retornou ${matches.length} partidas`);
+      console.log(
+        `[AIPredictions] Fallback retornou ${matches.length} partidas`,
+      );
     }
 
     if (matches.length === 0) {
@@ -208,8 +289,8 @@ router.get("/upcoming", async (req, res) => {
       });
     }
 
-    // Obter previsões da IA (máximo 3 partidas para resposta rápida)
-    const predictions = await getMatchesPredictions(matches, 3);
+    // Obter previsões da IA para todas as partidas do dia
+    const predictions = await getMatchesPredictions(matches, matches.length);
 
     console.log(`[AIPredictions] ${predictions.length} previsões geradas`);
 
@@ -235,17 +316,17 @@ router.get("/upcoming", async (req, res) => {
 router.get("/debug", async (req, res) => {
   try {
     console.log("[AIPredictions] Debug: iniciando busca de partidas...");
-    
+
     // Limpar cache
     matchesCache = { data: [], timestamp: 0 };
-    
+
     // Buscar partidas diretamente
     const matches = await fetchMSNUpcomingMatches();
-    
+
     res.json({
       success: true,
       matchesCount: matches.length,
-      matches: matches.slice(0, 5).map(m => ({
+      matches: matches.slice(0, 5).map((m) => ({
         id: m.id,
         home: m.homeTeam,
         away: m.awayTeam,
@@ -273,7 +354,7 @@ router.get("/test-msn", async (req, res) => {
   try {
     const axios = require("axios");
     const now = new Date();
-    
+
     const params = new URLSearchParams({
       version: "1.0",
       cm: "pt-br",
@@ -294,20 +375,25 @@ router.get("/test-msn", async (req, res) => {
           Accept: "application/json",
         },
         timeout: 10000,
-      }
+      },
     );
 
     const schedules = response.data?.value?.[0]?.schedules || [];
     const games = schedules[0]?.games || [];
-    
-    const processedGames = games.slice(0, 3).map(g => {
+
+    const processedGames = games.slice(0, 3).map((g) => {
       const startDateTime = g.startDateTime;
-      const matchTime = typeof startDateTime === 'number' ? startDateTime : new Date(startDateTime).getTime();
+      const matchTime =
+        typeof startDateTime === "number"
+          ? startDateTime
+          : new Date(startDateTime).getTime();
       const gameStatus = (g.gameState?.gameStatus || "").toLowerCase();
       const nowMs = Date.now();
-      const isInRange = matchTime >= nowMs && matchTime <= nowMs + 7 * 24 * 60 * 60 * 1000;
-      const isFinished = gameStatus === "final" || gameStatus === "post" || gameStatus === "ft";
-      
+      const isInRange =
+        matchTime >= nowMs && matchTime <= nowMs + 7 * 24 * 60 * 60 * 1000;
+      const isFinished =
+        gameStatus === "final" || gameStatus === "post" || gameStatus === "ft";
+
       return {
         home: g.participants?.[0]?.team?.shortName?.rawName,
         away: g.participants?.[1]?.team?.shortName?.rawName,
@@ -354,7 +440,7 @@ router.get("/match/:id", async (req, res) => {
 
     // Buscar dados da partida
     const { getMatchPrediction } = require("../services/aiPrediction");
-    
+
     // TODO: Implementar busca de dados específicos da partida
     // Por enquanto retorna erro
     res.status(501).json({

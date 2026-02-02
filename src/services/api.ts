@@ -91,13 +91,13 @@ export const api = {
             dateFrom: queryDate,
             dateTo: queryDate,
           },
-        }
+        },
       );
 
       console.log(
         `[API] Fetched ${
           response.data.matches?.length || 0
-        } matches for ${leagueCode} on ${queryDate}`
+        } matches for ${leagueCode} on ${queryDate}`,
       );
 
       if (!response.data.matches || response.data.matches.length === 0) {
@@ -114,18 +114,18 @@ export const api = {
               match.status === "FINISHED"
                 ? "Partida Encerrada"
                 : match.status === "IN_PLAY"
-                ? "Em Andamento"
-                : match.status === "PAUSED"
-                ? "Intervalo"
-                : "Não Iniciado",
+                  ? "Em Andamento"
+                  : match.status === "PAUSED"
+                    ? "Intervalo"
+                    : "Não Iniciado",
             short:
               match.status === "FINISHED"
                 ? "FT"
                 : match.status === "IN_PLAY"
-                ? "1H"
-                : match.status === "PAUSED"
-                ? "HT"
-                : "NS",
+                  ? "1H"
+                  : match.status === "PAUSED"
+                    ? "HT"
+                    : "NS",
             elapsed: match.minute || null,
           },
         },
@@ -239,18 +239,18 @@ export const api = {
               matchData.status === "FINISHED"
                 ? "Partida Encerrada"
                 : matchData.status === "IN_PLAY"
-                ? "Em Andamento"
-                : matchData.status === "PAUSED"
-                ? "Intervalo"
-                : "Não Iniciado",
+                  ? "Em Andamento"
+                  : matchData.status === "PAUSED"
+                    ? "Intervalo"
+                    : "Não Iniciado",
             short:
               matchData.status === "FINISHED"
                 ? "FT"
                 : matchData.status === "IN_PLAY"
-                ? "1H"
-                : matchData.status === "PAUSED"
-                ? "HT"
-                : "NS",
+                  ? "1H"
+                  : matchData.status === "PAUSED"
+                    ? "HT"
+                    : "NS",
             elapsed: matchData.minute || null,
           },
           venue: matchData.venue
@@ -376,7 +376,7 @@ export const api = {
   // Search teams across multiple leagues
   searchTeams: async (
     query: string,
-    leagueCodes?: string[]
+    leagueCodes?: string[],
   ): Promise<Array<Team & { country: string }>> => {
     if (!query || query.length < 2) {
       return [];
@@ -402,16 +402,19 @@ export const api = {
       // Filter teams by search query
       const searchLower = query.toLowerCase();
       const filtered = allTeams.filter((team) =>
-        team.name.toLowerCase().includes(searchLower)
+        team.name.toLowerCase().includes(searchLower),
       );
 
       // Remove duplicates by team ID
-      const uniqueTeams = filtered.reduce((acc, team) => {
-        if (!acc.find((t: Team & { country: string }) => t.id === team.id)) {
-          acc.push(team);
-        }
-        return acc;
-      }, [] as Array<Team & { country: string }>);
+      const uniqueTeams = filtered.reduce(
+        (acc, team) => {
+          if (!acc.find((t: Team & { country: string }) => t.id === team.id)) {
+            acc.push(team);
+          }
+          return acc;
+        },
+        [] as Array<Team & { country: string }>,
+      );
 
       return uniqueTeams;
     } catch (error) {
@@ -455,7 +458,7 @@ export const api = {
    */
   getTeamMatches: async (
     teamId: number,
-    limit: number = 5
+    limit: number = 5,
   ): Promise<Match[]> => {
     const cacheKey = `team_matches_${teamId}_${limit}`;
     const cached = await getCachedData<Match[]>(cacheKey);
@@ -530,7 +533,7 @@ export const api = {
         }));
 
       console.log(
-        `[API] Fetched ${matches.length} recent matches for team ${teamId}`
+        `[API] Fetched ${matches.length} recent matches for team ${teamId}`,
       );
 
       // Cache for 1 hour
@@ -539,7 +542,7 @@ export const api = {
     } catch (error) {
       console.error(
         `[API] Error fetching team matches for team ${teamId}:`,
-        error
+        error,
       );
       return [];
     }
@@ -552,7 +555,7 @@ export const api = {
    */
   getTeamUpcomingMatches: async (
     teamId: number,
-    limit: number = 3
+    limit: number = 3,
   ): Promise<Match[]> => {
     const cacheKey = `team_upcoming_${teamId}_${limit}`;
     const cached = await getCachedData<Match[]>(cacheKey);
@@ -574,7 +577,10 @@ export const api = {
 
       // Transform and filter
       const matches: Match[] = response.data.matches
-        .filter((match: any) => match.status === "SCHEDULED" || match.status === "TIMED")
+        .filter(
+          (match: any) =>
+            match.status === "SCHEDULED" || match.status === "TIMED",
+        )
         .slice(0, limit)
         .map((match: any) => ({
           fixture: {
@@ -627,7 +633,7 @@ export const api = {
         }));
 
       console.log(
-        `[API] Fetched ${matches.length} upcoming matches for team ${teamId}`
+        `[API] Fetched ${matches.length} upcoming matches for team ${teamId}`,
       );
 
       // Cache for 30 minutes
@@ -636,8 +642,36 @@ export const api = {
     } catch (error) {
       console.error(
         `[API] Error fetching team upcoming matches for team ${teamId}:`,
-        error
+        error,
       );
+      return [];
+    }
+  },
+
+  // AI Predictions
+  getAIPredictions: async (): Promise<any[]> => {
+    const cacheKey = "ai_predictions";
+    const cached = await getCachedData<any[]>(cacheKey);
+    if (cached) return cached;
+
+    try {
+      console.log("[API] Fetching AI predictions...");
+      const response = await axios.get(
+        `${CONFIG.BACKEND_URL}/api/ai-predictions/upcoming`,
+      );
+
+      if (response.data?.success && response.data?.predictions) {
+        const predictions = response.data.predictions;
+        console.log(`[API] Fetched ${predictions.length} AI predictions`);
+
+        // Cache for 15 minutes
+        await setCachedData(cacheKey, predictions, 15 * 60 * 1000);
+        return predictions;
+      }
+
+      return [];
+    } catch (error) {
+      console.error("[API] Error fetching AI predictions:", error);
       return [];
     }
   },
