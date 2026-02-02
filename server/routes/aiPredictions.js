@@ -178,10 +178,10 @@ async function fetchMSNUpcomingMatches() {
                 awayTeam?.team?.name?.rawName ||
                 "Time Fora",
               homeTeamLogo: homeTeam?.team?.image?.id
-                ? `https://img-s-msn-com.akamaized.net/tenant/amp/entityid/${homeTeam.team.image.id}`
+                ? `https://www.bing.com/th?id=${homeTeam.team.image.id}&w=80&h=80`
                 : "",
               awayTeamLogo: awayTeam?.team?.image?.id
-                ? `https://img-s-msn-com.akamaized.net/tenant/amp/entityid/${awayTeam.team.image.id}`
+                ? `https://www.bing.com/th?id=${awayTeam.team.image.id}&w=80&h=80`
                 : "",
               startTime:
                 typeof startDateTime === "number"

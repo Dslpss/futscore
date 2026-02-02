@@ -250,14 +250,17 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
                 <View style={styles.teamSection}>
                   <View style={styles.teamLogoContainer}>
                     <View style={styles.teamLogoGlow} />
-                    <Image
-                      source={{
-                        uri:
-                          prediction.homeTeam.logo ||
-                          "https://via.placeholder.com/50",
-                      }}
-                      style={styles.teamLogo}
-                    />
+                    {prediction.homeTeam.logo ? (
+                      <Image
+                        source={{ uri: prediction.homeTeam.logo }}
+                        style={styles.teamLogo}
+                        resizeMode="contain"
+                      />
+                    ) : (
+                      <View style={styles.teamLogoPlaceholder}>
+                        <Text style={styles.teamLogoPlaceholderText}>⚽</Text>
+                      </View>
+                    )}
                   </View>
                   <Text style={styles.teamName} numberOfLines={2}>
                     {prediction.homeTeam.name}
@@ -283,14 +286,17 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
                 <View style={styles.teamSection}>
                   <View style={styles.teamLogoContainer}>
                     <View style={styles.teamLogoGlow} />
-                    <Image
-                      source={{
-                        uri:
-                          prediction.awayTeam.logo ||
-                          "https://via.placeholder.com/50",
-                      }}
-                      style={styles.teamLogo}
-                    />
+                    {prediction.awayTeam.logo ? (
+                      <Image
+                        source={{ uri: prediction.awayTeam.logo }}
+                        style={styles.teamLogo}
+                        resizeMode="contain"
+                      />
+                    ) : (
+                      <View style={styles.teamLogoPlaceholder}>
+                        <Text style={styles.teamLogoPlaceholderText}>⚽</Text>
+                      </View>
+                    )}
                   </View>
                   <Text style={styles.teamName} numberOfLines={2}>
                     {prediction.awayTeam.name}
@@ -519,6 +525,17 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     resizeMode: "contain",
+  },
+  teamLogoPlaceholder: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(168, 85, 247, 0.3)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  teamLogoPlaceholderText: {
+    fontSize: 24,
   },
   teamName: {
     color: "#ffffff",
