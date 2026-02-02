@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -59,6 +59,44 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const shimmerAnim = useRef(new Animated.Value(0)).current;
 
+  // Validate and filter predictions to ensure all required fields exist
+  const validPredictions = useMemo(() => {
+    if (!predictions || !Array.isArray(predictions)) return [];
+    
+    return predictions.filter((p) => {
+      // Check required fields exist
+      if (!p || typeof p !== 'object') return false;
+      if (!p.matchId) return false;
+      if (!p.homeTeam || typeof p.homeTeam !== 'object') return false;
+      if (!p.awayTeam || typeof p.awayTeam !== 'object') return false;
+      if (typeof p.homeTeam.winProbability !== 'number') return false;
+      if (typeof p.awayTeam.winProbability !== 'number') return false;
+      if (typeof p.drawProbability !== 'number') return false;
+      return true;
+    }).map((p) => ({
+      ...p,
+      // Ensure all optional fields have defaults
+      homeTeam: {
+        name: p.homeTeam?.name || 'Time Casa',
+        logo: p.homeTeam?.logo || '',
+        winProbability: p.homeTeam?.winProbability ?? 33,
+      },
+      awayTeam: {
+        name: p.awayTeam?.name || 'Time Fora',
+        logo: p.awayTeam?.logo || '',
+        winProbability: p.awayTeam?.winProbability ?? 33,
+      },
+      drawProbability: p.drawProbability ?? 34,
+      analysis: p.analysis || 'Análise não disponível',
+      confidence: p.confidence || 'medium',
+      matchDate: p.matchDate || new Date().toISOString(),
+      league: {
+        name: p.league?.name || '',
+        logo: p.league?.logo || '',
+      },
+    }));
+  }, [predictions]);
+
   const handlePredictionPress = (prediction: AIPrediction) => {
     setSelectedPrediction(prediction);
     setModalVisible(true);
@@ -100,10 +138,10 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
 
   // Auto-scroll
   useEffect(() => {
-    if (predictions.length <= 1) return;
+    if (validPredictions.length <= 1) return;
 
     const autoScrollInterval = setInterval(() => {
-      const nextIndex = (activeIndex + 1) % predictions.length;
+      const nextIndex = (activeIndex + 1) % validPredictions.length;
       const offsetX = nextIndex * (CARD_WIDTH + CARD_GAP);
 
       scrollViewRef.current?.scrollTo({
@@ -114,7 +152,7 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
     }, 6000);
 
     return () => clearInterval(autoScrollInterval);
-  }, [activeIndex, predictions.length]);
+  }, [activeIndex, validPredictions.length]);
 
   const handleScroll = (event: any) => {
     const contentOffsetX = event.nativeEvent.contentOffset.x;
@@ -187,7 +225,7 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
   }
 
   // Empty state
-  if (predictions.length === 0) {
+  if (validPredictions.length === 0) {
     return <View style={styles.emptyContainer} />;
   }
 
@@ -223,7 +261,7 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
         contentContainerStyle={styles.scrollContent}
         onScroll={handleScroll}
         scrollEventThrottle={16}>
-        {predictions.map((prediction, index) => (
+        {validPredictions.map((prediction, index) => (
           <TouchableOpacity
             key={prediction.matchId}
             activeOpacity={0.9}
@@ -380,9 +418,9 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
       </ScrollView>
 
       {/* Pagination Dots */}
-      {predictions.length > 1 && (
+      {validPredictions.length > 1 && (
         <View style={styles.pagination}>
-          {predictions.map((_, index) => (
+          {validPredictions.map((_, index) => (
             <View
               key={index}
               style={[
