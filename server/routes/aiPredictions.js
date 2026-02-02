@@ -104,17 +104,22 @@ async function fetchMSNUpcomingMatches() {
         
         for (const game of games) {
           const startDateTime = game.startDateTime;
-          const matchTime = new Date(startDateTime).getTime();
-          const gameStatus = game.gameState?.gameStatus?.toLowerCase() || "";
+          // Handle both milliseconds timestamp and ISO string
+          const matchTime = typeof startDateTime === 'number' ? startDateTime : new Date(startDateTime).getTime();
+          const gameStatus = (game.gameState?.gameStatus || "").toLowerCase();
           
-          // Pegar apenas partidas que ainda não terminaram (não são "final" ou "post")
+          // Pegar apenas partidas que ainda não terminaram
           const isFinished = gameStatus === "final" || gameStatus === "post" || gameStatus === "ft";
           
-          // Verificar se é partida de hoje ou amanhã
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          const dayAfterTomorrow = new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000);
-          const isInRange = matchTime >= today.getTime() && matchTime < dayAfterTomorrow.getTime();
+          // Verificar se é partida dentro dos próximos 7 dias
+          const now = Date.now();
+          const sevenDaysFromNow = now + 7 * 24 * 60 * 60 * 1000;
+          const isInRange = matchTime >= now && matchTime <= sevenDaysFromNow;
+          
+          // Log debug para primeira partida
+          if (games.indexOf(game) === 0) {
+            console.log(`[AIPredictions] Sample: ${game.participants?.[0]?.team?.shortName?.rawName} status=${gameStatus} time=${matchTime} now=${now} inRange=${isInRange}`);
+          }
           
           if (!isFinished && isInRange) {
             const homeTeam = game.participants?.[0];
@@ -129,12 +134,12 @@ async function fetchMSNUpcomingMatches() {
                   `https://img-s-msn-com.akamaized.net/tenant/amp/entityid/${homeTeam.team.image.id}` : "",
                 awayTeamLogo: awayTeam?.team?.image?.id ?
                   `https://img-s-msn-com.akamaized.net/tenant/amp/entityid/${awayTeam.team.image.id}` : "",
-                startTime: startDateTime,
+                startTime: typeof startDateTime === 'number' ? new Date(startDateTime).toISOString() : startDateTime,
                 league: { name: league.name, logo: "" },
-                status: gameStatus || "scheduled",
+                status: gameStatus || "pregame",
               });
               
-              console.log(`[AIPredictions] + ${homeTeam?.team?.shortName?.rawName} vs ${awayTeam?.team?.shortName?.rawName} (${gameStatus || 'scheduled'})`);
+              console.log(`[AIPredictions] + ${homeTeam?.team?.shortName?.rawName} vs ${awayTeam?.team?.shortName?.rawName} (${gameStatus || 'pregame'})`);
             }
           }
         }
