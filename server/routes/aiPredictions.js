@@ -80,8 +80,15 @@ async function fetchMSNUpcomingMatches() {
         
         for (const game of games) {
           const startDateTime = game.startDateTime;
-          // Handle both milliseconds timestamp and ISO string
-          const matchTime = typeof startDateTime === 'number' ? startDateTime : new Date(startDateTime).getTime();
+          // Handle numeric strings, numbers, and ISO strings
+          let matchTime;
+          if (typeof startDateTime === 'number') {
+            matchTime = startDateTime;
+          } else if (typeof startDateTime === 'string' && /^\d+$/.test(startDateTime)) {
+            matchTime = parseInt(startDateTime, 10);
+          } else {
+            matchTime = new Date(startDateTime).getTime();
+          }
           const gameStatus = (game.gameState?.gameStatus || "").toLowerCase();
           
           // Pegar apenas partidas que ainda não terminaram
