@@ -251,6 +251,78 @@ router.get("/debug", async (req, res) => {
 });
 
 /**
+ * GET /api/ai-predictions/test-msn
+ * Testa a API MSN diretamente
+ */
+router.get("/test-msn", async (req, res) => {
+  try {
+    const axios = require("axios");
+    const now = new Date();
+    
+    const params = new URLSearchParams({
+      version: "1.0",
+      cm: "pt-br",
+      scn: "ANON",
+      it: "web",
+      apikey: "kO1dI4ptCTTylLkPL1ZTHYP8JhLKb8mRDoA5yotmNJ",
+      id: "Soccer_EnglandPremierLeague",
+      sport: "Soccer",
+      datetime: now.toISOString().split(".")[0],
+      tzoffset: "-3",
+    });
+
+    const response = await axios.get(
+      `https://api.msn.com/sports/livearoundtheleague?${params}`,
+      {
+        headers: {
+          "User-Agent": "Mozilla/5.0",
+          Accept: "application/json",
+        },
+        timeout: 10000,
+      }
+    );
+
+    const schedules = response.data?.value?.[0]?.schedules || [];
+    const games = schedules[0]?.games || [];
+    
+    const processedGames = games.slice(0, 3).map(g => {
+      const startDateTime = g.startDateTime;
+      const matchTime = typeof startDateTime === 'number' ? startDateTime : new Date(startDateTime).getTime();
+      const gameStatus = (g.gameState?.gameStatus || "").toLowerCase();
+      const nowMs = Date.now();
+      const isInRange = matchTime >= nowMs && matchTime <= nowMs + 7 * 24 * 60 * 60 * 1000;
+      const isFinished = gameStatus === "final" || gameStatus === "post" || gameStatus === "ft";
+      
+      return {
+        home: g.participants?.[0]?.team?.shortName?.rawName,
+        away: g.participants?.[1]?.team?.shortName?.rawName,
+        rawTime: startDateTime,
+        matchTimeMs: matchTime,
+        nowMs: nowMs,
+        status: gameStatus,
+        isInRange,
+        isFinished,
+        shouldInclude: !isFinished && isInRange,
+      };
+    });
+
+    res.json({
+      success: true,
+      schedulesCount: schedules.length,
+      gamesInFirstSchedule: games.length,
+      sampleGames: processedGames,
+      serverTime: now.toISOString(),
+      serverTimeMs: Date.now(),
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+/**
  * GET /api/ai-predictions/match/:id
  * Retorna previsão para uma partida específica
  */
