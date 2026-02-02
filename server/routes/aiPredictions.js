@@ -176,17 +176,32 @@ router.get("/upcoming", async (req, res) => {
       });
     }
 
+    // Force refresh se cache estiver vazio ou parâmetro refresh=true
+    const forceRefresh = req.query.refresh === "true";
+    
     // Buscar partidas próximas (com cache)
     let matches = [];
     const now = Date.now();
 
-    if (matchesCache.data.length > 0 && now - matchesCache.timestamp < MATCHES_CACHE_TTL) {
+    if (!forceRefresh && matchesCache.data.length > 0 && now - matchesCache.timestamp < MATCHES_CACHE_TTL) {
       matches = matchesCache.data;
-      console.log("[AIPredictions] Usando cache de partidas");
+      console.log("[AIPredictions] Usando cache de partidas:", matches.length);
     } else {
+      console.log("[AIPredictions] Buscando partidas frescas...");
       matches = await getUpcomingMatches();
-      matchesCache = { data: matches, timestamp: now };
+      
+      // Só guardar no cache se encontrar partidas
+      if (matches.length > 0) {
+        matchesCache = { data: matches, timestamp: now };
+      }
       console.log(`[AIPredictions] ${matches.length} partidas encontradas`);
+    }
+
+    if (matches.length === 0) {
+      // Tentar fallback direto
+      console.log("[AIPredictions] Sem partidas, tentando fetchMSNUpcomingMatches diretamente...");
+      matches = await fetchMSNUpcomingMatches();
+      console.log(`[AIPredictions] Fallback retornou ${matches.length} partidas`);
     }
 
     if (matches.length === 0) {
@@ -213,6 +228,43 @@ router.get("/upcoming", async (req, res) => {
       success: false,
       error: error.message,
       predictions: [],
+    });
+  }
+});
+
+/**
+ * GET /api/ai-predictions/debug
+ * Endpoint de debug para verificar busca de partidas
+ */
+router.get("/debug", async (req, res) => {
+  try {
+    console.log("[AIPredictions] Debug: iniciando busca de partidas...");
+    
+    // Limpar cache
+    matchesCache = { data: [], timestamp: 0 };
+    
+    // Buscar partidas diretamente
+    const matches = await fetchMSNUpcomingMatches();
+    
+    res.json({
+      success: true,
+      matchesCount: matches.length,
+      matches: matches.slice(0, 5).map(m => ({
+        id: m.id,
+        home: m.homeTeam,
+        away: m.awayTeam,
+        time: m.startTime,
+        status: m.status,
+        league: m.league.name,
+      })),
+      apiKeyConfigured: !!process.env.NVIDIA_API_KEY,
+      cacheCleared: true,
+    });
+  } catch (error) {
+    console.error("[AIPredictions] Debug erro:", error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message,
     });
   }
 });
