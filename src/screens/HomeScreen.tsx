@@ -595,6 +595,7 @@ export const HomeScreen = ({ navigation }: any) => {
   // AI Predictions State
   const [aiPredictions, setAiPredictions] = useState<AIPrediction[]>([]);
   const [loadingAIPredictions, setLoadingAIPredictions] = useState(false);
+  const [aiPredictionsError, setAiPredictionsError] = useState(false);
 
   // Team Search State
   const [teamSearchQuery, setTeamSearchQuery] = useState("");
@@ -1084,13 +1085,18 @@ export const HomeScreen = ({ navigation }: any) => {
   // Fetch AI Predictions (cache diário no servidor, economiza tokens)
   const fetchAIPredictions = async () => {
     setLoadingAIPredictions(true);
+    setAiPredictionsError(false);
     try {
       console.log("[HomeScreen] Fetching AI predictions...");
       const predictions = await api.getAIPredictions();
       console.log(`[HomeScreen] Got ${predictions.length} AI predictions`);
       setAiPredictions(predictions);
+      if (predictions.length === 0) {
+        setAiPredictionsError(true);
+      }
     } catch (error) {
       console.error("[HomeScreen] Error fetching AI predictions:", error);
+      setAiPredictionsError(true);
     } finally {
       setLoadingAIPredictions(false);
     }
@@ -1770,6 +1776,8 @@ export const HomeScreen = ({ navigation }: any) => {
         <AIPredictionSlider
           predictions={aiPredictions}
           loading={loadingAIPredictions}
+          error={aiPredictionsError}
+          onRetry={fetchAIPredictions}
           onPressPrediction={(prediction) => {
             console.log("AI Prediction clicked:", prediction);
           }}

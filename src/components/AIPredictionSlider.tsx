@@ -44,13 +44,17 @@ export interface AIPrediction {
 interface AIPredictionSliderProps {
   predictions: AIPrediction[];
   loading?: boolean;
+  error?: boolean;
   onPressPrediction?: (prediction: AIPrediction) => void;
+  onRetry?: () => void;
 }
 
 export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
   predictions,
   loading = false,
+  error = false,
   onPressPrediction,
+  onRetry,
 }) => {
   const scrollViewRef = useRef<ScrollView>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -224,9 +228,32 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
     );
   }
 
-  // Empty state
-  if (validPredictions.length === 0) {
-    return <View style={styles.emptyContainer} />;
+  // Error state - show retry button
+  if (error || (validPredictions.length === 0 && !loading)) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.sectionHeader}>
+          <View style={styles.sectionTitleContainer}>
+            <Brain size={20} color="#a855f7" />
+            <Text style={styles.sectionTitle}>Previsões da IA</Text>
+          </View>
+        </View>
+        <View style={styles.errorContainer}>
+          <View style={styles.errorIconWrapper}>
+            <Brain size={32} color="#6b7280" />
+          </View>
+          <Text style={styles.errorTitle}>Previsões indisponíveis</Text>
+          <Text style={styles.errorText}>
+            Não foi possível carregar as previsões da IA.
+          </Text>
+          {onRetry && (
+            <TouchableOpacity style={styles.retryButton} onPress={onRetry}>
+              <Text style={styles.retryButtonText}>Tentar novamente</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+    );
   }
 
   return (
@@ -1060,6 +1087,49 @@ const styles = StyleSheet.create({
     color: "#71717a",
     fontSize: 12,
     textAlign: "center",
+  },
+  errorContainer: {
+    backgroundColor: "rgba(99, 102, 241, 0.08)",
+    borderRadius: 16,
+    padding: 24,
+    marginHorizontal: 16,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(99, 102, 241, 0.15)",
+  },
+  errorIconWrapper: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "rgba(107, 114, 128, 0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  errorTitle: {
+    color: "#e4e4e7",
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 6,
+  },
+  errorText: {
+    color: "#71717a",
+    fontSize: 13,
+    textAlign: "center",
+    marginBottom: 16,
+  },
+  retryButton: {
+    backgroundColor: "rgba(168, 85, 247, 0.2)",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(168, 85, 247, 0.4)",
+  },
+  retryButtonText: {
+    color: "#a855f7",
+    fontSize: 14,
+    fontWeight: "600",
   },
 });
 
