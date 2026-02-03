@@ -491,10 +491,98 @@ Responda agora:`;
   }
 }
 
+/**
+ * Gera prompt para análise de STREAKS (Sequências Estatísticas)
+ */
+function generateStreakPrompt(matches) {
+  const matchesList = matches
+    .map(
+      (m, i) =>
+        `${i + 1}. ${m.homeTeam} vs ${m.awayTeam} (${m.league.name || "Liga"})`,
+    )
+    .join("\n");
+
+  return `Atue como um analista de dados de futebol.
+Analise os times jogando HOJE na lista abaixo e identifique SEQUÊNCIAS ESTATÍSTICAS IMPRESSIONANTES (Streaks) atuais.
+Use seu conhecimento sobre o momento atual desses times.
+
+Jogos de Hoje:
+${matchesList}
+
+CRITÉRIOS DE STREAK (Mínimo 4 jogos para considerar um streak):
+- Vitórias seguidas (ex: "5 vitórias seguidas")
+- Invencibilidade (ex: "8 jogos sem perder", "Invicto em casa há 10 jogos")
+- Gols (ex: "Marcou em 100% dos ultimos 6 jogos")
+- Defesa (ex: "Não sofre gols há 4 jogos")
+- Ambas Marcam (ex: "Ambas marcaram nos últimos 5 jogos")
+
+Retorne APENAS um JSON válido com a seguinte estrutura (máximo 4 destaques):
+{
+  "streaks": [
+    {
+      "matchIndex": <1-N>,
+      "team": "Nome do Time",
+      "type": "fire" (sequencia positiva) | "shield" (defesa) | "alert" (negativa/curiosa),
+      "title": "5 Vitórias Seguidas",
+      "subtitle": "Venceu os últimos 5 jogos da liga"
+    }
+  ]
+}
+
+Se não houver streaks MUITO RELEVANTES, retorne array vazio.`;
+}
+
+/**
+ * Gera Insights de Streaks (Sequências)
+ */
+async function generateStreakInsights(matches) {
+  if (!matches || matches.length === 0) return [];
+
+  const cacheKey = `streak_insights_${new Date().toISOString().split("T")[0]}`;
+  const cached = predictionCache.get(cacheKey);
+
+  if (cached && Date.now() - cached.timestamp < 4 * 60 * 60 * 1000) { // Cache de 4 horas
+    return cached.data;
+  }
+
+  try {
+    console.log(`[AIPrediction] Gerando Streaks para ${matches.length} partidas...`);
+    const prompt = generateStreakPrompt(matches);
+    const response = await callPerplexityAPI(prompt);
+    const result = extractJSON(response);
+
+    if (!result || !result.streaks) return [];
+
+    const enhancedStreaks = result.streaks
+      .map((streak) => {
+        const originalMatch = matches[streak.matchIndex - 1];
+        if (!originalMatch) return null;
+
+        return {
+          ...streak,
+          matchId: originalMatch.id,
+          startTime: originalMatch.startTime,
+        };
+      })
+      .filter((s) => s !== null);
+
+    predictionCache.set(cacheKey, {
+      data: enhancedStreaks,
+      timestamp: Date.now(),
+    });
+
+    return enhancedStreaks;
+  } catch (error) {
+    console.error("[AIPrediction] Erro Streaks:", error.message);
+    return [];
+  }
+}
+
 module.exports = {
   getMatchPrediction,
-  getMatchesPredictions,
+  getMatchesPredictions, // Assuming this is the analyzeMatchBatch from the instruction, or it should be kept. Keeping original name.
   generateScoutInsights,
+  generateStreakInsights,
   getFootballChatResponse,
   clearCache,
 };

@@ -3,6 +3,7 @@ const router = express.Router();
 const {
   getMatchesPredictions,
   generateScoutInsights,
+  generateStreakInsights,
   getFootballChatResponse,
 } = require("../services/aiPrediction");
 
@@ -489,6 +490,52 @@ router.get("/scout", async (req, res) => {
       error: error.message,
       insights: [],
     });
+  }
+});
+
+
+/**
+ * GET /api/ai-predictions/streaks
+ * Retorna sequências estatísticas (Streaks)
+ */
+router.get("/streaks", async (req, res) => {
+  try {
+    console.log("[AIPredictions] Requisição Streaks recebida");
+
+    if (!process.env.NVIDIA_API_KEY) {
+      return res.json({ success: false, streaks: [] });
+    }
+
+    // 1. Tentar pegar do cache de partidas recente
+    let matches = [];
+    const now = Date.now();
+    const CACHE_TTL = 10 * 60 * 1000;
+    
+    if (matchesCache.data.length > 0 && now - matchesCache.timestamp < CACHE_TTL) {
+      matches = matchesCache.data;
+    } else {
+      matches = await getUpcomingMatches();
+      if (matches.length > 0) matchesCache = { data: matches, timestamp: now };
+    }
+
+    if (matches.length === 0) {
+      matches = await fetchMSNUpcomingMatches();
+    }
+
+    if (matches.length === 0) {
+      return res.json({ success: true, streaks: [] });
+    }
+
+    // 3. Gerar Streaks
+    const streaks = await generateStreakInsights(matches);
+
+    res.json({
+      success: true,
+      streaks,
+    });
+  } catch (error) {
+    console.error("[AIPredictions] Erro Streaks:", error.message);
+    res.status(500).json({ success: false, streaks: [] });
   }
 });
 
