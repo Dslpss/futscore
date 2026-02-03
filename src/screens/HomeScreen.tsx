@@ -576,6 +576,7 @@ export const HomeScreen = ({ navigation }: any) => {
   const [updateInfo, setUpdateInfo] = useState<any>(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [premiumModalMode, setPremiumModalMode] = useState<"welcome" | "block">("welcome");
   const [showWorldCupModal, setShowWorldCupModal] = useState(false);
 
   // Date Selection State
@@ -1834,6 +1835,7 @@ export const HomeScreen = ({ navigation }: any) => {
                 if (isPremium) {
                   navigation.navigate("AIGuru");
                 } else {
+                  setPremiumModalMode("block");
                   setShowPremiumModal(true);
                 }
               }}
@@ -2592,8 +2594,17 @@ export const HomeScreen = ({ navigation }: any) => {
       <PremiumFeaturesModal
         visible={showPremiumModal}
         onClose={() => setShowPremiumModal(false)}
-        showDontShowAgain={true}
+        showDontShowAgain={premiumModalMode === "welcome"}
         onDontShowAgain={handleDontShowAgainHome}
+        actionLabel={premiumModalMode === "block" ? "Assinar Premium" : "Começar Agora"}
+        onAction={
+          premiumModalMode === "block" 
+          ? () => {
+              setShowPremiumModal(false);
+              navigation.navigate("Subscription");
+            }
+          : undefined
+        }
       />
 
       {/* Profile Modal */}

@@ -178,7 +178,13 @@ export const AIGuruScreen = ({ navigation }: any) => {
         <View style={styles.headerContent}>
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => navigation.goBack()}>
+            onPress={() => {
+              if (navigation.canGoBack()) {
+                navigation.goBack();
+              } else {
+                navigation.navigate("Home");
+              }
+            }}>
             <ChevronLeft size={24} color="#fff" />
           </TouchableOpacity>
           <View style={styles.headerTitleContainer}>

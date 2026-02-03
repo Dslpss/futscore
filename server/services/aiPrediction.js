@@ -354,7 +354,8 @@ Retorne APENAS um JSON válido com a seguinte estrutura (máximo 3 destaques):
       "awayTeam": "Nome Time Fora",
       "reason": "Explicação técnica curta e direta sobre por que é uma oportunidade (max 100 chars)",
       "confidence": "high" | "medium",
-      "odds_estimation": "Valor estimado (ex: 2.10)"
+      "odds_estimation": "Valor estimado (ex: 2.10)",
+      "favorite": "Home" | "Away" | "None"
     }
   ]
 }

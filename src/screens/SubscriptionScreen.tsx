@@ -190,7 +190,15 @@ export const SubscriptionScreen = ({ navigation }: any) => {
   return (
     <LinearGradient colors={['#09090b', '#18181b']} style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Header with Back Button */}
         <View style={styles.header}>
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
           <Sparkles size={48} color="#fbbf24" strokeWidth={2} />
           <Text style={styles.title}>Upgrade para Premium</Text>
           <Text style={styles.subtitle}>
@@ -284,6 +292,17 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     marginBottom: 32,
+    position: 'relative',
+    width: '100%',
+  },
+  backButton: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    padding: 8,
+    zIndex: 10,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 20,
   },
   title: {
     fontSize: 32,

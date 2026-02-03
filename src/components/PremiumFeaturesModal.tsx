@@ -8,11 +8,13 @@ interface PremiumFeaturesModalProps {
   onClose: () => void;
   showDontShowAgain?: boolean;
   onDontShowAgain?: () => void;
+  actionLabel?: string;
+  onAction?: () => void;
 }
 
 const { width, height } = Dimensions.get('window');
 
-export const PremiumFeaturesModal = ({ visible, onClose, showDontShowAgain = false, onDontShowAgain }: PremiumFeaturesModalProps) => {
+export const PremiumFeaturesModal = ({ visible, onClose, showDontShowAgain = false, onDontShowAgain, actionLabel = "Começar Agora", onAction }: PremiumFeaturesModalProps) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
   const logoRotate = useRef(new Animated.Value(0)).current;
@@ -86,10 +88,14 @@ export const PremiumFeaturesModal = ({ visible, onClose, showDontShowAgain = fal
   });
 
   const handleClose = () => {
-    if (dontShowChecked && onDontShowAgain) {
-      onDontShowAgain();
+    if (onAction) {
+      onAction();
+    } else {
+      if (dontShowChecked && onDontShowAgain) {
+        onDontShowAgain();
+      }
+      onClose();
     }
-    onClose();
   };
 
   const features = [
@@ -210,7 +216,7 @@ export const PremiumFeaturesModal = ({ visible, onClose, showDontShowAgain = fal
                 end={{ x: 1, y: 1 }}
                 style={styles.ctaGradient}
               >
-                <Text style={styles.ctaText}>Começar Agora</Text>
+                <Text style={styles.ctaText}>{actionLabel}</Text>
                 <View style={styles.ctaIcon}>
                   <ChevronRight size={20} color="#fff" />
                 </View>

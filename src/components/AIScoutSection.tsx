@@ -6,17 +6,16 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Image,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import {
-  Brain,
   TrendingUp,
   TriangleAlert,
   ShieldCheck,
   Flame,
-  ChevronRight,
   Target,
+  Sparkles,
+  Info,
 } from "lucide-react-native";
 import { CONFIG } from "../constants/config";
 
@@ -35,8 +34,7 @@ export interface ScoutInsight {
     logo?: string;
   };
   startTime: string;
-  homeTeamLogo?: string;
-  awayTeamLogo?: string;
+  favorite?: "Home" | "Away" | "None";
 }
 
 interface AIScoutSectionProps {
@@ -48,7 +46,6 @@ export const AIScoutSection: React.FC<AIScoutSectionProps> = ({
 }) => {
   const [insights, setInsights] = useState<ScoutInsight[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
 
   useEffect(() => {
     fetchScoutInsights();
@@ -57,7 +54,6 @@ export const AIScoutSection: React.FC<AIScoutSectionProps> = ({
   const fetchScoutInsights = async () => {
     try {
       setLoading(true);
-      setError(false);
       // Use configured API URL
       const apiUrl = `${CONFIG.BACKEND_URL}/api/ai-predictions/scout`;
       const response = await fetch(apiUrl);
@@ -66,12 +62,10 @@ export const AIScoutSection: React.FC<AIScoutSectionProps> = ({
       if (data.success && Array.isArray(data.insights)) {
         setInsights(data.insights);
       } else {
-        // Se falhar ou vier vazio, apenas não mostra nada (sem erro explícito para o usuário)
         setInsights([]);
       }
     } catch (err) {
-      console.error("[AIScout] Error fetching insights:", err);
-      setError(true);
+      console.error("[AIScout] Error checking insights:", err);
     } finally {
       setLoading(false);
     }
@@ -81,7 +75,7 @@ export const AIScoutSection: React.FC<AIScoutSectionProps> = ({
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="small" color="#a855f7" />
-        <Text style={styles.loadingText}>Buscando oportunidades...</Text>
+        <Text style={styles.loadingText}>Buscando as melhores oportunidades...</Text>
       </View>
     );
   }
@@ -92,35 +86,43 @@ export const AIScoutSection: React.FC<AIScoutSectionProps> = ({
     switch (type) {
       case "zebra":
         return {
-          icon: <TriangleAlert size={16} color="#fbbf24" />,
-          label: "ZEBRA POSSÍVEL",
+          icon: <TriangleAlert size={18} color="#fbbf24" />,
+          label: "OPORTUNIDADE DE RISCO",
+          action: "Apostar na Zebra 🦓",
           colors: ["#422006", "#271a0c"],
           borderColor: "rgba(251, 191, 36, 0.4)",
           textColor: "#fbbf24",
+          gradientIcon: ["#f59e0b", "#d97706"],
         };
       case "seguro":
         return {
-          icon: <ShieldCheck size={16} color="#22c55e" />,
-          label: "JOGO SEGURO",
+          icon: <ShieldCheck size={18} color="#22c55e" />,
+          label: "ALTA PROBABILIDADE",
+          action: "Vitória do Favorito 🛡️",
           colors: ["#052e16", "#022c22"],
           borderColor: "rgba(34, 197, 94, 0.4)",
           textColor: "#4ade80",
+          gradientIcon: ["#22c55e", "#15803d"],
         };
       case "gols":
         return {
-          icon: <Flame size={16} color="#f97316" />,
-          label: "ALERTA DE GOLS",
+          icon: <Flame size={18} color="#f97316" />,
+          label: "TENDÊNCIA DE GOLS",
+          action: "Mais de 2.5 Gols 🔥",
           colors: ["#431407", "#27120a"],
           borderColor: "rgba(249, 115, 22, 0.4)",
           textColor: "#fb923c",
+          gradientIcon: ["#f97316", "#c2410c"],
         };
       default:
         return {
-          icon: <Target size={16} color="#a855f7" />,
-          label: "DESTAQUE",
+          icon: <Target size={18} color="#a855f7" />,
+          label: "DESTAQUE IA",
+          action: "Fique de Olho 👀",
           colors: ["#3b0764", "#2e1065"],
           borderColor: "rgba(168, 85, 247, 0.4)",
           textColor: "#c084fc",
+          gradientIcon: ["#a855f7", "#7e22ce"],
         };
     }
   };
@@ -130,12 +132,10 @@ export const AIScoutSection: React.FC<AIScoutSectionProps> = ({
       if (!isoString) return "--:--";
       const date = new Date(isoString);
       if (isNaN(date.getTime())) return "--:--";
-      
-      // Ajuste simples de fuso se necessário ou usar o local
       return date.toLocaleTimeString("pt-BR", {
         hour: "2-digit",
         minute: "2-digit",
-        timeZone: "America/Sao_Paulo", // Forçar BRT se possível, ou remover se causar erro
+        timeZone: "America/Sao_Paulo",
       });
     } catch {
       return "--:--";
@@ -144,13 +144,16 @@ export const AIScoutSection: React.FC<AIScoutSectionProps> = ({
 
   return (
     <View style={styles.container}>
+      {/* Section Header */}
       <View style={styles.header}>
-        <View style={styles.titleContainer}>
-          <Target size={20} color="#fbbf24" />
-          <Text style={styles.title}>Scout de Oportunidades</Text>
-        </View>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>BETA</Text>
+        <View>
+          <View style={styles.titleRow}>
+            <Sparkles size={18} color="#a855f7" />
+            <Text style={styles.title}>Dicas de Apostas & Scout IA</Text>
+          </View>
+          <Text style={styles.subtitle}>
+            Melhores oportunidades analisadas pelo algoritmo hoje
+          </Text>
         </View>
       </View>
 
@@ -171,50 +174,71 @@ export const AIScoutSection: React.FC<AIScoutSectionProps> = ({
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={[styles.card, { borderColor: config.borderColor }]}>
-                {/* Type Header */}
+                
+                {/* Header do Card: Tipo e Odds */}
                 <View style={styles.cardHeader}>
                   <View style={styles.typeBadge}>
                     {config.icon}
-                    <Text
-                      style={[styles.typeText, { color: config.textColor }]}>
+                    <Text style={[styles.typeText, { color: config.textColor }]}>
                       {config.label}
                     </Text>
                   </View>
-                  <View style={styles.oddsBadge}>
-                    <Text style={styles.oddsLabel}>Odds est.</Text>
-                    <Text style={styles.oddsValue}>
-                      {insight.odds_estimation || "-.-"}
-                    </Text>
-                  </View>
+                  {insight.odds_estimation && (
+                    <View style={styles.oddsBadge}>
+                      <Text style={styles.oddsLabel}>ODD EST.</Text>
+                      <Text style={styles.oddsValue}>@{insight.odds_estimation}</Text>
+                    </View>
+                  )}
                 </View>
 
-                {/* Match Info */}
-                <View style={styles.matchInfo}>
-                  <Text style={styles.leagueName} numberOfLines={1}>
-                    {insight.league.name} • {formatTime(insight.startTime)}
+                {/* Ação Sugerida (Destaque) */}
+                <View style={styles.actionContainer}>
+                  <Text style={styles.actionLabel}>Sugestão da IA:</Text>
+                  <Text style={[styles.actionText, { color: config.textColor }]}>
+                    {config.action}
                   </Text>
-                  <View style={styles.teamsRow}>
-                    <Text style={styles.teamName} numberOfLines={1}>
-                      {insight.homeTeam}
-                    </Text>
-                    <Text style={styles.vsText}>vs</Text>
-                    <Text style={styles.teamName} numberOfLines={1}>
-                      {insight.awayTeam}
-                    </Text>
-                  </View>
                 </View>
 
-                {/* Reason */}
+                {/* Informações do Jogo */}
+                <View style={styles.divider} />
+                <View style={styles.matchInfo}>
+                  <View style={styles.leagueRow}>
+                    <Text style={styles.leagueName}>
+                      {insight.league.name}
+                    </Text>
+                    <Text style={styles.matchTime}>
+                      {formatTime(insight.startTime)}
+                    </Text>
+                  </View>
+                  
+                  <View style={styles.teamsContainer}>
+                    <Text style={styles.teamsText}>
+                      {insight.homeTeam} <Text style={styles.vsText}>x</Text> {insight.awayTeam}
+                    </Text>
+                  </View>
+
+                  {/* Favorito Badge */}
+                  {insight.favorite && insight.favorite !== "None" && (
+                    <View style={styles.favoriteBadge}>
+                      <Text style={styles.favoriteLabel}>FAVORITO:</Text>
+                      <Text style={styles.favoriteValue}>
+                        {insight.favorite === "Home" ? insight.homeTeam : insight.awayTeam}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Motivo (Análise) */}
                 <View style={styles.reasonContainer}>
-                  <TrendingUp
-                    size={14}
-                    color="#a1a1aa"
-                    style={{ marginTop: 2, marginRight: 6 }}
-                  />
+                  <View style={styles.reasonHeader}>
+                    <Info size={12} color="#a1a1aa" />
+                    <Text style={styles.reasonLabel}>Por que apostar?</Text>
+                  </View>
                   <Text style={styles.reasonText} numberOfLines={3}>
                     {insight.reason}
                   </Text>
                 </View>
+
               </LinearGradient>
             </TouchableOpacity>
           );
@@ -226,131 +250,187 @@ export const AIScoutSection: React.FC<AIScoutSectionProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 24,
+    marginBottom: 28,
   },
   loadingContainer: {
-    padding: 20,
-    flexDirection: "row",
+    padding: 24,
     justifyContent: "center",
-    alignItems: "center",
-    gap: 10,
-  },
-  loadingText: {
-    color: "#a1a1aa",
-    fontSize: 14,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    marginBottom: 12,
-  },
-  titleContainer: {
-    flexDirection: "row",
     alignItems: "center",
     gap: 8,
   },
+  loadingText: {
+    color: "#71717a",
+    fontSize: 13,
+  },
+  header: {
+    paddingHorizontal: 16,
+    marginBottom: 16,
+  },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
+  },
   title: {
     color: "#ffffff",
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "700",
-    letterSpacing: 0.3,
   },
-  badge: {
-    backgroundColor: "rgba(251, 191, 36, 0.2)",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "rgba(251, 191, 36, 0.3)",
-  },
-  badgeText: {
-    color: "#fbbf24",
-    fontSize: 10,
-    fontWeight: "700",
+  subtitle: {
+    color: "#a1a1aa",
+    fontSize: 13,
   },
   scrollContent: {
     paddingHorizontal: 16,
-    gap: 12,
+    paddingBottom: 4,
+    gap: 16,
   },
   cardWrapper: {
-    width: 280,
+    width: 320,
   },
   card: {
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 20,
+    padding: 18,
     borderWidth: 1,
-    height: 160,
+    minHeight: 220,
   },
   cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 16,
   },
   typeBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    backgroundColor: "rgba(0,0,0,0.3)",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    gap: 8,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
   },
   typeText: {
     fontSize: 11,
-    fontWeight: "700",
+    fontWeight: "800",
     letterSpacing: 0.5,
   },
   oddsBadge: {
     alignItems: "flex-end",
+    backgroundColor: "rgba(255,255,255,0.08)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
   },
   oddsLabel: {
-    color: "#71717a",
+    color: "#a1a1aa",
     fontSize: 9,
+    fontWeight: "600",
+    marginBottom: 2,
   },
   oddsValue: {
-    color: "#ffffff",
-    fontSize: 12,
-    fontWeight: "700",
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "800",
   },
-  matchInfo: {
-    marginBottom: 12,
+  actionContainer: {
+    marginBottom: 16,
   },
-  leagueName: {
+  actionLabel: {
     color: "#a1a1aa",
     fontSize: 11,
     marginBottom: 4,
+    fontWeight: "600",
+    textTransform: "uppercase",
   },
-  teamsRow: {
+  actionText: {
+    fontSize: 20,
+    fontWeight: "800",
+    letterSpacing: -0.5,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    marginBottom: 16,
+  },
+  matchInfo: {
+    marginBottom: 16,
+  },
+  leagueRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  leagueName: {
+    color: "#94a3b8",
+    fontSize: 11,
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
+  matchTime: {
+    color: "#a1a1aa",
+    fontSize: 11,
+  },
+  teamsContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  teamsText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  vsText: {
+    color: "#71717a",
+    fontWeight: "400",
+    fontSize: 13,
+  },
+  reasonContainer: {
+    backgroundColor: "rgba(0,0,0,0.3)",
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+  },
+  reasonHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
+    marginBottom: 6,
   },
-  teamName: {
-    color: "#ffffff",
-    fontSize: 13,
-    fontWeight: "600",
-    flex: 1,
-  },
-  vsText: {
-    color: "#52525b",
+  reasonLabel: {
+    color: "#a1a1aa",
     fontSize: 11,
-    fontWeight: "500",
-  },
-  reasonContainer: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    backgroundColor: "rgba(0,0,0,0.2)",
-    padding: 8,
-    borderRadius: 8,
-    flex: 1,
+    fontWeight: "600",
   },
   reasonText: {
-    color: "#d4d4d8",
-    fontSize: 12,
-    lineHeight: 16,
-    flex: 1,
+    color: "#e4e4e7",
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  favoriteBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignSelf: "flex-start",
+  },
+  favoriteLabel: {
+    color: "#a1a1aa",
+    fontSize: 10,
+    fontWeight: "700",
+    marginRight: 4,
+  },
+  favoriteValue: {
+    color: "#22c55e",
+    fontSize: 10,
+    fontWeight: "800",
+    textTransform: "uppercase",
   },
 });
