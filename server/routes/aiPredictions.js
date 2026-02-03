@@ -3,6 +3,7 @@ const router = express.Router();
 const {
   getMatchesPredictions,
   generateScoutInsights,
+  getFootballChatResponse,
 } = require("../services/aiPrediction");
 
 // Cache simples para partidas próximas
@@ -487,6 +488,43 @@ router.get("/scout", async (req, res) => {
       success: false,
       error: error.message,
       insights: [],
+    });
+  }
+});
+
+/**
+ * POST /api/ai-predictions/chat
+ * Chat com o Guru do Futebol
+ */
+router.post("/chat", async (req, res) => {
+  try {
+    const { message, history } = req.body;
+
+    if (!message) {
+      return res.status(400).json({
+        success: false,
+        error: "Mensagem é obrigatória",
+      });
+    }
+
+    if (!process.env.NVIDIA_API_KEY) {
+      return res.status(503).json({
+        success: false,
+        error: "Serviço de IA indisponível (Key missing)",
+      });
+    }
+
+    const response = await getFootballChatResponse(message, history || []);
+
+    res.json({
+      success: true,
+      message: response,
+    });
+  } catch (error) {
+    console.error("[AIPredictions] Erro Chat:", error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message,
     });
   }
 });

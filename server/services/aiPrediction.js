@@ -420,9 +420,80 @@ async function generateScoutInsights(matches) {
   }
 }
 
+/**
+ * Gera resposta de chat sobre futebol em tempo real
+ */
+async function getFootballChatResponse(message, history = []) {
+  if (!message) return "Por favor, digite uma mensagem.";
+
+  // Construir contexto da conversa
+  const conversationContext = history
+    .slice(-4) // Manter apenas as últimas 4 trocas para contexto
+    .map((msg) => `${msg.role === "user" ? "Usuário" : "Guru"}: ${msg.content}`)
+    .join("\n");
+
+  const prompt = `Você é o "Guru do Futebol", um assistente de IA extremamente inteligente, atualizado e viciado em futebol.
+Sua missão é responder perguntas sobre futebol com dados PRECISOS, ATUALIZADOS e uma personalidade amigável mas técnica.
+
+Contexto da conversa anterior:
+${conversationContext}
+
+Pergunta do Usuário: ${message}
+
+REGRAS OBRIGATÓRIAS:
+1. PESQUISE DADOS ATUAIS se a pergunta for sobre jogos recentes, lesões ou tabelas.
+2. Seja direto e objetivo. Não enrole.
+3. Se o usuário perguntar opinião, dê uma baseada em dados, não fique "em cima do muro".
+4. Use emojis moderadamente para dar personalidade.
+5. Se não souber a resposta (ex: vida pessoal de jogador muito obscura), admita.
+6. Responda SEMPRE em Português do Brasil.
+7. Formatação: Use markdown para negrito e listas se ajudar.
+
+Responda agora:`;
+
+  try {
+    console.log(`[AIPrediction] Gerando resposta de chat para: "${message}"`);
+    
+    // Usar a mesma API Perplexity/Sonar para ter dados em tempo real
+    const response = await axios.post(
+      PERPLEXITY_URL,
+      {
+        model: "sonar",
+        messages: [
+          {
+            role: "system",
+            content: "Você é o Guru do Futebol, especialista em análises e dados em tempo real.",
+          },
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        max_tokens: 800,
+        temperature: 0.6,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        timeout: 40000,
+      }
+    );
+
+    const content = response.data?.choices?.[0]?.message?.content || "";
+    return content;
+
+  } catch (error) {
+    console.error("[AIPrediction] Erro no Chat:", error.message);
+    return "Desculpe, estou aquecendo no banco de reservas. Tente novamente em instantes! 😅";
+  }
+}
+
 module.exports = {
   getMatchPrediction,
   getMatchesPredictions,
   generateScoutInsights,
+  getFootballChatResponse,
   clearCache,
 };

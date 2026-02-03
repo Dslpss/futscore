@@ -127,10 +127,15 @@ export const AIScoutSection: React.FC<AIScoutSectionProps> = ({
 
   const formatTime = (isoString: string) => {
     try {
+      if (!isoString) return "--:--";
       const date = new Date(isoString);
+      if (isNaN(date.getTime())) return "--:--";
+      
+      // Ajuste simples de fuso se necessário ou usar o local
       return date.toLocaleTimeString("pt-BR", {
         hour: "2-digit",
         minute: "2-digit",
+        timeZone: "America/Sao_Paulo", // Forçar BRT se possível, ou remover se causar erro
       });
     } catch {
       return "--:--";

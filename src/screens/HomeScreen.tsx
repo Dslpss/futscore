@@ -28,6 +28,7 @@ import {
 import { useMatches } from "../context/MatchContext";
 import { useFavorites } from "../context/FavoritesContext";
 import { useAuth } from "../context/AuthContext";
+import { useSubscriptionContext } from "../context/SubscriptionContext";
 import { MatchCard } from "../components/MatchCard";
 import { NextMatchWidget } from "../components/NextMatchWidget";
 import { UpcomingMatchesSlider } from "../components/UpcomingMatchesSlider";
@@ -568,6 +569,7 @@ export const HomeScreen = ({ navigation }: any) => {
     isFavoriteTeam,
   } = useFavorites();
   const { user, signOut } = useAuth();
+  const { isPremium } = useSubscriptionContext();
   const [selectedLeague, setSelectedLeague] = useState<string>("ALL");
   const [warnings, setWarnings] = useState<Warning[]>([]);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
@@ -1825,6 +1827,36 @@ export const HomeScreen = ({ navigation }: any) => {
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.actionButtonsContent}>
+            {/* AI Guru Chat Button */}
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => {
+                if (isPremium) {
+                  navigation.navigate("AIGuru");
+                } else {
+                  setShowPremiumModal(true);
+                }
+              }}
+              activeOpacity={0.85}>
+              <LinearGradient
+                colors={["#4c1d95", "#1a1a2e"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.actionButtonGradient}>
+                <View style={styles.actionButtonIconWrapper}>
+                  <LinearGradient
+                    colors={["#a855f7", "#7c3aed"]}
+                    style={styles.actionIconGradient}>
+                    <Text style={styles.actionButtonIcon}>🤖</Text>
+                  </LinearGradient>
+                </View>
+                <View style={styles.actionButtonTextContainer}>
+                  <Text style={styles.actionButtonText}>Guru IA</Text>
+                  <Text style={styles.actionButtonSubtext}>Chatbot</Text>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+
             <TouchableOpacity
               style={styles.actionButton}
               onPress={() => navigation.navigate("TeamSelection")}
