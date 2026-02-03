@@ -234,7 +234,7 @@ export const AIScoutSection: React.FC<AIScoutSectionProps> = ({
                     <Info size={12} color="#a1a1aa" />
                     <Text style={styles.reasonLabel}>Por que apostar?</Text>
                   </View>
-                  <Text style={styles.reasonText} numberOfLines={3}>
+                  <Text style={styles.reasonText} numberOfLines={2}>
                     {insight.reason}
                   </Text>
                 </View>
@@ -283,30 +283,32 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingBottom: 4,
+    paddingBottom: 8,
     gap: 16,
   },
   cardWrapper: {
-    width: 320,
+    width: 340, // Aumentado
   },
   card: {
-    borderRadius: 20,
-    padding: 18,
+    borderRadius: 24,
+    padding: 20,
     borderWidth: 1,
-    minHeight: 220,
+    height: 320, // Aumentado para caber tudo folgado
+    justifyContent: "space-between",
   },
   cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
+    height: 32,
+    marginBottom: 8,
   },
   typeBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     backgroundColor: "rgba(0,0,0,0.4)",
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 10,
     borderWidth: 1,
@@ -336,33 +338,36 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   actionContainer: {
-    marginBottom: 16,
+    height: 50,
+    justifyContent: 'center',
+    marginBottom: 4,
   },
   actionLabel: {
     color: "#a1a1aa",
     fontSize: 11,
-    marginBottom: 4,
+    marginBottom: 2,
     fontWeight: "600",
     textTransform: "uppercase",
   },
   actionText: {
-    fontSize: 20,
+    fontSize: 22, // Maior destaque
     fontWeight: "800",
     letterSpacing: -0.5,
   },
   divider: {
     height: 1,
     backgroundColor: "rgba(255,255,255,0.1)",
-    marginBottom: 16,
+    marginVertical: 12,
   },
   matchInfo: {
-    marginBottom: 16,
+    marginBottom: 0,
+    flex: 1,
   },
   leagueRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 6,
+    marginBottom: 8,
   },
   leagueName: {
     color: "#94a3b8",
@@ -377,60 +382,65 @@ const styles = StyleSheet.create({
   teamsContainer: {
     flexDirection: "row",
     alignItems: "center",
+    marginBottom: 8,
   },
   teamsText: {
     color: "#fff",
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "600",
   },
   vsText: {
     color: "#71717a",
     fontWeight: "400",
-    fontSize: 13,
-  },
-  reasonContainer: {
-    backgroundColor: "rgba(0,0,0,0.3)",
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.05)",
-  },
-  reasonHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 6,
-  },
-  reasonLabel: {
-    color: "#a1a1aa",
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  reasonText: {
-    color: "#e4e4e7",
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 14,
+    marginHorizontal: 4,
   },
   favoriteBadge: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 8,
     backgroundColor: "rgba(255,255,255,0.05)",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
     alignSelf: "flex-start",
+    height: 28,
   },
   favoriteLabel: {
     color: "#a1a1aa",
     fontSize: 10,
     fontWeight: "700",
-    marginRight: 4,
+    marginRight: 6,
   },
   favoriteValue: {
     color: "#22c55e",
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "800",
     textTransform: "uppercase",
+  },
+  reasonContainer: {
+    backgroundColor: "rgba(0,0,0,0.3)",
+    padding: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+    height: 80, // Um pouco maior
+    justifyContent: 'center',
+  },
+  reasonHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 4,
+  },
+  reasonLabel: {
+    color: "#a1a1aa",
+    fontSize: 10,
+    fontWeight: "600",
+    textTransform: "uppercase",
+  },
+  reasonText: {
+    color: "#e4e4e7",
+    fontSize: 12,
+    lineHeight: 16,
   },
 });
