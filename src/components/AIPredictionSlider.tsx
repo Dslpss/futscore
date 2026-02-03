@@ -474,10 +474,16 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
         visible={modalVisible}
         transparent
         animationType="fade"
-        onRequestClose={() => { setModalVisible(false); setAnalysisExpanded(false); }}>
+        onRequestClose={() => {
+          setModalVisible(false);
+          setAnalysisExpanded(false);
+        }}>
         <Pressable
           style={styles.modalOverlay}
-          onPress={() => { setModalVisible(false); setAnalysisExpanded(false); }}>
+          onPress={() => {
+            setModalVisible(false);
+            setAnalysisExpanded(false);
+          }}>
           <Pressable
             style={styles.modalContent}
             onPress={(e) => e.stopPropagation()}>
@@ -493,7 +499,10 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
                   <Text style={styles.modalTitle}>Análise da IA</Text>
                 </View>
                 <TouchableOpacity
-                  onPress={() => { setModalVisible(false); setAnalysisExpanded(false); }}
+                  onPress={() => {
+                    setModalVisible(false);
+                    setAnalysisExpanded(false);
+                  }}
                   style={styles.modalCloseButton}>
                   <X size={20} color="#ffffff" />
                 </TouchableOpacity>
@@ -595,23 +604,22 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
                       <Sparkles size={16} color="#a855f7" />
                       <Text style={styles.modalAnalysisTitle}>Análise</Text>
                     </View>
-                    <Text 
-                      style={styles.modalAnalysisText} 
+                    <Text
+                      style={styles.modalAnalysisText}
                       selectable={true}
-                      numberOfLines={analysisExpanded ? undefined : 3}
-                    >
+                      numberOfLines={analysisExpanded ? undefined : 3}>
                       {selectedPrediction.analysis}
                     </Text>
-                    {selectedPrediction.analysis && selectedPrediction.analysis.length > 100 && (
-                      <TouchableOpacity 
-                        onPress={() => setAnalysisExpanded(!analysisExpanded)}
-                        style={styles.expandButton}
-                      >
-                        <Text style={styles.expandButtonText}>
-                          {analysisExpanded ? "Ver menos ▲" : "Ver mais ▼"}
-                        </Text>
-                      </TouchableOpacity>
-                    )}
+                    {selectedPrediction.analysis &&
+                      selectedPrediction.analysis.length > 100 && (
+                        <TouchableOpacity
+                          onPress={() => setAnalysisExpanded(!analysisExpanded)}
+                          style={styles.expandButton}>
+                          <Text style={styles.expandButtonText}>
+                            {analysisExpanded ? "Ver menos ▲" : "Ver mais ▼"}
+                          </Text>
+                        </TouchableOpacity>
+                      )}
                   </View>
 
                   {/* Confidence */}

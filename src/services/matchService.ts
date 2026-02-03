@@ -325,22 +325,22 @@ export const matchService = {
               transformMsnGameToMatch(game),
             );
 
-            // Filter to keep only today's matches that are not finished
-            const todayActiveMatches = allMatches.filter(
-              (m: Match) => isMatchFromToday(m) && isMatchNotFinished(m),
+            // Include ALL today's matches (scheduled, live, and finished)
+            const todayMatches = allMatches.filter(
+              (m: Match) => isMatchFromToday(m),
             );
 
             // Also include live/in-progress matches even if from previous days
-            const liveMatches = allMatches.filter((m: Match) => {
+            const liveMatchesFromOtherDays = allMatches.filter((m: Match) => {
               const status = m.fixture.status?.short?.toUpperCase() || "";
-              return ["1H", "2H", "HT", "ET", "P", "BT", "LIVE"].includes(
-                status,
-              );
+              const isLive = ["1H", "2H", "HT", "ET", "P", "BT", "LIVE"].includes(status);
+              // Only include if it's live AND not from today (to avoid duplicates)
+              return isLive && !isMatchFromToday(m);
             });
 
-            // Combine: today's active + any live matches (deduplicated)
+            // Combine: ALL today's matches + any live matches from other days (deduplicated)
             const matchIds = new Set<number>();
-            leagueMatches = [...todayActiveMatches, ...liveMatches].filter(
+            leagueMatches = [...todayMatches, ...liveMatchesFromOtherDays].filter(
               (m: Match) => {
                 if (matchIds.has(m.fixture.id)) return false;
                 matchIds.add(m.fixture.id);
@@ -350,11 +350,11 @@ export const matchService = {
 
             if (leagueMatches.length > 0) {
               console.log(
-                `[MatchService] ✓ ${league.name}: ${leagueMatches.length} active matches from MSN Sports (live)`,
+                `[MatchService] ✓ ${league.name}: ${leagueMatches.length} matches from MSN Sports (live API)`,
               );
             } else {
               console.log(
-                `[MatchService] ○ ${league.name}: ${allMatches.length} matches found but none active for today`,
+                `[MatchService] ○ ${league.name}: ${allMatches.length} matches found but none for today`,
               );
             }
           }

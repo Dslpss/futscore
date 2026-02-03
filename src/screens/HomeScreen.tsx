@@ -1763,7 +1763,11 @@ export const HomeScreen = ({ navigation }: any) => {
       <UpcomingMatchesSlider
         matches={
           isToday(selectedDate)
-            ? [...liveMatches, ...todaysMatches]
+            ? [...liveMatches, ...todaysMatches].filter(
+                (match, index, self) =>
+                  index ===
+                  self.findIndex((m) => m.fixture.id === match.fixture.id),
+              )
             : customMatches
         }
         onPressMatch={(match) => {
@@ -2172,9 +2176,15 @@ export const HomeScreen = ({ navigation }: any) => {
   // Filter matches by selected league
   const filteredMatches = (() => {
     let matches = [];
-    const sourceMatches = isToday(selectedDate)
+    const rawMatches = isToday(selectedDate)
       ? [...liveMatches, ...todaysMatches]
       : customMatches;
+
+    // Deduplicate matches to prevent doubles (since todaysMatches now includes live matches too)
+    const sourceMatches = rawMatches.filter(
+      (match, index, self) =>
+        index === self.findIndex((m) => m.fixture.id === match.fixture.id),
+    );
 
     if (selectedLeague === "ALL") {
       matches = sourceMatches;

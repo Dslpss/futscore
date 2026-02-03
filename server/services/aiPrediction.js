@@ -33,27 +33,31 @@ function generateMatchPrompt(match) {
   const homeForm = match.homeForm || match.teams?.home?.form || "";
   const awayForm = match.awayForm || match.teams?.away?.form || "";
 
-  return `Analise esta partida de futebol e forneça previsão:
+  return `Atue como um analista de futebol pragmático e baseado em dados.
+Sua tarefa é prever o resultado para: ${homeTeam} vs ${awayTeam} (${league}).
 
-Partida: ${homeTeam} vs ${awayTeam}
-Competição: ${league}
-${homeForm ? `Últimos jogos ${homeTeam}: ${homeForm}` : ""}
-${awayForm ? `Últimos jogos ${awayTeam}: ${awayForm}` : ""}
+CRITÉRIOS OBRIGATÓRIOS:
+1. PESQUISE EM TEMPO REAL os últimos 5 jogos de cada time. Não confie em dados antigos.
+2. Priorize TOTALMENTE o MOMENTO ATUAL (forma recente) sobre a "tradição" ou "tamanho" do time.
+3. Se um time grande está jogando mal, sua previsão DEVE refletir baixa probabilidade de vitória.
+4. Considere mando de campo e desfalques importantes recentes.
 
-Responda APENAS em JSON válido:
+Dados fornecidos (se vazios, você DEVE pesquisar):
+Casa: ${homeForm || "Pesquise a forma recente na web"}
+Fora: ${awayForm || "Pesquise a forma recente na web"}
+
+Responda APENAS com este JSON válido (sem markdown, sem code blocks):
 {
-  "homeWinProbability": <número inteiro de 0 a 100>,
-  "drawProbability": <número inteiro de 0 a 100>,
-  "awayWinProbability": <número inteiro de 0 a 100>,
-  "confidence": "high" ou "medium" ou "low",
-  "analysis": "<análise CURTA em português, MÁXIMO 80 caracteres>"
+  "homeWinProbability": <inteiro 0-100>,
+  "drawProbability": <inteiro 0-100>,
+  "awayWinProbability": <inteiro 0-100>,
+  "confidence": "high" | "medium" | "low",
+  "analysis": "<Resumo de 1 frase (max 80 chars) focado APENAS no motivo técnico principal>"
 }
 
-REGRAS:
-1. As 3 probabilidades devem somar exatamente 100
-2. A análise deve ser MUITO curta e direta (máximo 80 caracteres)
-3. Foque no essencial: quem é favorito e por quê
-4. Não use aspas dentro do texto da análise`;
+As probabilidades devem somar 100.
+Exemplo de análise boa: "Time A vem de 3 vitórias seguidas em casa."
+Exemplo de análise ruim: "Time A é muito tradicional."`;
 }
 
 /**
@@ -86,8 +90,9 @@ function cleanAnalysisText(text) {
   if (cleaned.length > 120) {
     // Corta na última palavra completa antes do limite
     const truncated = cleaned.substring(0, 117);
-    const lastSpace = truncated.lastIndexOf(' ');
-    cleaned = (lastSpace > 80 ? truncated.substring(0, lastSpace) : truncated) + '...';
+    const lastSpace = truncated.lastIndexOf(" ");
+    cleaned =
+      (lastSpace > 80 ? truncated.substring(0, lastSpace) : truncated) + "...";
   }
 
   return cleaned || "Análise indisponível";
