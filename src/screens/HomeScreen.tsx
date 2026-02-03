@@ -35,6 +35,7 @@ import {
   AIPredictionSlider,
   AIPrediction,
 } from "../components/AIPredictionSlider";
+import { AIScoutSection } from "../components/AIScoutSection";
 import { LinearGradient } from "expo-linear-gradient";
 import { WarningCard } from "../components/WarningCard";
 import { UpdateModal } from "../components/UpdateModal";
@@ -1784,6 +1785,15 @@ export const HomeScreen = ({ navigation }: any) => {
           onRetry={fetchAIPredictions}
           onPressPrediction={(prediction) => {
             console.log("AI Prediction clicked:", prediction);
+          }}
+        />
+      )}
+
+      {/* AI Scout Section */}
+      {isToday(selectedDate) && (
+        <AIScoutSection
+          onPressMatch={(matchId) => {
+            console.log("Scout match:", matchId);
           }}
         />
       )}

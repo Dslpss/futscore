@@ -1,6 +1,9 @@
 const express = require("express");
 const router = express.Router();
-const { getMatchesPredictions } = require("../services/aiPrediction");
+const {
+  getMatchesPredictions,
+  generateScoutInsights,
+} = require("../services/aiPrediction");
 
 // Cache simples para partidas próximas
 let matchesCache = {
@@ -420,6 +423,70 @@ router.get("/upcoming", async (req, res) => {
       success: false,
       error: error.message,
       predictions: [],
+    });
+  }
+});
+
+/**
+ * GET /api/ai-predictions/scout
+ * Retorna Oportunidades e Identificação de Zebras
+ */
+router.get("/scout", async (req, res) => {
+  try {
+    console.log("[AIPredictions] Requisição Scout recebida");
+
+    // Verificar API key
+    if (!process.env.NVIDIA_API_KEY) {
+      return res.json({
+        success: false,
+        message: "API de IA não configurada",
+        insights: [],
+      });
+    }
+
+    // Buscar partidas do dia
+    let matches = [];
+    const now = Date.now();
+
+    // Tentar usar cache de partidas primeiro
+    if (
+      matchesCache.data.length > 0 &&
+      now - matchesCache.timestamp < MATCHES_CACHE_TTL
+    ) {
+      matches = matchesCache.data;
+    } else {
+      matches = await getUpcomingMatches();
+      if (matches.length > 0) {
+        matchesCache = { data: matches, timestamp: now };
+      }
+    }
+
+    if (matches.length === 0) {
+      matches = await fetchMSNUpcomingMatches();
+    }
+
+    if (matches.length === 0) {
+      return res.json({
+        success: true,
+        message: "Nenhuma partida encontrada para analisar",
+        insights: [],
+      });
+    }
+
+    // Gerar Insights
+    const insights = await generateScoutInsights(matches);
+
+    res.json({
+      success: true,
+      insights,
+      matchesAnalyzed: matches.length,
+    });
+  } catch (error) {
+    console.error("[AIPredictions] Erro Scout:", error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      insights: [],
     });
   }
 });

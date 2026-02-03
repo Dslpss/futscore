@@ -318,8 +318,111 @@ function clearCache() {
   console.log("[AIPrediction] Cache limpo");
 }
 
+
+/**
+ * Gera prompt para análise de SCOUT (Oportunidades e Zebras)
+ */
+function generateScoutPrompt(matches) {
+  // Filtrar apenas dados essenciais para economizar tokens
+  const matchesList = matches
+    .map(
+      (m, i) =>
+        `${i + 1}. ${m.homeTeam} vs ${m.awayTeam} (${m.league.name || "Liga"}) - ${m.startTime}`,
+    )
+    .join("\n");
+
+  return `Atue como um SCOUT profissional de futebol e apostador experiente.
+Analise a lista de jogos abaixo e identifique as MELHORES OPORTUNIDADES do dia.
+
+Jogos:
+${matchesList}
+
+CRITÉRIOS DE ANÁLISE:
+1. Identifique "ZEBRAS POSSÍVEIS" (Underdogs com boa chance de pontuar ou vencer).
+2. Identifique "JOGOS GARANTIDOS" (Favoritos muito claros com risco baixo).
+3. Identifique "JOGOS DE GOLS" (Alta probabilidade de Over 2.5 gols).
+4. Use seu conhecimento sobre momento dos times, desfalques comuns e histórico recente.
+
+Retorne APENAS um JSON válido com a seguinte estrutura (máximo 3 destaques):
+{
+  "insights": [
+    {
+      "type": "zebra" | "seguro" | "gols",
+      "matchIndex": <número do jogo na lista acima, 1-N>,
+      "matchId": "<ID implícito, não precisa retornar o ID original, apenas o índice para referência>",
+      "homeTeam": "Nome Time Casa",
+      "awayTeam": "Nome Time Fora",
+      "reason": "Explicação técnica curta e direta sobre por que é uma oportunidade (max 100 chars)",
+      "confidence": "high" | "medium",
+      "odds_estimation": "Valor estimado (ex: 2.10)"
+    }
+  ]
+}
+
+Se não houver boas oportunidades, retorne array vazio. Priorize qualidade sobre quantidade.`;
+}
+
+/**
+ * Gera insights de Scout para uma lista de partidas
+ */
+async function generateScoutInsights(matches) {
+  if (!matches || matches.length === 0) return [];
+
+  const cacheKey = `scout_insights_${new Date().toISOString().split("T")[0]}`;
+  const cached = predictionCache.get(cacheKey);
+
+  // Cache de 2 horas para Scout
+  if (cached && Date.now() - cached.timestamp < 2 * 60 * 60 * 1000) {
+    console.log("[AIPrediction] Scout hit cache");
+    return cached.data;
+  }
+
+  try {
+    console.log(
+      `[AIPrediction] Gerando Scout Insights para ${matches.length} partidas...`,
+    );
+    const prompt = generateScoutPrompt(matches);
+    const response = await callPerplexityAPI(prompt);
+    const result = extractJSON(response);
+
+    if (!result || !result.insights) {
+      console.error("[AIPrediction] Falha ao gerar Scout Insights");
+      return [];
+    }
+
+    // Mapear de volta para os objetos de partida originais
+    const enhancedInsights = result.insights
+      .map((insight) => {
+        const originalMatch = matches[insight.matchIndex - 1];
+        if (!originalMatch) return null;
+
+        return {
+          ...insight,
+          matchId: originalMatch.id,
+          league: originalMatch.league,
+          startTime: originalMatch.startTime,
+          homeTeamLogo: originalMatch.homeTeamLogo,
+          awayTeamLogo: originalMatch.awayTeamLogo,
+        };
+      })
+      .filter((i) => i !== null);
+
+    // Salvar no cache
+    predictionCache.set(cacheKey, {
+      data: enhancedInsights,
+      timestamp: Date.now(),
+    });
+
+    return enhancedInsights;
+  } catch (error) {
+    console.error("[AIPrediction] Erro no Scout:", error.message);
+    return [];
+  }
+}
+
 module.exports = {
   getMatchPrediction,
   getMatchesPredictions,
+  generateScoutInsights,
   clearCache,
 };
