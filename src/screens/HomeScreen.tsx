@@ -37,6 +37,8 @@ import {
   AIPrediction,
 } from "../components/AIPredictionSlider";
 import { AIScoutSection } from "../components/AIScoutSection";
+import { StreakSection } from "../components/StreakSection";
+import { PremiumTeaserCard } from "../components/PremiumTeaserCard";
 import { LinearGradient } from "expo-linear-gradient";
 import { WarningCard } from "../components/WarningCard";
 import { UpdateModal } from "../components/UpdateModal";
@@ -60,6 +62,9 @@ import {
   Tv,
   Search,
   Radio,
+  Crown,
+  Sparkles,
+  Lock,
 } from "lucide-react-native";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
@@ -569,14 +574,16 @@ export const HomeScreen = ({ navigation }: any) => {
     isFavoriteTeam,
   } = useFavorites();
   const { user, signOut } = useAuth();
-  const { isPremium } = useSubscriptionContext();
+  const { isPremium, loading: subscriptionLoading } = useSubscriptionContext();
   const [selectedLeague, setSelectedLeague] = useState<string>("ALL");
   const [warnings, setWarnings] = useState<Warning[]>([]);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<any>(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
-  const [premiumModalMode, setPremiumModalMode] = useState<"welcome" | "block">("welcome");
+  const [premiumModalMode, setPremiumModalMode] = useState<"welcome" | "block">(
+    "welcome",
+  );
   const [showWorldCupModal, setShowWorldCupModal] = useState(false);
 
   // Date Selection State
@@ -1058,15 +1065,26 @@ export const HomeScreen = ({ navigation }: any) => {
   const PREMIUM_MODAL_KEY = "@futscore_hide_premium_modal";
 
   const checkPremiumModal = async () => {
+    // Se estiver carregando o status de subscription ou já for premium, não mostrar
+    if (subscriptionLoading || isPremium) return;
+
     try {
       const hidden = await AsyncStorage.getItem(PREMIUM_MODAL_KEY);
       if (!hidden) {
+        setPremiumModalMode("welcome"); // Garantir que está no modo welcome
         setShowPremiumModal(true);
       }
     } catch (error) {
       console.error("Error checking premium modal preference:", error);
     }
   };
+
+  // Check once when subscription loading finishes and premium status is known
+  useEffect(() => {
+    if (!subscriptionLoading) {
+      checkPremiumModal();
+    }
+  }, [subscriptionLoading, isPremium]);
 
   const handleDontShowAgainHome = async () => {
     try {
@@ -1081,7 +1099,7 @@ export const HomeScreen = ({ navigation }: any) => {
     checkUpdate();
     fetchMatchCalendar();
     fetchLeagueLogos();
-    checkPremiumModal();
+    // checkPremiumModal agora é chamado no useEffect dedicado
     fetchAIPredictions();
     // backendFavorites is loaded automatically by FavoritesContext
   }, []);
@@ -1792,13 +1810,44 @@ export const HomeScreen = ({ navigation }: any) => {
         />
       )}
 
-      {/* AI Scout Section */}
+      {/* AI Scout Section - Sempre visível, com versão bloqueada para não-premium */}
       {isToday(selectedDate) && (
-        <AIScoutSection
-          onPressMatch={(matchId) => {
-            console.log("Scout match:", matchId);
-          }}
-        />
+        <>
+          <AIScoutSection
+            isPremium={isPremium}
+            onPremiumPress={() => navigation.navigate("Subscription")}
+            onPressMatch={(matchId) => {
+              const allMatches = [
+                ...liveMatches,
+                ...todaysMatches,
+                ...customMatches,
+              ];
+              const found = allMatches.find(
+                (m) => m.fixture.id.toString() === matchId,
+              );
+              if (found) {
+                navigation.navigate("MatchDetails", { match: found });
+              }
+            }}
+          />
+          {isPremium && (
+            <StreakSection
+              onPressMatch={(matchId) => {
+                const allMatches = [
+                  ...liveMatches,
+                  ...todaysMatches,
+                  ...customMatches,
+                ];
+                const found = allMatches.find(
+                  (m) => m.fixture.id.toString() === matchId,
+                );
+                if (found) {
+                  navigation.navigate("MatchDetails", { match: found });
+                }
+              }}
+            />
+          )}
+        </>
       )}
 
       {/* ESPN, OndeAssistir, and News Cards - Fully isolated component */}
@@ -1835,8 +1884,7 @@ export const HomeScreen = ({ navigation }: any) => {
                 if (isPremium) {
                   navigation.navigate("AIGuru");
                 } else {
-                  setPremiumModalMode("block");
-                  setShowPremiumModal(true);
+                  navigation.navigate("Subscription");
                 }
               }}
               activeOpacity={0.85}>
@@ -1845,6 +1893,12 @@ export const HomeScreen = ({ navigation }: any) => {
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.actionButtonGradient}>
+                {/* Badge de cadeado para não-premium */}
+                {!isPremium && (
+                  <View style={styles.actionLockBadge}>
+                    <Lock size={10} color="#fbbf24" />
+                  </View>
+                )}
                 <View style={styles.actionButtonIconWrapper}>
                   <LinearGradient
                     colors={["#a855f7", "#7c3aed"]}
@@ -1854,7 +1908,9 @@ export const HomeScreen = ({ navigation }: any) => {
                 </View>
                 <View style={styles.actionButtonTextContainer}>
                   <Text style={styles.actionButtonText}>Guru IA</Text>
-                  <Text style={styles.actionButtonSubtext}>Chatbot</Text>
+                  <Text style={styles.actionButtonSubtext}>
+                    {isPremium ? "Chatbot" : "Premium"}
+                  </Text>
                 </View>
               </LinearGradient>
             </TouchableOpacity>
@@ -1885,23 +1941,35 @@ export const HomeScreen = ({ navigation }: any) => {
             {/* TV Channels Button - Premium Highlight */}
             <TouchableOpacity
               style={styles.actionButton}
-              onPress={() => navigation.navigate("TVChannels")}
+              onPress={() => {
+                if (isPremium) {
+                  navigation.navigate("TVChannels");
+                } else {
+                  navigation.navigate("Subscription");
+                }
+              }}
               activeOpacity={0.85}>
               <LinearGradient
                 colors={["#350b0b", "#1a1a2e"]} // Vinho muito escuro para o tema base
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={[styles.actionButtonGradient, styles.tvButtonBorder]}>
-                {/* Badge Flutuante Discreto */}
+                {/* Badge Flutuante - LIVE ou Lock */}
                 <View style={styles.liveBadgeContainer}>
-                  <LinearGradient
-                    colors={["#dc2626", "#991b1b"]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.liveBadge}>
-                    <View style={styles.liveDot} />
-                    <Text style={styles.liveBadgeText}>LIVE</Text>
-                  </LinearGradient>
+                  {isPremium ? (
+                    <LinearGradient
+                      colors={["#dc2626", "#991b1b"]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.liveBadge}>
+                      <View style={styles.liveDot} />
+                      <Text style={styles.liveBadgeText}>LIVE</Text>
+                    </LinearGradient>
+                  ) : (
+                    <View style={styles.lockBadge}>
+                      <Lock size={10} color="#fbbf24" />
+                    </View>
+                  )}
                 </View>
 
                 <View style={styles.actionButtonIconWrapper}>
@@ -1914,7 +1982,9 @@ export const HomeScreen = ({ navigation }: any) => {
 
                 <View style={styles.actionButtonTextContainer}>
                   <Text style={styles.actionButtonText}>TV ao Vivo</Text>
-                  <Text style={styles.actionButtonSubtext}>Assista Agora</Text>
+                  <Text style={styles.actionButtonSubtext}>
+                    {isPremium ? "Assista Agora" : "Premium"}
+                  </Text>
                 </View>
               </LinearGradient>
             </TouchableOpacity>
@@ -2596,15 +2666,13 @@ export const HomeScreen = ({ navigation }: any) => {
         onClose={() => setShowPremiumModal(false)}
         showDontShowAgain={premiumModalMode === "welcome"}
         onDontShowAgain={handleDontShowAgainHome}
-        actionLabel={premiumModalMode === "block" ? "Assinar Premium" : "Começar Agora"}
-        onAction={
-          premiumModalMode === "block" 
-          ? () => {
-              setShowPremiumModal(false);
-              navigation.navigate("Subscription");
-            }
-          : undefined
+        actionLabel={
+          premiumModalMode === "block" ? "Assinar Premium" : "Começar Agora"
         }
+        onAction={() => {
+          setShowPremiumModal(false);
+          navigation.navigate("Subscription");
+        }}
       />
 
       {/* Profile Modal */}
@@ -2632,17 +2700,59 @@ export const HomeScreen = ({ navigation }: any) => {
               </TouchableOpacity>
 
               <View style={styles.profileModalHeader}>
-                <LinearGradient
-                  colors={["#22c55e", "#16a34a"]}
-                  style={styles.profileAvatar}>
-                  <Text style={styles.profileAvatarText}>
-                    {user?.name?.charAt(0).toUpperCase() || "?"}
-                  </Text>
-                </LinearGradient>
+                <View style={styles.profileAvatarContainer}>
+                  <LinearGradient
+                    colors={
+                      isPremium
+                        ? ["#fbbf24", "#f59e0b"]
+                        : ["#22c55e", "#16a34a"]
+                    }
+                    style={styles.profileAvatar}>
+                    <Text style={styles.profileAvatarText}>
+                      {user?.name?.charAt(0).toUpperCase() || "?"}
+                    </Text>
+                  </LinearGradient>
+                  {isPremium && (
+                    <View style={styles.premiumAvatarBadge}>
+                      <Crown size={12} color="#fbbf24" fill="#fbbf24" />
+                    </View>
+                  )}
+                </View>
                 <Text style={styles.profileName}>
                   {user?.name || "Usuário"}
                 </Text>
                 <Text style={styles.profileEmail}>{user?.email || ""}</Text>
+
+                {/* Premium Status Badge */}
+                <TouchableOpacity
+                  style={[
+                    styles.premiumStatusBadge,
+                    isPremium
+                      ? styles.premiumStatusActive
+                      : styles.premiumStatusInactive,
+                  ]}
+                  onPress={() => {
+                    setShowProfileModal(false);
+                    navigation.navigate("Subscription");
+                  }}
+                  activeOpacity={0.8}>
+                  {isPremium ? (
+                    <>
+                      <Crown size={14} color="#fbbf24" />
+                      <Text style={styles.premiumStatusTextActive}>
+                        Premium Ativo
+                      </Text>
+                      <Sparkles size={12} color="#fbbf24" />
+                    </>
+                  ) : (
+                    <>
+                      <Crown size={14} color="#71717a" />
+                      <Text style={styles.premiumStatusTextInactive}>
+                        Seja Premium
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
               </View>
 
               <View style={styles.profileModalDivider} />
@@ -3076,7 +3186,6 @@ const styles = StyleSheet.create({
     borderRadius: 36,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 16,
     shadowColor: "#22c55e",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
@@ -3096,6 +3205,52 @@ const styles = StyleSheet.create({
   },
   profileEmail: {
     fontSize: 13,
+    color: "#71717a",
+  },
+  profileAvatarContainer: {
+    position: "relative",
+    marginBottom: 16,
+  },
+  premiumAvatarBadge: {
+    position: "absolute",
+    bottom: -2,
+    right: -2,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#18181b",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#fbbf24",
+  },
+  premiumStatusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginTop: 12,
+    gap: 6,
+  },
+  premiumStatusActive: {
+    backgroundColor: "rgba(251, 191, 36, 0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(251, 191, 36, 0.3)",
+  },
+  premiumStatusInactive: {
+    backgroundColor: "rgba(113, 113, 122, 0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(113, 113, 122, 0.2)",
+  },
+  premiumStatusTextActive: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#fbbf24",
+  },
+  premiumStatusTextInactive: {
+    fontSize: 13,
+    fontWeight: "600",
     color: "#71717a",
   },
   profileModalDivider: {
@@ -3913,5 +4068,30 @@ const styles = StyleSheet.create({
     fontSize: 7,
     fontWeight: "900",
     letterSpacing: 0.2,
+  },
+  // Lock Badge Styles
+  actionLockBadge: {
+    position: "absolute",
+    top: 5,
+    right: 5,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: "rgba(251, 191, 36, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(251, 191, 36, 0.4)",
+    zIndex: 10,
+  },
+  lockBadge: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: "rgba(251, 191, 36, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(251, 191, 36, 0.4)",
   },
 });

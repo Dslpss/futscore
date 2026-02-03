@@ -37,18 +37,36 @@ router.get("/status", auth, async (req, res) => {
       message: user.giftPremiumMessage || `Parabéns! Você ganhou ${user.giftPremiumDays} dias de acesso Premium!`,
     } : null;
 
+    // Lógica principal de Premium
+    // 1. Admin é sempre Premium
+    if (user.isAdmin) {
+      console.log(`[Subscription Status] User ${user.email} is ADMIN. Granting Premium.`);
+      return res.json({
+        isPremium: true,
+        hasSubscription: !!user.subscriptionId,
+        isAdmin: true,
+        trial: {
+          hasTrialAvailable: false,
+          isTrialActive: false,
+          trialUsed: true,
+          trialEndDate: null,
+          daysRemaining: 0,
+        },
+        gift: null,
+        pendingGift,
+      });
+    }
+
     // DEBUG: Log all premium-related fields
     console.log(`[Subscription Status] User: ${user.email}`);
     console.log(`[Subscription Status] user.isPremium: ${user.isPremium}`);
-    console.log(`[Subscription Status] isTrialActive: ${isTrialActive}`);
-    console.log(`[Subscription Status] hasActiveGift: ${hasActiveGift}`);
-    console.log(`[Subscription Status] user.subscriptionId: ${user.subscriptionId}`);
-    console.log(`[Subscription Status] Final isPremium will be: ${user.isPremium || isTrialActive || hasActiveGift}`);
+    console.log(`[Subscription Status] subscriptionId: ${user.subscriptionId}`);
 
-    // Se não tem subscriptionId, retornar como não premium (mas pode ter trial ou gift)
+    // Se não tem subscriptionId, retornar como não premium (mas pode ter trial ou gift ou ser manual)
     if (!user.subscriptionId) {
+      // Se não tem subscription, mas isPremium é true, é um usuário MANUAL (ex: sorteio, amigo do dono)
       const finalIsPremium = user.isPremium || isTrialActive || hasActiveGift;
-      console.log(`[Subscription Status] Returning (no subscription): isPremium = ${finalIsPremium}`);
+      console.log(`[Subscription Status] Returning (no subscription ID): isPremium = ${finalIsPremium}`);
       return res.json({
         isPremium: finalIsPremium,
         hasSubscription: false,
@@ -73,10 +91,12 @@ router.get("/status", auth, async (req, res) => {
     // Buscar assinatura separadamente para evitar erros de populate
     const subscription = await Subscription.findById(user.subscriptionId);
 
-    // Se assinatura não existe mais no banco
+    // Se assinatura não existe mais no banco (mas o ID estava no user)
     if (!subscription) {
+      // Assumimos que se o ID não existe, voltamos para a lógica manual/trial
+      const finalIsPremium = user.isPremium || isTrialActive || hasActiveGift;
       return res.json({
-        isPremium: isTrialActive,
+        isPremium: finalIsPremium,
         hasSubscription: false,
         trial: {
           hasTrialAvailable: !user.trialUsed && !user.trialStartDate,
@@ -91,7 +111,11 @@ router.get("/status", auth, async (req, res) => {
     // Verificar se assinatura está ativa
     const isActive = subscription.isActive ? subscription.isActive() : (subscription.status === "active" && subscription.endDate > new Date());
 
-    // Se expirou, atualizar status
+    // Se expirou, atualizar status APENAS se não for Admin (já checado acima) e se não for manual override explícito
+    // Como saber se é manual override? Difícil se tem subscription ID.
+    // Vamos assumir: Se tem subscription ID, a subscription manda.
+    // SE O USUÁRIO QUER SER MANUAL, O ADMIN DEVE REMOVER O SUBSCRIPTION_ID DO BANCO SE ESTIVER EXPIRADO.
+    
     if (!isActive && subscription.status === "active") {
       subscription.status = "expired";
       if (subscription.addEvent) {
@@ -99,12 +123,18 @@ router.get("/status", auth, async (req, res) => {
       }
       await subscription.save();
 
-      user.isPremium = false;
-      await user.save();
+      // Só desativa o status premium do user se ele não tiver trial ou gift ativo
+      if (!isTrialActive && !hasActiveGift && !user.isAdmin) {
+         user.isPremium = false;
+         await user.save();
+      }
     }
 
+    // A lógica final considera tudo
+    const finalPremiumStatus = (user.isPremium && isActive) || isTrialActive || hasActiveGift;
+
     return res.json({
-      isPremium: (user.isPremium && isActive) || isTrialActive || hasActiveGift,
+      isPremium: finalPremiumStatus,
       hasSubscription: true,
       subscription: {
         status: subscription.status,

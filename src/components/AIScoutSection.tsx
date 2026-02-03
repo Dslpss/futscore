@@ -16,6 +16,8 @@ import {
   Target,
   Sparkles,
   Info,
+  Lock,
+  Crown,
 } from "lucide-react-native";
 import { CONFIG } from "../constants/config";
 
@@ -39,10 +41,14 @@ export interface ScoutInsight {
 
 interface AIScoutSectionProps {
   onPressMatch?: (matchId: string) => void;
+  isPremium?: boolean;
+  onPremiumPress?: () => void;
 }
 
 export const AIScoutSection: React.FC<AIScoutSectionProps> = ({
   onPressMatch,
+  isPremium = true,
+  onPremiumPress,
 }) => {
   const [insights, setInsights] = useState<ScoutInsight[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,7 +81,9 @@ export const AIScoutSection: React.FC<AIScoutSectionProps> = ({
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="small" color="#a855f7" />
-        <Text style={styles.loadingText}>Buscando as melhores oportunidades...</Text>
+        <Text style={styles.loadingText}>
+          Buscando as melhores oportunidades...
+        </Text>
       </View>
     );
   }
@@ -142,6 +150,104 @@ export const AIScoutSection: React.FC<AIScoutSectionProps> = ({
     }
   };
 
+  // Se não é premium, mostrar versão bloqueada
+  if (!isPremium) {
+    return (
+      <View style={styles.container}>
+        {/* Section Header */}
+        <View style={styles.header}>
+          <View>
+            <View style={styles.titleRow}>
+              <Sparkles size={18} color="#a855f7" />
+              <Text style={styles.title}>Guru IA - Dicas de Apostas</Text>
+              <View style={styles.premiumBadgeSmall}>
+                <Crown size={10} color="#fbbf24" />
+                <Text style={styles.premiumBadgeText}>PRO</Text>
+              </View>
+            </View>
+            <Text style={styles.subtitle}>
+              Análises exclusivas do nosso algoritmo de IA
+            </Text>
+          </View>
+        </View>
+
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={onPremiumPress}
+          style={styles.lockedContainer}>
+          <LinearGradient
+            colors={["#1a1a2e", "#16162a"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.lockedCard}>
+            {/* Ícones de exemplo borrados no fundo */}
+            <View style={styles.lockedBackground}>
+              <View style={[styles.lockedIcon, { left: 20, top: 30 }]}>
+                <TriangleAlert size={24} color="rgba(251, 191, 36, 0.2)" />
+              </View>
+              <View style={[styles.lockedIcon, { right: 40, top: 50 }]}>
+                <ShieldCheck size={28} color="rgba(34, 197, 94, 0.2)" />
+              </View>
+              <View style={[styles.lockedIcon, { left: 60, bottom: 40 }]}>
+                <Flame size={22} color="rgba(249, 115, 22, 0.2)" />
+              </View>
+              <View style={[styles.lockedIcon, { right: 80, bottom: 60 }]}>
+                <Target size={26} color="rgba(168, 85, 247, 0.2)" />
+              </View>
+            </View>
+
+            {/* Conteúdo Principal */}
+            <View style={styles.lockedContent}>
+              <View style={styles.lockedIconWrapper}>
+                <LinearGradient
+                  colors={["#a855f7", "#7c3aed"]}
+                  style={styles.lockedIconGradient}>
+                  <Lock size={28} color="#fff" />
+                </LinearGradient>
+              </View>
+
+              <Text style={styles.lockedTitle}>Conteúdo Exclusivo Premium</Text>
+              <Text style={styles.lockedDescription}>
+                Desbloqueie análises avançadas de IA com dicas de apostas,
+                identificação de zebras e oportunidades de alto valor.
+              </Text>
+
+              {/* Features */}
+              <View style={styles.lockedFeatures}>
+                <View style={styles.lockedFeatureItem}>
+                  <TriangleAlert size={14} color="#fbbf24" />
+                  <Text style={styles.lockedFeatureText}>
+                    Zebras identificadas
+                  </Text>
+                </View>
+                <View style={styles.lockedFeatureItem}>
+                  <ShieldCheck size={14} color="#22c55e" />
+                  <Text style={styles.lockedFeatureText}>Apostas seguras</Text>
+                </View>
+                <View style={styles.lockedFeatureItem}>
+                  <Flame size={14} color="#f97316" />
+                  <Text style={styles.lockedFeatureText}>
+                    Tendência de gols
+                  </Text>
+                </View>
+              </View>
+
+              {/* CTA Button */}
+              <LinearGradient
+                colors={["#a855f7", "#7c3aed"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.lockedButton}>
+                <Crown size={16} color="#fff" />
+                <Text style={styles.lockedButtonText}>Desbloquear Guru IA</Text>
+              </LinearGradient>
+            </View>
+          </LinearGradient>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       {/* Section Header */}
@@ -149,7 +255,7 @@ export const AIScoutSection: React.FC<AIScoutSectionProps> = ({
         <View>
           <View style={styles.titleRow}>
             <Sparkles size={18} color="#a855f7" />
-            <Text style={styles.title}>Dicas de Apostas & Scout IA</Text>
+            <Text style={styles.title}>Guru IA - Dicas de Apostas</Text>
           </View>
           <Text style={styles.subtitle}>
             Melhores oportunidades analisadas pelo algoritmo hoje
@@ -174,19 +280,21 @@ export const AIScoutSection: React.FC<AIScoutSectionProps> = ({
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={[styles.card, { borderColor: config.borderColor }]}>
-                
                 {/* Header do Card: Tipo e Odds */}
                 <View style={styles.cardHeader}>
                   <View style={styles.typeBadge}>
                     {config.icon}
-                    <Text style={[styles.typeText, { color: config.textColor }]}>
+                    <Text
+                      style={[styles.typeText, { color: config.textColor }]}>
                       {config.label}
                     </Text>
                   </View>
                   {insight.odds_estimation && (
                     <View style={styles.oddsBadge}>
                       <Text style={styles.oddsLabel}>ODD EST.</Text>
-                      <Text style={styles.oddsValue}>@{insight.odds_estimation}</Text>
+                      <Text style={styles.oddsValue}>
+                        @{insight.odds_estimation}
+                      </Text>
                     </View>
                   )}
                 </View>
@@ -194,7 +302,8 @@ export const AIScoutSection: React.FC<AIScoutSectionProps> = ({
                 {/* Ação Sugerida (Destaque) */}
                 <View style={styles.actionContainer}>
                   <Text style={styles.actionLabel}>Sugestão da IA:</Text>
-                  <Text style={[styles.actionText, { color: config.textColor }]}>
+                  <Text
+                    style={[styles.actionText, { color: config.textColor }]}>
                     {config.action}
                   </Text>
                 </View>
@@ -203,17 +312,16 @@ export const AIScoutSection: React.FC<AIScoutSectionProps> = ({
                 <View style={styles.divider} />
                 <View style={styles.matchInfo}>
                   <View style={styles.leagueRow}>
-                    <Text style={styles.leagueName}>
-                      {insight.league.name}
-                    </Text>
+                    <Text style={styles.leagueName}>{insight.league.name}</Text>
                     <Text style={styles.matchTime}>
                       {formatTime(insight.startTime)}
                     </Text>
                   </View>
-                  
+
                   <View style={styles.teamsContainer}>
                     <Text style={styles.teamsText}>
-                      {insight.homeTeam} <Text style={styles.vsText}>x</Text> {insight.awayTeam}
+                      {insight.homeTeam} <Text style={styles.vsText}>x</Text>{" "}
+                      {insight.awayTeam}
                     </Text>
                   </View>
 
@@ -222,7 +330,9 @@ export const AIScoutSection: React.FC<AIScoutSectionProps> = ({
                     <View style={styles.favoriteBadge}>
                       <Text style={styles.favoriteLabel}>FAVORITO:</Text>
                       <Text style={styles.favoriteValue}>
-                        {insight.favorite === "Home" ? insight.homeTeam : insight.awayTeam}
+                        {insight.favorite === "Home"
+                          ? insight.homeTeam
+                          : insight.awayTeam}
                       </Text>
                     </View>
                   )}
@@ -238,7 +348,6 @@ export const AIScoutSection: React.FC<AIScoutSectionProps> = ({
                     {insight.reason}
                   </Text>
                 </View>
-
               </LinearGradient>
             </TouchableOpacity>
           );
@@ -339,7 +448,7 @@ const styles = StyleSheet.create({
   },
   actionContainer: {
     height: 50,
-    justifyContent: 'center',
+    justifyContent: "center",
     marginBottom: 4,
   },
   actionLabel: {
@@ -424,7 +533,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.05)",
     height: 80, // Um pouco maior
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   reasonHeader: {
     flexDirection: "row",
@@ -442,5 +551,113 @@ const styles = StyleSheet.create({
     color: "#e4e4e7",
     fontSize: 12,
     lineHeight: 16,
+  },
+  // Estilos para versão bloqueada (não-premium)
+  premiumBadgeSmall: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(251, 191, 36, 0.15)",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    gap: 4,
+    marginLeft: 4,
+  },
+  premiumBadgeText: {
+    color: "#fbbf24",
+    fontSize: 9,
+    fontWeight: "800",
+  },
+  lockedContainer: {
+    paddingHorizontal: 16,
+  },
+  lockedCard: {
+    borderRadius: 24,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: "rgba(168, 85, 247, 0.3)",
+    minHeight: 320,
+    overflow: "hidden",
+  },
+  lockedBackground: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  lockedIcon: {
+    position: "absolute",
+    opacity: 0.6,
+  },
+  lockedContent: {
+    alignItems: "center",
+    justifyContent: "center",
+    flex: 1,
+  },
+  lockedIconWrapper: {
+    marginBottom: 16,
+  },
+  lockedIconGradient: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#a855f7",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  lockedTitle: {
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "800",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  lockedDescription: {
+    color: "#a1a1aa",
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: 20,
+    paddingHorizontal: 16,
+  },
+  lockedFeatures: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 8,
+    marginBottom: 24,
+  },
+  lockedFeatureItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.05)",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
+  },
+  lockedFeatureText: {
+    color: "#e4e4e7",
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  lockedButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 16,
+    gap: 8,
+  },
+  lockedButtonText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "700",
   },
 });
