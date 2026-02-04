@@ -27,6 +27,7 @@ import { transformMsnGameToMatch } from "../utils/msnTransformer";
 import { Match } from "../types";
 import { MatchStatsModal } from "../components/MatchStatsModal";
 import { espnApi } from "../services/espnApi";
+import AdBanner from "../components/AdBanner";
 
 // Configurar locale para português
 LocaleConfig.locales["pt-br"] = {
@@ -242,17 +243,17 @@ interface MatchDay {
 export function CalendarScreen({ navigation }: any) {
   const { favoriteTeams, favoriteMatches } = useFavorites();
   const [selectedDate, setSelectedDate] = useState<string>(
-    new Date().toISOString().split("T")[0]
+    new Date().toISOString().split("T")[0],
   );
   const [markedDates, setMarkedDates] = useState<Record<string, MarkedDate>>(
-    {}
+    {},
   );
   const [matchesForDate, setMatchesForDate] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMatches, setLoadingMatches] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [allDatesWithMatches, setAllDatesWithMatches] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
 
   // League logos cache - same method as LeaguesExplorer
@@ -267,7 +268,7 @@ export function CalendarScreen({ navigation }: any) {
     try {
       const leagues = await msnSportsApi.getPersonalizationStrip();
       const logos: Record<string, string> = {};
-      
+
       leagues.forEach((league: any) => {
         if (league.sportWithLeague && league.image?.id) {
           // Use getLeagueImageUrl - same as LeaguesExplorer
@@ -275,7 +276,7 @@ export function CalendarScreen({ navigation }: any) {
           logos[league.sportWithLeague] = imageUrl;
         }
       });
-      
+
       setLeagueLogos(logos);
     } catch (error) {
       console.error("[Calendar] Error loading league logos:", error);
@@ -290,7 +291,7 @@ export function CalendarScreen({ navigation }: any) {
 
       // Buscar calendário de todas as ligas
       const promises = ALL_LEAGUES.map((leagueId) =>
-        msnSportsApi.getLeagueCalendar(leagueId)
+        msnSportsApi.getLeagueCalendar(leagueId),
       );
 
       const results = await Promise.all(promises);
@@ -358,7 +359,7 @@ export function CalendarScreen({ navigation }: any) {
         // Use getLiveAroundLeague which returns games from multiple dates
         // This is better for calendar as it includes past games
         const promises = ALL_LEAGUES.map((leagueId) =>
-          msnSportsApi.getLiveAroundLeague(leagueId)
+          msnSportsApi.getLiveAroundLeague(leagueId),
         );
 
         const results = await Promise.all(promises);
@@ -376,11 +377,13 @@ export function CalendarScreen({ navigation }: any) {
               const gameDateStr = `${year}-${month}-${day}`;
               return gameDateStr === date;
             });
-            
-            console.log(`[Calendar] ${ALL_LEAGUES[idx]}: ${gamesForDate.length}/${games.length} games for ${date}`);
-            
+
+            console.log(
+              `[Calendar] ${ALL_LEAGUES[idx]}: ${gamesForDate.length}/${games.length} games for ${date}`,
+            );
+
             const matches = gamesForDate.map((game: any) =>
-              transformMsnGameToMatch(game)
+              transformMsnGameToMatch(game),
             );
             allMatches.push(...matches);
           }
@@ -401,33 +404,48 @@ export function CalendarScreen({ navigation }: any) {
               return eventDateStr === date;
             });
 
-            console.log(`[Calendar] ESPN Intercontinental: ${espnGamesForDate.length}/${espnEvents.length} games for ${date}`);
+            console.log(
+              `[Calendar] ESPN Intercontinental: ${espnGamesForDate.length}/${espnEvents.length} games for ${date}`,
+            );
 
             // Transform ESPN events to Match format
             const espnMatches: Match[] = espnGamesForDate.map((event: any) => {
-              const homeCompetitor = event.competitors?.find((c: any) => c.homeAway === 'home');
-              const awayCompetitor = event.competitors?.find((c: any) => c.homeAway === 'away');
+              const homeCompetitor = event.competitors?.find(
+                (c: any) => c.homeAway === "home",
+              );
+              const awayCompetitor = event.competitors?.find(
+                (c: any) => c.homeAway === "away",
+              );
 
               let status = "NS";
-              if (event.status === 'in') status = "1H";
-              if (event.status === 'post') status = "FT";
+              if (event.status === "in") status = "1H";
+              if (event.status === "post") status = "FT";
 
               return {
                 fixture: {
                   id: parseInt(event.id) || Math.random() * 1000000,
                   date: event.date,
-                  status: { short: status, long: event.fullStatus?.type?.description || status },
+                  status: {
+                    short: status,
+                    long: event.fullStatus?.type?.description || status,
+                  },
                   venue: { name: event.venue || "", city: "" },
                 },
                 teams: {
                   home: {
                     id: parseInt(homeCompetitor?.id) || 0,
-                    name: homeCompetitor?.displayName || homeCompetitor?.name || "TBD",
+                    name:
+                      homeCompetitor?.displayName ||
+                      homeCompetitor?.name ||
+                      "TBD",
                     logo: homeCompetitor?.logo || "",
                   },
                   away: {
                     id: parseInt(awayCompetitor?.id) || 0,
-                    name: awayCompetitor?.displayName || awayCompetitor?.name || "TBD",
+                    name:
+                      awayCompetitor?.displayName ||
+                      awayCompetitor?.name ||
+                      "TBD",
                     logo: awayCompetitor?.logo || "",
                   },
                 },
@@ -447,7 +465,10 @@ export function CalendarScreen({ navigation }: any) {
             allMatches.push(...espnMatches);
           }
         } catch (espnError) {
-          console.log("[Calendar] ESPN Intercontinental fetch failed:", espnError);
+          console.log(
+            "[Calendar] ESPN Intercontinental fetch failed:",
+            espnError,
+          );
         }
 
         // Filtrar por times favoritos se houver
@@ -458,12 +479,12 @@ export function CalendarScreen({ navigation }: any) {
           const favoriteMatchesList = allMatches.filter(
             (m) =>
               favoriteTeams.includes(m.teams.home.id) ||
-              favoriteTeams.includes(m.teams.away.id)
+              favoriteTeams.includes(m.teams.away.id),
           );
           const otherMatches = allMatches.filter(
             (m) =>
               !favoriteTeams.includes(m.teams.home.id) &&
-              !favoriteTeams.includes(m.teams.away.id)
+              !favoriteTeams.includes(m.teams.away.id),
           );
           filteredMatches = [...favoriteMatchesList, ...otherMatches];
         }
@@ -478,36 +499,48 @@ export function CalendarScreen({ navigation }: any) {
 
         // Map league logos using leagueLogos from API (PROVEN METHOD)
         // This mirrors logic used in HomeScreen/LeaguesExplorer
-        const matchesWithLogos = filteredMatches.map(match => {
+        const matchesWithLogos = filteredMatches.map((match) => {
           let logo = match.league.logo || "";
-          
+
           // If already has logo from transformer, use it, but fallback to leagueLogos cache
           // if it's empty or we can find a better match in our cache
-          
+
           const leagueName = match.league.name?.toLowerCase() || "";
-          
-          for (const [sportWithLeague, logoUrl] of Object.entries(leagueLogos)) {
+
+          for (const [sportWithLeague, logoUrl] of Object.entries(
+            leagueLogos,
+          )) {
             const keyLower = sportWithLeague.toLowerCase();
-            
+
             // Robust matching logic for common leagues
             if (
-              (leagueName.includes("copa do brasil") && keyLower.includes("copadobrasil")) ||
-              (leagueName.includes("brasileir") && keyLower.includes("brasileiroseriea")) ||
-              (leagueName.includes("premier") && keyLower.includes("premierleague")) ||
-              (leagueName.includes("champions") && keyLower.includes("championsleague")) ||
-              (leagueName.includes("europa") && keyLower.includes("europaleague")) ||
+              (leagueName.includes("copa do brasil") &&
+                keyLower.includes("copadobrasil")) ||
+              (leagueName.includes("brasileir") &&
+                keyLower.includes("brasileiroseriea")) ||
+              (leagueName.includes("premier") &&
+                keyLower.includes("premierleague")) ||
+              (leagueName.includes("champions") &&
+                keyLower.includes("championsleague")) ||
+              (leagueName.includes("europa") &&
+                keyLower.includes("europaleague")) ||
               (leagueName.includes("la liga") && keyLower.includes("laliga")) ||
-              (leagueName.includes("bundesliga") && keyLower.includes("bundesliga")) ||
+              (leagueName.includes("bundesliga") &&
+                keyLower.includes("bundesliga")) ||
               (leagueName.includes("serie a") && keyLower.includes("seriea")) ||
               (leagueName.includes("ligue 1") && keyLower.includes("ligue1")) ||
-              (leagueName.includes("portugal") && keyLower.includes("portugal")) ||
+              (leagueName.includes("portugal") &&
+                keyLower.includes("portugal")) ||
               (leagueName.includes("nba") && keyLower.includes("nba")) ||
-              (leagueName.includes("carioca") && keyLower.includes("carioca")) ||
-              (leagueName.includes("mineiro") && keyLower.includes("mineiro")) ||
-              (leagueName.includes("paulista") && keyLower.includes("paulista")) ||
+              (leagueName.includes("carioca") &&
+                keyLower.includes("carioca")) ||
+              (leagueName.includes("mineiro") &&
+                keyLower.includes("mineiro")) ||
+              (leagueName.includes("paulista") &&
+                keyLower.includes("paulista")) ||
               (leagueName.includes("gaucho") && keyLower.includes("gaucho")) ||
               (leagueName.includes("gaúcho") && keyLower.includes("gaucho")) ||
-              (leagueName === sportWithLeague.toLowerCase())
+              leagueName === sportWithLeague.toLowerCase()
             ) {
               logo = logoUrl;
               break;
@@ -515,10 +548,10 @@ export function CalendarScreen({ navigation }: any) {
           }
 
           if (logo) {
-             return {
-               ...match,
-               league: { ...match.league, logo },
-             };
+            return {
+              ...match,
+              league: { ...match.league, logo },
+            };
           }
           return match;
         });
@@ -531,7 +564,7 @@ export function CalendarScreen({ navigation }: any) {
         setLoadingMatches(false);
       }
     },
-    [favoriteTeams, leagueLogos]
+    [favoriteTeams, leagueLogos],
   );
 
   useEffect(() => {
@@ -616,7 +649,12 @@ export function CalendarScreen({ navigation }: any) {
 
   const getStatusColor = (status: string) => {
     // Include soccer: 1H, 2H, HT, ET, BT, P and basketball: Q1, Q2, Q3, Q4, OT
-    if (["1H", "2H", "HT", "ET", "BT", "P", "Q1", "Q2", "Q3", "Q4"].includes(status) || status.startsWith("OT")) {
+    if (
+      ["1H", "2H", "HT", "ET", "BT", "P", "Q1", "Q2", "Q3", "Q4"].includes(
+        status,
+      ) ||
+      status.startsWith("OT")
+    ) {
       return "#22c55e"; // Verde para ao vivo
     }
     if (["FT", "AET", "PEN"].includes(status)) {
@@ -634,7 +672,7 @@ export function CalendarScreen({ navigation }: any) {
     const statusShort = match.fixture.status.short;
     const isLive =
       ["1H", "2H", "HT", "ET", "BT", "P", "Q1", "Q2", "Q3", "Q4"].includes(
-        statusShort
+        statusShort,
       ) || statusShort.startsWith("OT");
     const isFinished = ["FT", "AET", "PEN"].includes(statusShort);
 
@@ -882,6 +920,9 @@ export function CalendarScreen({ navigation }: any) {
           setSelectedMatch(null);
         }}
       />
+
+      {/* Banner de Anúncio */}
+      <AdBanner />
     </SafeAreaView>
   );
 }

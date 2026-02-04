@@ -58,6 +58,12 @@
         {
           "minimumInterval": 900
         }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-6929713450943259~8108778359"
+        }
       ]
     ],
     "extra": {
@@ -66,5 +72,8 @@
       }
     },
     "owner": "dslpss"
+  },
+  "react-native-google-mobile-ads": {
+    "android_app_id": "ca-app-pub-6929713450943259~8108778359"
   }
 }

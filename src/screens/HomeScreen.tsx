@@ -67,6 +67,7 @@ import {
   Lock,
 } from "lucide-react-native";
 import { Ionicons } from "@expo/vector-icons";
+import AdBanner from "../components/AdBanner";
 import axios from "axios";
 import { api } from "../services/api";
 import { authApi, FavoriteTeam } from "../services/authApi";
@@ -1113,9 +1114,8 @@ export const HomeScreen = ({ navigation }: any) => {
       const predictions = await api.getAIPredictions();
       console.log(`[HomeScreen] Got ${predictions.length} AI predictions`);
       setAiPredictions(predictions);
-      if (predictions.length === 0) {
-        setAiPredictionsError(true);
-      }
+      // Não seta erro se retornou vazio - significa que não há jogos hoje
+      // O componente AIPredictionSlider vai mostrar mensagem apropriada
     } catch (error) {
       console.error("[HomeScreen] Error fetching AI predictions:", error);
       setAiPredictionsError(true);
@@ -2647,6 +2647,9 @@ export const HomeScreen = ({ navigation }: any) => {
             ) : null
           }
         />
+
+        {/* Banner de Anúncio */}
+        <AdBanner />
       </SafeAreaView>
 
       {updateInfo && (

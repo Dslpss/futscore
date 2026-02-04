@@ -17,6 +17,7 @@ import { Newspaper, X } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NewsCard } from "../components/NewsCard";
 import { msnSportsApi } from "../services/msnSportsApi";
+import AdBanner from "../components/AdBanner";
 
 const { width } = Dimensions.get("window");
 
@@ -66,7 +67,7 @@ export const NewsScreen = () => {
       }
 
       const news = await msnSportsApi.getSportsNews(10, skip);
-      
+
       if (news.length < 10) {
         setHasMore(false);
       }
@@ -76,8 +77,10 @@ export const NewsScreen = () => {
       } else {
         // Deduplicate articles by ID
         setArticles((prev) => {
-          const existingIds = new Set(prev.map(a => a.id));
-          const newArticles = news.filter((a: NewsArticle) => !existingIds.has(a.id));
+          const existingIds = new Set(prev.map((a) => a.id));
+          const newArticles = news.filter(
+            (a: NewsArticle) => !existingIds.has(a.id),
+          );
           return [...prev, ...newArticles];
         });
       }
@@ -119,8 +122,7 @@ export const NewsScreen = () => {
             <View style={styles.headerIconWrapper}>
               <LinearGradient
                 colors={["#22c55e", "#16a34a"]}
-                style={styles.headerIconGradient}
-              >
+                style={styles.headerIconGradient}>
                 <Newspaper size={20} color="#fff" />
               </LinearGradient>
             </View>
@@ -132,12 +134,10 @@ export const NewsScreen = () => {
           <TouchableOpacity
             style={styles.closeButton}
             onPress={() => navigation.goBack()}
-            activeOpacity={0.7}
-          >
+            activeOpacity={0.7}>
             <LinearGradient
               colors={["#27272a", "#18181b"]}
-              style={styles.closeButtonGradient}
-            >
+              style={styles.closeButtonGradient}>
               <X size={20} color="#a1a1aa" />
             </LinearGradient>
           </TouchableOpacity>
@@ -151,10 +151,13 @@ export const NewsScreen = () => {
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.featuredScroll}
-          >
+            contentContainerStyle={styles.featuredScroll}>
             {articles.slice(0, 3).map((article) => (
-              <NewsCard key={`featured_${article.id}`} article={article} variant="featured" />
+              <NewsCard
+                key={`featured_${article.id}`}
+                article={article}
+                variant="featured"
+              />
             ))}
           </ScrollView>
         </View>
@@ -169,7 +172,13 @@ export const NewsScreen = () => {
     </View>
   );
 
-  const renderItem = ({ item, index }: { item: NewsArticle; index: number }) => {
+  const renderItem = ({
+    item,
+    index,
+  }: {
+    item: NewsArticle;
+    index: number;
+  }) => {
     // Skip first 3 items as they are in the featured carousel
     if (index < 3) return null;
     return <NewsCard article={item} variant="compact" />;
@@ -191,9 +200,7 @@ export const NewsScreen = () => {
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyIcon}>📰</Text>
         <Text style={styles.emptyText}>Nenhuma notícia encontrada</Text>
-        <Text style={styles.emptySubtext}>
-          Puxe para baixo para atualizar
-        </Text>
+        <Text style={styles.emptySubtext}>Puxe para baixo para atualizar</Text>
       </View>
     );
   };
@@ -244,6 +251,9 @@ export const NewsScreen = () => {
             />
           }
         />
+
+        {/* Banner de Anúncio */}
+        <AdBanner />
       </SafeAreaView>
     </View>
   );

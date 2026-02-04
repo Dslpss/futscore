@@ -239,7 +239,7 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
   }
 
   // Error state - show retry button
-  if (error || (validPredictions.length === 0 && !loading)) {
+  if (error && validPredictions.length === 0) {
     return (
       <View style={styles.container}>
         <View style={styles.sectionHeader}>
@@ -252,7 +252,7 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
           <View style={styles.errorIconWrapper}>
             <Brain size={32} color="#6b7280" />
           </View>
-          <Text style={styles.errorTitle}>Previsões indisponíveis</Text>
+          <Text style={styles.errorTitle}>Erro ao carregar</Text>
           <Text style={styles.errorText}>
             Não foi possível carregar as previsões da IA.
           </Text>
@@ -261,6 +261,30 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
               <Text style={styles.retryButtonText}>Tentar novamente</Text>
             </TouchableOpacity>
           )}
+        </View>
+      </View>
+    );
+  }
+
+  // Empty state - no matches today
+  if (validPredictions.length === 0 && !loading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.sectionHeader}>
+          <View style={styles.sectionTitleContainer}>
+            <Brain size={20} color="#a855f7" />
+            <Text style={styles.sectionTitle}>Previsões da IA</Text>
+          </View>
+        </View>
+        <View style={styles.emptyContainer}>
+          <View style={styles.emptyIconWrapper}>
+            <Text style={styles.emptyIcon}>⚽</Text>
+          </View>
+          <Text style={styles.emptyTitle}>Sem jogos hoje</Text>
+          <Text style={styles.emptyText}>
+            Não há partidas agendadas para hoje.{"\n"}
+            Volte amanhã para novas previsões!
+          </Text>
         </View>
       </View>
     );
@@ -1177,6 +1201,39 @@ const styles = StyleSheet.create({
     color: "#a855f7",
     fontSize: 14,
     fontWeight: "600",
+  },
+  emptyContainer: {
+    backgroundColor: "rgba(34, 197, 94, 0.08)",
+    borderRadius: 16,
+    padding: 24,
+    marginHorizontal: 16,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(34, 197, 94, 0.15)",
+  },
+  emptyIconWrapper: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "rgba(34, 197, 94, 0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  emptyIcon: {
+    fontSize: 28,
+  },
+  emptyTitle: {
+    color: "#e4e4e7",
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 6,
+  },
+  emptyText: {
+    color: "#71717a",
+    fontSize: 13,
+    textAlign: "center",
+    lineHeight: 20,
   },
 });
 
