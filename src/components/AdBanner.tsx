@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { View, StyleSheet, Text, Platform } from "react-native";
+import { useSubscriptionContext } from "../context/SubscriptionContext";
 
 // ============================================
 // CONFIGURAÇÃO DE ANÚNCIOS
@@ -13,7 +14,7 @@ const TEST_AD_UNIT_ID_IOS = "ca-app-pub-3940256099942544/2934735716";
 
 // Altere para 'true' para testar se os anúncios aparecem
 // IMPORTANTE: Mude para 'false' antes de publicar!
-const USE_TEST_ADS = true; // TEMPORÁRIO - MUDE PARA false ANTES DE PUBLICAR!
+const USE_TEST_ADS = false;
 
 // Seleciona o ID correto baseado no modo e plataforma
 const BANNER_AD_UNIT_ID = USE_TEST_ADS 
@@ -42,6 +43,9 @@ interface AdBannerProps {
 export default function AdBanner({ size }: AdBannerProps) {
   const [isInitialized, setIsInitialized] = useState(false);
   const [adError, setAdError] = useState<string | null>(null);
+  
+  // Verificar se o usuário é premium
+  const { isPremium } = useSubscriptionContext();
 
   useEffect(() => {
     // Inicializar o SDK do Google Mobile Ads
@@ -73,6 +77,12 @@ export default function AdBanner({ size }: AdBannerProps) {
   // Não renderiza nada se o módulo não estiver disponível (Expo Go)
   if (!BannerAd) {
     console.log("[AdBanner] BannerAd não disponível");
+    return null;
+  }
+
+  // Não mostra anúncios para usuários premium
+  if (isPremium) {
+    console.log("[AdBanner] 👑 Usuário premium - anúncios ocultos");
     return null;
   }
 

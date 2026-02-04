@@ -689,9 +689,6 @@ const styles = StyleSheet.create({
   container: {
     marginBottom: 20,
   },
-  emptyContainer: {
-    height: 0,
-  },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
