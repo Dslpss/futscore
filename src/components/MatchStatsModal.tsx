@@ -27,7 +27,9 @@ import { Match, MatchTopPlayers, MatchInjuries, MatchLeagueStats } from "../type
 import { api } from "../services/api";
 import { LinearGradient } from "expo-linear-gradient";
 import { TeamDetailsModal } from "./TeamDetailsModal";
-
+import { HeadToHeadSection } from "./HeadToHeadSection";
+import { MatchTimelineSection } from "./MatchTimelineSection";
+import { MatchTimeline } from "../utils/msnTimelineTransformer";
 interface GameDetails {
   venue?: {
     name: string;
@@ -190,11 +192,11 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
 }) => {
   const [match, setMatch] = useState<Match | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"stats" | "lineups" | "goals" | "players">(
+  const [activeTab, setActiveTab] = useState<"stats" | "lineups" | "timeline" | "players">(
     "stats"
   );
   const [lineupView, setLineupView] = useState<"list" | "field">("field");
-  const [goals, setGoals] = useState<any[]>([]);
+  const [timelineData, setTimelineData] = useState<MatchTimeline | null>(null);
   const [gameDetails, setGameDetails] = useState<GameDetails | null>(null);
   const [topPlayers, setTopPlayers] = useState<MatchTopPlayers | null>(null);
   const [injuries, setInjuries] = useState<MatchInjuries | null>(null);
@@ -375,12 +377,12 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
               // Fetch recent matches for both teams
               try {
                 const [homeSchedule, awaySchedule] = await Promise.all([
-                  msnSportsApi.getTeamLiveSchedule(homeTeamMsnId, 7),
-                  msnSportsApi.getTeamLiveSchedule(awayTeamMsnId, 7),
+                  msnSportsApi.getTeamLiveSchedule(homeTeamMsnId, 20),
+                  msnSportsApi.getTeamLiveSchedule(awayTeamMsnId, 20),
                 ]);
 
                 const filterFinishedGames = (games: any[]) => 
-                  games.filter((g: any) => g.gameState?.gameStatus === 'Final').slice(0, 5);
+                  games.filter((g: any) => g.gameState?.gameStatus === 'Final');
 
                 if (homeSchedule.length > 0 || awaySchedule.length > 0) {
                   setRecentMatches({
@@ -539,20 +541,20 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
               }
             }
 
-            // Fetch timeline (goals, events)
-            const { transformMsnTimelineToGoals } = await import(
+            // Fetch timeline (goals, cards, subs, VAR events)
+            const { transformMsnTimeline } = await import(
               "../utils/msnTimelineTransformer"
             );
-            const msnTimelineData = await msnSportsApi.getTimeline(
+            const msnTimelineRawData = await msnSportsApi.getTimeline(
               gameId,
               sport
             );
 
-            if (msnTimelineData) {
-              const goalEvents = transformMsnTimelineToGoals(msnTimelineData);
-              setGoals(goalEvents);
+            if (msnTimelineRawData) {
+              const fullTimeline = transformMsnTimeline(msnTimelineRawData);
+              setTimelineData(fullTimeline);
               console.log(
-                `[MatchStatsModal] Fetched ${goalEvents.length} goal events from MSN`
+                `[MatchStatsModal] Fetched timeline: ${fullTimeline.allEvents.length} events (${fullTimeline.goals.length} goals, ${fullTimeline.cards.length} cards, ${fullTimeline.substitutions.length} subs, ${fullTimeline.varDecisions.length} VAR)`
               );
             }
           } else {
@@ -1064,6 +1066,20 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                 </View>
               )}
 
+              {/* Head-to-Head Section */}
+              {(recentMatches.home.length > 0 || recentMatches.away.length > 0) && (
+                <HeadToHeadSection
+                  homeTeamName={match.teams.home.name}
+                  awayTeamName={match.teams.away.name}
+                  homeLogo={match.teams.home.logo}
+                  awayLogo={match.teams.away.logo}
+                  homeRecentGames={recentMatches.home}
+                  awayRecentGames={recentMatches.away}
+                  homeTeamId={(match.teams.home as any).msnId}
+                  awayTeamId={(match.teams.away as any).msnId}
+                />
+              )}
+
               {/* Recent Matches History */}
               {(recentMatches.home.length > 0 || recentMatches.away.length > 0) && (
                 <View style={styles.recentMatchesCard}>
@@ -1078,7 +1094,7 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                           {match.teams.home.name}
                         </Text>
                       </View>
-                      {recentMatches.home.map((game, index) => {
+                      {recentMatches.home.slice(0, 5).map((game, index) => {
                         const myParticipant = game.participants?.find((p: any) => 
                           p.team?.id?.includes(match.teams.home.id?.toString()) || 
                           p.team?.name?.rawName?.includes(match.teams.home.name) ||
@@ -1117,7 +1133,7 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                           {match.teams.away.name}
                         </Text>
                       </View>
-                      {recentMatches.away.map((game, index) => {
+                      {recentMatches.away.slice(0, 5).map((game, index) => {
                         const myParticipant = game.participants?.find((p: any) => 
                           p.team?.id?.includes(match.teams.away.id?.toString()) || 
                           p.team?.name?.rawName?.includes(match.teams.away.name) ||
@@ -1298,15 +1314,15 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                     <TouchableOpacity
                       style={[
                         styles.tabButton,
-                        activeTab === "goals" && styles.activeTabButton,
+                        activeTab === "timeline" && styles.activeTabButton,
                       ]}
-                      onPress={() => setActiveTab("goals")}>
+                      onPress={() => setActiveTab("timeline")}>
                       <Text
                         style={[
                           styles.tabText,
-                          activeTab === "goals" && styles.activeTabText,
+                          activeTab === "timeline" && styles.activeTabText,
                         ]}>
-                        Gols
+                        Timeline
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -1420,93 +1436,31 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                         </Text>
                       </View>
                     )
-                  ) : activeTab === "goals" ? (
-                    /* Goals Tab */
-                    <View style={styles.statsContainer}>
-                      {goals && goals.length > 0 ? (
-                        <>
-                          <Text style={styles.sectionTitle}>
-                            Gols da Partida
-                          </Text>
-                          {goals.map((goal, index) => (
-                            <View
-                              key={index}
-                              style={[
-                                styles.goalCard,
-                                goal.isDisallowed && styles.goalCardDisallowed,
-                              ]}>
-                              <View style={styles.goalHeader}>
-                                <View style={styles.goalTimeContainer}>
-                                  <Text
-                                    style={[
-                                      styles.goalMinute,
-                                      goal.isDisallowed &&
-                                        styles.goalMinuteDisallowed,
-                                    ]}>
-                                    {goal.minute}'
-                                  </Text>
-                                  <View
-                                    style={[
-                                      styles.goalPeriodBadge,
-                                      goal.period === 2 &&
-                                        styles.goalPeriodBadgeSecond,
-                                      goal.isDisallowed &&
-                                        styles.goalPeriodBadgeDisallowed,
-                                    ]}>
-                                    <Text style={styles.goalPeriodText}>
-                                      {goal.period === 1 ? "1º T" : "2º T"}
-                                    </Text>
-                                  </View>
-                                  {goal.isDisallowed && (
-                                    <View style={styles.disallowedBadge}>
-                                      <Text style={styles.disallowedText}>
-                                        ANULADO
-                                      </Text>
-                                    </View>
-                                  )}
-                                </View>
-                                <Text style={styles.goalIcon}>
-                                  {goal.isDisallowed ? "❌" : "⚽"}
-                                </Text>
-                              </View>
-                              <Text
-                                style={[
-                                  styles.goalPlayer,
-                                  goal.isDisallowed &&
-                                    styles.goalPlayerDisallowed,
-                                ]}>
-                                {goal.player.number}. {goal.player.name}
-                                {goal.isPenalty && " (Pênalti)"}
-                                {goal.isOwnGoal && " (Gol Contra)"}
-                              </Text>
-                              <Text style={styles.goalTeamName}>
-                                {goal.teamId?.includes(match.teams.home.id?.toString()) || 
-                                 goal.teamId?.includes("home") 
-                                  ? match.teams.home.name 
-                                  : match.teams.away.name}
-                              </Text>
-                              {goal.assist && !goal.isDisallowed && (
-                                <Text style={styles.goalAssist}>
-                                  Assistência: {goal.assist.number}.{" "}
-                                  {goal.assist.name}
-                                </Text>
-                              )}
-                              {goal.isDisallowed && goal.description && (
-                                <Text style={styles.disallowedReason}>
-                                  {goal.description}
-                                </Text>
-                              )}
-                            </View>
-                          ))}
-                        </>
-                      ) : (
-                        <View style={styles.noStatsContainer}>
-                          <Text style={styles.noStatsText}>
-                            Nenhum gol marcado nesta partida
-                          </Text>
-                        </View>
-                      )}
-                    </View>
+                  ) : activeTab === "timeline" ? (
+                    /* Timeline Tab */
+                    timelineData ? (
+                      <MatchTimelineSection
+                        timeline={timelineData}
+                        homeTeam={{
+                          id: match.teams.home.id,
+                          name: match.teams.home.name,
+                          logo: match.teams.home.logo,
+                          msnId: (match.teams.home as any).msnId,
+                        }}
+                        awayTeam={{
+                          id: match.teams.away.id,
+                          name: match.teams.away.name,
+                          logo: match.teams.away.logo,
+                          msnId: (match.teams.away as any).msnId,
+                        }}
+                      />
+                    ) : (
+                      <View style={styles.noStatsContainer}>
+                        <Text style={styles.noStatsText}>
+                          Linha do tempo não disponível para este jogo.
+                        </Text>
+                      </View>
+                    )
                   ) : /* Lineups */
                   match.lineups && match.lineups.length > 0 ? (
                     <View style={styles.lineupsContainer}>
