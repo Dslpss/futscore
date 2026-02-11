@@ -62,7 +62,7 @@
       [
         "react-native-google-mobile-ads",
         {
-          "androidAppId": "ca-app-pub-6929713450943259~8108778359"
+          "androidAppId": "ca-app-pub-6929713450943259~8162886737"
         }
       ]
     ],
@@ -74,6 +74,6 @@
     "owner": "dslpss"
   },
   "react-native-google-mobile-ads": {
-    "android_app_id": "ca-app-pub-6929713450943259~8108778359"
+    "android_app_id": "ca-app-pub-6929713450943259~8162886737"
   }
 }
