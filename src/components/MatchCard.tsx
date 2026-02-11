@@ -88,10 +88,18 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
     toggleFavoriteMatch,
   } = useFavorites();
   const [modalVisible, setModalVisible] = React.useState(false);
+  const [displayedMatch, setDisplayedMatch] = React.useState<Match>(match);
   const [notifyModalVisible, setNotifyModalVisible] = React.useState(false);
   const { isPremium, hasTrialAvailable, refreshSubscription, loading: subscriptionLoading } = useSubscription();
   const navigation = useNavigation<any>();
   const [showTrialModal, setShowTrialModal] = React.useState(false);
+
+  // Sync displayedMatch with prop when modal opens/closes or prop changes
+  React.useEffect(() => {
+    if (!modalVisible) {
+      setDisplayedMatch(match);
+    }
+  }, [match, modalVisible]);
 
   const isHomeFavorite = isFavoriteTeam(match.teams.home.id);
   const isAwayFavorite = isFavoriteTeam(match.teams.away.id);
@@ -685,7 +693,8 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
       <MatchStatsModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
-        match={match}
+        match={displayedMatch}
+        onMatchSelect={setDisplayedMatch}
       />
 
       {/* Premium Trial Modal */}

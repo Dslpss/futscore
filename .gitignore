@@ -48,3 +48,4 @@ ios/.xcode.env.local
 *.dSYM.zip
 canais.m3u
 iptv_info.json
+.agent

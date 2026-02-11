@@ -14,13 +14,12 @@ import { Match } from "../types";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { inferMsnTeamId } from "../utils/teamIdMapper";
-import { MatchStatsModal } from "./MatchStatsModal";
-
 interface TeamMatchHistoryProps {
   teamId: number;
   teamName: string;
   limit?: number;
   msnId?: string; // Optional MSN Sports Team ID for better data
+  onMatchPress?: (match: Match) => void;
 }
 
 type MatchResult = "W" | "D" | "L" | "F"; // Win, Draw, Loss, Future
@@ -30,15 +29,15 @@ export const TeamMatchHistory: React.FC<TeamMatchHistoryProps> = ({
   teamName,
   limit = 5,
   msnId,
+  onMatchPress,
 }) => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
-  const [modalVisible, setModalVisible] = useState(false);
 
   const handleMatchPress = (match: Match) => {
-    setSelectedMatch(match);
-    setModalVisible(true);
+    if (onMatchPress) {
+      onMatchPress(match);
+    }
   };
 
   useEffect(() => {
@@ -332,15 +331,6 @@ export const TeamMatchHistory: React.FC<TeamMatchHistoryProps> = ({
         </View>
       </View>
 
-      {/* Match Stats Modal */}
-      <MatchStatsModal
-        visible={modalVisible}
-        onClose={() => {
-          setModalVisible(false);
-          setSelectedMatch(null);
-        }}
-        match={selectedMatch}
-      />
     </View>
   );
 };

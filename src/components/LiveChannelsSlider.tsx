@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -491,6 +491,22 @@ export const LiveChannelsSlider: React.FC = () => {
     [channels],
   );
 
+  // Memoize channel matching to avoid heavy regex on every render (e.g. when opening modals)
+  const gameChannelsMap = useMemo(() => {
+    const map = new Map<string, Channel | null>();
+    if (games.length === 0 || channels.length === 0) return map;
+
+    console.log("[LiveChannelsSlider] Computing channel matches...");
+    games.forEach((game) => {
+      const primaryChannel = game.channels[0] || "";
+      // Only compute if not already computed (though games are unique by ID usually)
+      if (!map.has(game.id)) {
+        map.set(game.id, findMatchingChannel(primaryChannel));
+      }
+    });
+    return map;
+  }, [games, channels, findMatchingChannel]);
+
   // Handle card press
   const handleCardPress = async (game: UnifiedGame) => {
     console.log("[LiveChannelsSlider] handleCardPress called");
@@ -779,7 +795,7 @@ export const LiveChannelsSlider: React.FC = () => {
         {games.map((game, index) => {
           const status = getGameStatus(game);
           const primaryChannel = game.channels[0] || "";
-          const matchedChannel = findMatchingChannel(primaryChannel);
+          const matchedChannel = gameChannelsMap.get(game.id);
 
           return (
             <TouchableOpacity

@@ -14,7 +14,7 @@ import { X } from "lucide-react-native";
 import { api } from "../services/api";
 import { msnSportsApi } from "../services/msnSportsApi";
 import { inferMsnTeamId, addTeamMsnIdMapping } from "../utils/teamIdMapper";
-import { Player } from "../types";
+import { Player, Match } from "../types";
 import { LinearGradient } from "expo-linear-gradient";
 import { TeamMatchHistory } from "./TeamMatchHistory";
 
@@ -28,12 +28,14 @@ interface TeamDetailsModalProps {
     country: string;
     msnId?: string; // Optional MSN Sports Team ID
   } | null;
+  onMatchPress?: (match: Match) => void;
 }
 
 export const TeamDetailsModal: React.FC<TeamDetailsModalProps> = ({
   visible,
   onClose,
   team,
+  onMatchPress,
 }) => {
   const [squad, setSquad] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
@@ -339,6 +341,7 @@ export const TeamDetailsModal: React.FC<TeamDetailsModalProps> = ({
                 teamName={team.name}
                 msnId={resolvedMsnId || team.msnId}
                 limit={5}
+                onMatchPress={onMatchPress}
               />
             </View>
 

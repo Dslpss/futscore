@@ -55,6 +55,7 @@ interface MatchStatsModalProps {
   visible: boolean;
   onClose: () => void;
   match: Match | null;
+  onMatchSelect?: (match: Match) => void;
 }
 
 const { width } = Dimensions.get("window");
@@ -185,6 +186,7 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
   visible,
   onClose,
   match: initialMatch,
+  onMatchSelect,
 }) => {
   const [match, setMatch] = useState<Match | null>(null);
   const [loading, setLoading] = useState(true);
@@ -1961,6 +1963,10 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
         visible={!!selectedTeam}
         onClose={() => setSelectedTeam(null)}
         team={selectedTeam}
+        onMatchPress={(m) => {
+          setSelectedTeam(null);
+          if (onMatchSelect) onMatchSelect(m);
+        }}
       />
     </>
   );

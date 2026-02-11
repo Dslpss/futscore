@@ -7,7 +7,9 @@
 
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { 
-  getAuth, 
+  initializeAuth,
+  // @ts-ignore
+  getReactNativePersistence,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
@@ -15,8 +17,10 @@ import {
   updatePassword,
   signOut as firebaseSignOut,
   onAuthStateChanged,
-  User as FirebaseUser
+  User as FirebaseUser,
+  getAuth
 } from 'firebase/auth';
+import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 
 // Configuração do Firebase (do google-services.json)
 const firebaseConfig = {
@@ -30,7 +34,11 @@ const firebaseConfig = {
 
 // Inicializar Firebase (evita reinicialização)
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-const auth = getAuth(app);
+
+// Initialize Auth with persistence
+const auth = initializeAuth(app, {
+  persistence: getReactNativePersistence(ReactNativeAsyncStorage)
+});
 
 // ====== FUNÇÕES DE AUTENTICAÇÃO ======
 
