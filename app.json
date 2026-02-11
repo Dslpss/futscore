@@ -2,7 +2,7 @@
   "expo": {
     "name": "FutScore",
     "slug": "FutScore",
-    "version": "1.0.59",
+    "version": "1.0.60",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -16,7 +16,9 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.futscore.app",
       "infoPlist": {
-        "UIBackgroundModes": ["audio"]
+        "UIBackgroundModes": [
+          "audio"
+        ]
       }
     },
     "android": {
@@ -27,7 +29,7 @@
       "package": "com.futscore.app",
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "usesCleartextTraffic": true,
+      "usesCleartextTraffic": false,
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
@@ -35,8 +37,7 @@
         "FOREGROUND_SERVICE",
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.WAKE_LOCK",
-        "android.permission.FOREGROUND_SERVICE",
-        "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
+        "android.permission.FOREGROUND_SERVICE"
       ],
       "googleServicesFile": "./google-services.json"
     },
@@ -64,7 +65,8 @@
         {
           "androidAppId": "ca-app-pub-6929713450943259~8162886737"
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "extra": {
       "eas": {

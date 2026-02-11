@@ -1,15 +1,14 @@
 /**
  * Firebase Configuration for FutScore App
  * 
- * Este arquivo configura o Firebase para uso no app React Native com Expo.
- * Usamos o Firebase JS SDK que é compatível com Expo.
+ * Revertendo para persistência padrão (AsyncStorage) para corrigir erros de build.
+ * Compatível com Expo Go e Firebase JS SDK v12.
  */
 
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { 
   initializeAuth,
-  // @ts-ignore
-  getReactNativePersistence,
+
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
@@ -20,9 +19,13 @@ import {
   User as FirebaseUser,
   getAuth
 } from 'firebase/auth';
+
+// @ts-ignore
+import { getReactNativePersistence } from 'firebase/auth';
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 
-// Configuração do Firebase (do google-services.json)
+// Configuração do Firebase
+// Projeto: anotacoes-estudos
 const firebaseConfig = {
   apiKey: "AIzaSyAqvfTFpri7-quRf8uKf9lKjQElQuBUTu8",
   authDomain: "anotacoes-estudos.firebaseapp.com",
@@ -32,20 +35,22 @@ const firebaseConfig = {
   appId: "1:730890275748:android:6305cd6b1b2ef753f60f31"
 };
 
-// Inicializar Firebase (evita reinicialização)
+// Inicializar Apps
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// Initialize Auth with persistence
-const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(ReactNativeAsyncStorage)
-});
+// Inicializar Auth com persistência padrão
+// Usamos try-catch para lidar com hot-reload (evita 'auth already initialized')
+let auth: any;
+try {
+  auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(ReactNativeAsyncStorage)
+  });
+} catch (e) {
+  auth = getAuth(app);
+}
 
 // ====== FUNÇÕES DE AUTENTICAÇÃO ======
 
-/**
- * Envia email de recuperação de senha via Firebase
- * @param email - Email do usuário
- */
 export const sendPasswordReset = async (email: string): Promise<void> => {
   try {
     await sendPasswordResetEmail(auth, email.toLowerCase().trim());
@@ -56,11 +61,6 @@ export const sendPasswordReset = async (email: string): Promise<void> => {
   }
 };
 
-/**
- * Confirma o reset de senha com o código recebido por email
- * @param oobCode - Código de verificação do email
- * @param newPassword - Nova senha
- */
 export const confirmPasswordResetWithCode = async (
   oobCode: string, 
   newPassword: string
@@ -74,11 +74,6 @@ export const confirmPasswordResetWithCode = async (
   }
 };
 
-/**
- * Login com email e senha via Firebase
- * @param email - Email do usuário
- * @param password - Senha do usuário
- */
 export const signInWithFirebase = async (email: string, password: string) => {
   try {
     const userCredential = await signInWithEmailAndPassword(
@@ -94,11 +89,6 @@ export const signInWithFirebase = async (email: string, password: string) => {
   }
 };
 
-/**
- * Criar conta com email e senha via Firebase
- * @param email - Email do usuário
- * @param password - Senha do usuário
- */
 export const createFirebaseAccount = async (email: string, password: string) => {
   try {
     const userCredential = await createUserWithEmailAndPassword(
@@ -114,10 +104,6 @@ export const createFirebaseAccount = async (email: string, password: string) => 
   }
 };
 
-/**
- * Atualizar senha do usuário logado
- * @param newPassword - Nova senha
- */
 export const updateUserPassword = async (newPassword: string): Promise<void> => {
   const user = auth.currentUser;
   if (!user) throw new Error('No user logged in');
@@ -131,9 +117,6 @@ export const updateUserPassword = async (newPassword: string): Promise<void> => 
   }
 };
 
-/**
- * Logout do Firebase
- */
 export const signOutFirebase = async (): Promise<void> => {
   try {
     await firebaseSignOut(auth);
@@ -144,22 +127,12 @@ export const signOutFirebase = async (): Promise<void> => {
   }
 };
 
-/**
- * Observa mudanças no estado de autenticação
- * @param callback - Função chamada quando o estado muda
- */
 export const onAuthChange = (callback: (user: FirebaseUser | null) => void) => {
   return onAuthStateChanged(auth, callback);
 };
 
-/**
- * Retorna o usuário atual do Firebase
- */
 export const getCurrentFirebaseUser = () => auth.currentUser;
 
-/**
- * Traduz códigos de erro do Firebase para mensagens em português
- */
 export const getFirebaseErrorMessage = (errorCode: string): string => {
   const errorMessages: Record<string, string> = {
     'auth/email-already-in-use': 'Este email já está em uso',
