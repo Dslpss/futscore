@@ -208,6 +208,12 @@ export const matchService = {
           name: "Copa do Brasil",
         },
         {
+          msn: "Soccer_InternationalClubsCopaLibertadores",
+          fd: null,
+          sport: "Soccer",
+          name: "Copa Libertadores",
+        },
+        {
           msn: "Soccer_InternationalClubsUEFAChampionsLeague",
           fd: "CL",
           sport: "Soccer",

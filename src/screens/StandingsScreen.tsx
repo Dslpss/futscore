@@ -8,6 +8,7 @@ import {
   Image,
   RefreshControl,
   ActivityIndicator,
+  SectionList,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { ChevronLeft, Shield } from "lucide-react-native";
@@ -82,16 +83,8 @@ export const StandingsScreen: React.FC<StandingsScreenProps> = ({
   const loadStandings = async () => {
     try {
       const data = await msnSportsApi.getStandings(selectedLeague);
-      console.log(
-        "[StandingsScreen] Raw data sample:",
-        JSON.stringify(data?.standings?.[0]?.team, null, 2)
-      );
       if (data && data.standings) {
         const transformed = transformMsnStandings(data);
-        console.log(
-          "[StandingsScreen] Transformed sample:",
-          JSON.stringify(transformed?.[0], null, 2)
-        );
         setStandings(transformed);
       } else {
         setStandings([]);
@@ -109,9 +102,11 @@ export const StandingsScreen: React.FC<StandingsScreenProps> = ({
     loadStandings();
   }, [selectedLeague]);
 
-  const onRefresh = () => {
+  const onRefresh = async () => {
     setRefreshing(true);
-    loadStandings();
+    // Clear cache to ensure fresh data, especially for group names logic
+    await msnSportsApi.clearCache();
+    await loadStandings();
   };
 
   const getPositionColor = (position: number) => {
@@ -122,6 +117,75 @@ export const StandingsScreen: React.FC<StandingsScreenProps> = ({
     // Relegation zone (bottom 3)
     if (position >= standings.length - 2) return "#ef4444";
     return "transparent";
+  };
+
+  const renderTeamRow = (team: StandingTeam, displayPosition: number, filter: 'ALL' | 'HOME' | 'AWAY') => {
+    let displayStats = {
+      played: team.played,
+      won: team.won,
+      draw: team.draw,
+      lost: team.lost,
+      goalDifference: team.goalDifference,
+      points: team.points
+    };
+
+    if (filter === 'HOME' && team.home) {
+        const { won, draw, lost, goalsFor, goalsAgainst } = team.home;
+        displayStats = {
+            played: won + draw + lost,
+            won,
+            draw,
+            lost,
+            goalDifference: goalsFor - goalsAgainst,
+            points: (won * 3) + draw 
+        };
+    } else if (filter === 'AWAY' && team.away) {
+          const { won, draw, lost, goalsFor, goalsAgainst } = team.away;
+        displayStats = {
+            played: won + draw + lost,
+            won,
+            draw,
+            lost,
+            goalDifference: goalsFor - goalsAgainst,
+            points: (won * 3) + draw 
+        };
+    }
+
+    return (
+    <View key={team.team.id} style={styles.row}>
+      <View
+        style={[
+          styles.positionIndicator,
+          { backgroundColor: getPositionColor(displayPosition) },
+        ]}
+      />
+      <Text style={[styles.cell, styles.positionCell]}>
+        {displayPosition}
+      </Text>
+      <View style={[styles.teamCellContainer]}>
+        <TeamLogo uri={team.team.logo} size={24} />
+        <Text style={styles.teamName} numberOfLines={1}>
+          {team.team.shortName || team.team.name}
+        </Text>
+      </View>
+      <Text style={[styles.cell, styles.statCell]}>{displayStats.played}</Text>
+      <Text style={[styles.cell, styles.statCell]}>{displayStats.won}</Text>
+      <Text style={[styles.cell, styles.statCell]}>{displayStats.draw}</Text>
+      <Text style={[styles.cell, styles.statCell]}>{displayStats.lost}</Text>
+      <Text
+        style={[
+          styles.cell,
+          styles.statCell,
+          displayStats.goalDifference > 0 && styles.positiveGD,
+        ]}>
+        {displayStats.goalDifference > 0 ? "+" : ""}
+        {displayStats.goalDifference}
+      </Text>
+      <Text style={[styles.cell, styles.pointsCell, styles.pointsText]}>
+        {displayStats.points}
+      </Text>
+    </View>
+    );
   };
 
   return (
@@ -226,120 +290,105 @@ export const StandingsScreen: React.FC<StandingsScreenProps> = ({
           <Text style={styles.emptyText}>Classificação indisponível</Text>
         </View>
       ) : (
-        <ScrollView
-          style={styles.scrollView}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor="#22c55e"
-            />
-          }>
-          {/* Table Header */}
-          <View style={styles.tableHeader}>
-            <Text style={[styles.headerCell, styles.positionCell]}>#</Text>
-            <Text style={[styles.headerCell, { flex: 1, textAlign: "left" }]}>
-              TIME
-            </Text>
-            <Text style={[styles.headerCell, styles.statCell]}>J</Text>
-            <Text style={[styles.headerCell, styles.statCell]}>V</Text>
-            <Text style={[styles.headerCell, styles.statCell]}>E</Text>
-            <Text style={[styles.headerCell, styles.statCell]}>D</Text>
-            <Text style={[styles.headerCell, styles.statCell]}>SG</Text>
-            <Text style={[styles.headerCell, styles.pointsCell]}>PTS</Text>
-          </View>
-
-          {/* Standings */}
-          {standings.map((team, index) => {
-            let displayStats = {
-              played: team.played,
-              won: team.won,
-              draw: team.draw,
-              lost: team.lost,
-              goalDifference: team.goalDifference,
-              points: team.points
-            };
-
-            if (filter === 'HOME' && team.home) {
-                const { won, draw, lost, goalsFor, goalsAgainst } = team.home;
-                displayStats = {
-                    played: won + draw + lost,
-                    won,
-                    draw,
-                    lost,
-                    goalDifference: goalsFor - goalsAgainst,
-                    points: (won * 3) + draw // Simplified points calc
-                };
-            } else if (filter === 'AWAY' && team.away) {
-                 const { won, draw, lost, goalsFor, goalsAgainst } = team.away;
-                displayStats = {
-                    played: won + draw + lost,
-                    won,
-                    draw,
-                    lost,
-                    goalDifference: goalsFor - goalsAgainst,
-                    points: (won * 3) + draw // Simplified points calc
-                };
+        <SectionList
+            style={styles.scrollView}
+            contentContainerStyle={{ paddingBottom: 100 }}
+            refreshControl={
+                <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                    tintColor="#22c55e"
+                />
             }
-
-            return (
-            <View key={team.team.id || index} style={styles.row}>
-              <View
-                style={[
-                  styles.positionIndicator,
-                  { backgroundColor: getPositionColor(team.position) },
-                ]}
-              />
-              <Text style={[styles.cell, styles.positionCell]}>
-                {team.position}
-              </Text>
-              <View style={[styles.teamCellContainer]}>
-                <TeamLogo uri={team.team.logo} size={24} />
-                <Text style={styles.teamName} numberOfLines={1}>
-                  {team.team.shortName || team.team.name}
-                </Text>
-              </View>
-              <Text style={[styles.cell, styles.statCell]}>{displayStats.played}</Text>
-              <Text style={[styles.cell, styles.statCell]}>{displayStats.won}</Text>
-              <Text style={[styles.cell, styles.statCell]}>{displayStats.draw}</Text>
-              <Text style={[styles.cell, styles.statCell]}>{displayStats.lost}</Text>
-              <Text
-                style={[
-                  styles.cell,
-                  styles.statCell,
-                  displayStats.goalDifference > 0 && styles.positiveGD,
-                ]}>
-                {displayStats.goalDifference > 0 ? "+" : ""}
-                {displayStats.goalDifference}
-              </Text>
-              <Text style={[styles.cell, styles.pointsCell, styles.pointsText]}>
-                {displayStats.points}
-              </Text>
-            </View>
-          )})}
-
-          {/* Legend */}
-          <View style={styles.legend}>
-            <View style={styles.legendItem}>
-              <View
-                style={[styles.legendColor, { backgroundColor: "#22c55e" }]}
-              />
-              <Text style={styles.legendText}>Champions League</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View
-                style={[styles.legendColor, { backgroundColor: "#3b82f6" }]}
-              />
-              <Text style={styles.legendText}>Europa League</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View
-                style={[styles.legendColor, { backgroundColor: "#ef4444" }]}
-              />
-              <Text style={styles.legendText}>Rebaixamento</Text>
-            </View>
-          </View>
-        </ScrollView>
+            stickySectionHeadersEnabled={false}
+            sections={(() => {
+                const hasGroups = standings.some((s) => s.group);
+                if (hasGroups) {
+                    const grouped: Record<string, StandingTeam[]> = {};
+                    standings.forEach((team) => {
+                        const rawGroup = team.group || "Outros";
+                        const groupName = rawGroup.trim();
+                        if (!grouped[groupName]) grouped[groupName] = [];
+                        grouped[groupName].push(team);
+                    });
+                    
+                    return Object.keys(grouped).sort().map(key => ({
+                        title: key,
+                        data: grouped[key].sort((a, b) => {
+                             if (a.points !== b.points) return b.points - a.points;
+                             if (a.goalDifference !== b.goalDifference) return b.goalDifference - a.goalDifference;
+                             return b.goalsFor - a.goalsFor;
+                        })
+                    }));
+                } else {
+                    return [{ title: 'Geral', data: standings }];
+                }
+            })()}
+            renderSectionHeader={({ section: { title } }: { section: { title: string } }) => (
+                title !== 'Geral' ? (
+                  <View style={{ marginBottom: 8, marginTop: 16 }}>
+                    <LinearGradient
+                        colors={["rgba(255,255,255,0.1)", "rgba(255,255,255,0.02)"]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={{
+                        paddingVertical: 8,
+                        paddingHorizontal: 12,
+                        borderLeftWidth: 4,
+                        borderLeftColor: "#22c55e",
+                        }}>
+                        <Text
+                        style={{
+                            color: "#fff",
+                            fontWeight: "800",
+                            fontSize: 14,
+                            textTransform: "uppercase",
+                        }}>
+                        {title}
+                        </Text>
+                    </LinearGradient>
+                  </View>
+                ) : null
+            )}
+            renderItem={({ item, index }: { item: StandingTeam, index: number }) => renderTeamRow(item, index + 1, filter)}
+            keyExtractor={(item: StandingTeam) => item.team.id.toString()}
+            ListHeaderComponent={
+                <View style={styles.tableHeader}>
+                    <Text style={[styles.headerCell, styles.positionCell]}>#</Text>
+                    <Text style={[styles.headerCell, { flex: 1, textAlign: "left" }]}>
+                    TIME
+                    </Text>
+                    <Text style={[styles.headerCell, styles.statCell]}>J</Text>
+                    <Text style={[styles.headerCell, styles.statCell]}>V</Text>
+                    <Text style={[styles.headerCell, styles.statCell]}>E</Text>
+                    <Text style={[styles.headerCell, styles.statCell]}>D</Text>
+                    <Text style={[styles.headerCell, styles.statCell]}>SG</Text>
+                    <Text style={[styles.headerCell, styles.pointsCell]}>PTS</Text>
+                </View>
+            }
+            ListFooterComponent={
+                 <View style={styles.legend}>
+                    <View style={styles.legendItem}>
+                    <View
+                        style={[styles.legendColor, { backgroundColor: "#22c55e" }]}
+                    />
+                    <Text style={styles.legendText}>Champions League</Text>
+                    </View>
+                    <View style={styles.legendItem}>
+                    <View
+                        style={[styles.legendColor, { backgroundColor: "#3b82f6" }]}
+                    />
+                    <Text style={styles.legendText}>Europa League</Text>
+                    </View>
+                    <View style={styles.legendItem}>
+                    <View
+                        style={[styles.legendColor, { backgroundColor: "#ef4444" }]}
+                    />
+                    <Text style={styles.legendText}>Rebaixamento</Text>
+                    </View>
+                </View>
+            }
+        />
       )}
     </View>
   );

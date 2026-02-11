@@ -139,8 +139,8 @@ async function sendPushToAll(title, body, data = {}, filter = {}) {
         FL1: "FranceLigue1",
         PPL: "PortugalPrimeiraLiga",
         ARG: "ArgentinaPrimeraDivision",
-        LIB: "CONMEBOLLibertadores",
-        SUL: "CONMEBOLSudamericana",
+        LIB: "InternationalClubsCopaLibertadores",
+        SUL: "InternationalClubsCopaSudamericana",
       };
       
       return user.favoriteLeagues.some(favLeagueCode => {

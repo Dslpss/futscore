@@ -271,7 +271,9 @@ export function transformMsnGameToMatch(game: any, leagueInfo?: any): Match {
           homeParticipant?.team?.name?.rawName ||
           "Unknown",
         logo: homeParticipant?.team?.image?.id
-          ? `https://www.bing.com/th?id=${homeParticipant.team.image.id}&w=80&h=80`
+          ? homeParticipant.team.image.id.startsWith("http")
+             ? homeParticipant.team.image.id 
+             : `https://www.bing.com/th?id=${homeParticipant.team.image.id}&w=80&h=80`
           : "",
         msnId: homeParticipant?.team?.id, // Store MSN Team ID for later use
         colors: homeParticipant?.team?.colors?.primaryColorHex
@@ -290,7 +292,9 @@ export function transformMsnGameToMatch(game: any, leagueInfo?: any): Match {
           awayParticipant?.team?.name?.rawName ||
           "Unknown",
         logo: awayParticipant?.team?.image?.id
-          ? `https://www.bing.com/th?id=${awayParticipant.team.image.id}&w=80&h=80`
+          ? awayParticipant.team.image.id.startsWith("http")
+             ? awayParticipant.team.image.id
+             : `https://www.bing.com/th?id=${awayParticipant.team.image.id}&w=80&h=80`
           : "",
         msnId: awayParticipant?.team?.id, // Store MSN Team ID for later use
         colors: awayParticipant?.team?.colors?.primaryColorHex
@@ -328,7 +332,7 @@ export function transformMsnGameToMatch(game: any, leagueInfo?: any): Match {
     },
     // Add probabilities if available
     probabilities:
-      homeParticipant?.probabilities?.[0] || awayParticipant?.probabilities?.[0]
+      (homeParticipant?.probabilities?.[0] || awayParticipant?.probabilities?.[0])
         ? {
             home: homeParticipant?.probabilities?.[0]?.winProbability || 0,
             draw:
@@ -472,6 +476,14 @@ export const MSN_LEAGUE_MAP: Record<
     imageId: "OIP.5CX8hcL8gQ8xnpEoG4KxjAHaHa",
     country: "Europa",
   },
+  Soccer_InternationalClubsCopaLibertadores: {
+    id: "LIB",
+    sport: "Soccer",
+    name: "Libertadores",
+    logo: "https://www.bing.com/th?id=OSB.O0CGp0MkiM5XkjMMWG73jw--.png&w=100&h=100",
+    imageId: "OSB.O0CGp0MkiM5XkjMMWG73jw--.png",
+    country: "América do Sul",
+  },
   Soccer_BrazilBrasileiroSerieA: {
     id: "BSA",
     sport: "Soccer",
@@ -537,6 +549,7 @@ export const MSN_LEAGUE_MAP: Record<
 export function getMsnLeagueIds(): string[] {
   return [
     "Soccer_BrazilBrasileiroSerieA",
+    "Soccer_InternationalClubsCopaLibertadores",
     "Soccer_InternationalClubsUEFAChampionsLeague",
     "Soccer_UEFAEuropaLeague",
     "Soccer_SpainLaLiga",

@@ -1,5 +1,6 @@
 export interface StandingTeam {
   position: number;
+  group?: string; // Add group support
   team: {
     id: string;
     name: string;
@@ -36,6 +37,7 @@ export interface StandingTeam {
  */
 function buildMsnImageUrl(imageId: string | undefined): string {
   if (!imageId) return "";
+  if (imageId.startsWith("http")) return imageId;
   return `https://www.bing.com/th?id=${imageId}&w=80&h=80`;
 }
 
@@ -54,6 +56,9 @@ export function transformMsnStandings(msnStandingsData: any): StandingTeam[] {
   const standings: StandingTeam[] = msnStandingsData.standings.map(
     (teamData: any) => ({
       position: teamData.overallRank || 0,
+      group: teamData.group?.shortName 
+        ? (teamData.group.shortName.length === 1 ? `Grupo ${teamData.group.shortName}` : teamData.group.shortName)
+        : teamData.group?.name, // Extract group name
       team: {
         id: teamData.team?.id || "",
         name:
@@ -64,6 +69,7 @@ export function transformMsnStandings(msnStandingsData: any): StandingTeam[] {
           teamData.team?.shortName?.rawName ||
           teamData.team?.shortName?.localizedName ||
           "",
+        // Use updated image logic
         logo: buildMsnImageUrl(teamData.team?.image?.id),
       },
       played: teamData.gamesPlayed || 0,
@@ -91,8 +97,8 @@ export function transformMsnStandings(msnStandingsData: any): StandingTeam[] {
     })
   );
 
-  // Sort by position
-  standings.sort((a, b) => a.position - b.position);
+  // Sort by position removed to preserve API order which is often by group
+  // standings.sort((a, b) => a.position - b.position);
 
   return standings;
 }

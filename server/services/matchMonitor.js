@@ -187,6 +187,11 @@ async function fetchLiveMatches() {
       sport: "Soccer",
     },
     {
+      id: "Soccer_InternationalClubsCopaLibertadores",
+      name: "Copa Libertadores",
+      sport: "Soccer",
+    },
+    {
       id: "Soccer_InternationalClubsUEFAChampionsLeague",
       name: "Champions League",
       sport: "Soccer",

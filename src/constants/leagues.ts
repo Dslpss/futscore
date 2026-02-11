@@ -71,5 +71,11 @@ export const LEAGUES = [
     name: "Campeonato Gaúcho",
     logo: "https://www.bing.com/th?id=OSB.ZkNO8eZsdqmMWmkJWegsWg--.png&w=100&h=100",
   },
+  {
+    id: "Soccer_InternationalClubsCopaLibertadores",
+    name: "Libertadores",
+    // Use the official logo ID we found in the API: OSB.O0CGp0MkiM5XkjMMWG73jw--.png
+    logo: "https://www.bing.com/th?id=OSB.O0CGp0MkiM5XkjMMWG73jw--.png&w=100&h=100",
+  },
 ];
 

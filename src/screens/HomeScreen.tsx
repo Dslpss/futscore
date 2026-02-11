@@ -24,6 +24,7 @@ import {
   Image,
   TextInput,
   Animated,
+  AppState,
 } from "react-native";
 import { useMatches } from "../context/MatchContext";
 import { useFavorites } from "../context/FavoritesContext";
@@ -195,6 +196,7 @@ export const HomeScreen = ({ navigation }: any) => {
       const leagueIds = [
         "Soccer_BrazilBrasileiroSerieA",
         "Soccer_BrazilCopaDoBrasil",
+        "Soccer_InternationalClubsCopaLibertadores",
         "Soccer_InternationalClubsUEFAChampionsLeague",
         "Soccer_UEFAEuropaLeague",
         "Soccer_EnglandPremierLeague",
@@ -247,6 +249,26 @@ export const HomeScreen = ({ navigation }: any) => {
     }
   };
 
+
+  // Add AppState listener to refresh matches when app returns to foreground
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextAppState) => {
+      if (nextAppState === "active") {
+        console.log("[HomeScreen] App returned to foreground, refreshing matches...");
+        if (isToday(selectedDate)) {
+          contextRefresh();
+          fetchAIPredictions();
+        } else {
+          fetchMatchesForDate(selectedDate);
+        }
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [selectedDate, contextRefresh]);
+
   useEffect(() => {
     if (!isToday(selectedDate)) {
       // Clear schedule cache for the selected date to ensure fresh data with date filtering
@@ -262,6 +284,7 @@ export const HomeScreen = ({ navigation }: any) => {
         const leagueIds = [
           "Soccer_BrazilBrasileiroSerieA",
           "Soccer_BrazilCopaDoBrasil",
+          "Soccer_InternationalClubsCopaLibertadores",
           "Soccer_InternationalClubsUEFAChampionsLeague",
           "Soccer_UEFAEuropaLeague",
           "Soccer_EnglandPremierLeague",
@@ -315,6 +338,7 @@ export const HomeScreen = ({ navigation }: any) => {
       const msnLeagueIds = [
         "Soccer_BrazilBrasileiroSerieA", // Brasileirão
         "Soccer_BrazilCopaDoBrasil", // Copa do Brasil
+        "Soccer_InternationalClubsCopaLibertadores", // Libertadores
         "Soccer_InternationalClubsUEFAChampionsLeague", // Champions League
         "Soccer_UEFAEuropaLeague", // Europa League
         "Soccer_EnglandPremierLeague",
@@ -568,6 +592,8 @@ export const HomeScreen = ({ navigation }: any) => {
             key.toLowerCase().includes(leagueName.replace(/\s+/g, "")) ||
             (leagueName.includes("copa do brasil") &&
               key.includes("CopaDoBrasil")) ||
+            (leagueName.includes("libertadores") &&
+              key.includes("CopaLibertadores")) ||
             (leagueName.includes("brasileir") &&
               key.includes("BrasileiroSerieA")) ||
             (leagueName.includes("premier") && key.includes("PremierLeague")) ||
@@ -936,6 +962,7 @@ export const HomeScreen = ({ navigation }: any) => {
     { code: "CDB", name: "Copa do Brasil", icon: "🏆" },
     { code: "CAR", name: "Carioca", icon: "🏟️" },
     { code: "FIC", name: "Intercontinental", icon: "🌎" },
+    { code: "LIB", name: "Libertadores", icon: "🏆" },
     { code: "CL", name: "Champions", icon: "⚽" },
     { code: "EL", name: "Europa League", icon: "🔶" },
     { code: "PD", name: "La Liga", icon: "🇪🇸" },
@@ -1377,6 +1404,7 @@ export const HomeScreen = ({ navigation }: any) => {
                 const leagueMap: Record<string, string> = {
                   BSA: "Soccer_BrazilBrasileiroSerieA",
                   CDB: "Soccer_BrazilCopaDoBrasil",
+                  LIB: "Soccer_InternationalClubsCopaLibertadores",
                   CL: "Soccer_InternationalClubsUEFAChampionsLeague",
                   EL: "Soccer_UEFAEuropaLeague",
                   PD: "Soccer_SpainLaLiga",

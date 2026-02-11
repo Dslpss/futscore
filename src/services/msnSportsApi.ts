@@ -761,7 +761,26 @@ export const msnSportsApi = {
   getStandings: async (leagueId: string): Promise<any> => {
     const cacheKey = `standings_${leagueId}`;
     const cached = await getCachedData<any>(cacheKey);
-    if (cached) return cached;
+
+    // Validate cached data integrity: check for group info
+    if (cached && cached.standings && Array.isArray(cached.standings)) {
+      const hasGroupData = cached.standings.some(
+        (entry: any) => entry.group?.shortName || entry.group?.name
+      );
+      const entryCount = cached.standings.length;
+      // If standings have few entries (< 8) for leagues that typically have groups,
+      // or if group data is missing, invalidate cache and re-fetch
+      if (!hasGroupData && entryCount < 8) {
+        console.log(
+          `[MSN CACHE] Standings cache for ${leagueId} is incomplete (${entryCount} entries, no groups). Invalidating...`
+        );
+        await AsyncStorage.removeItem(CACHE_PREFIX + cacheKey);
+      } else {
+        return cached;
+      }
+    } else if (cached) {
+      return cached;
+    }
 
     try {
       const params = {
@@ -771,7 +790,7 @@ export const msnSportsApi = {
         ocid: "sports-league-standings",
         id: leagueId,
         idtype: "league",
-        seasonPhase: "regularSeason",
+        seasonPhase: "entireSeason",
       };
 
       console.log(`[MSN API] Fetching standings for ${leagueId}...`);
@@ -789,10 +808,14 @@ export const msnSportsApi = {
 
       const standingsData = response.data.value[0];
 
+      console.log(
+        `[MSN API] Fetched standings: ${standingsData.standings?.length} entries, ` +
+        `groups: ${standingsData.standings?.[0]?.group?.shortName || 'none'}`
+      );
+
       // Cache for 1 hour (standings don't change frequently)
       await setCachedData(cacheKey, standingsData, 60 * 60 * 1000);
 
-      console.log(`[MSN API] Fetched standings successfully`);
       return standingsData;
     } catch (error) {
       console.error("[MSN API] Error fetching standings:", error);
