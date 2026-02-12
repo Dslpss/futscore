@@ -2,7 +2,7 @@
   "expo": {
     "name": "FutScore",
     "slug": "FutScore",
-    "version": "1.0.60",
+    "version": "1.0.61",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -29,7 +29,7 @@
       "package": "com.futscore.app",
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "usesCleartextTraffic": false,
+      "usesCleartextTraffic": true,
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
