@@ -48,6 +48,28 @@ export const AIGuruScreen = ({ navigation }: any) => {
   } | null>(null);
   const flatListRef = useRef<FlatList>(null);
 
+  useEffect(() => {
+    fetchUsage();
+  }, [token]);
+
+  const fetchUsage = async () => {
+    if (!token) return;
+    try {
+      const response = await fetch(
+        `${CONFIG.BACKEND_URL}/api/ai-predictions/usage`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const data = await response.json();
+      if (data.success && data.usage) {
+        setUsageInfo(data.usage);
+      }
+    } catch (e) {
+      console.error("Error fetching usage", e);
+    }
+  };
+
   const sendMessage = async () => {
     if (!inputText.trim() || loading) return;
 
@@ -303,7 +325,7 @@ export const AIGuruScreen = ({ navigation }: any) => {
               style={styles.usageBadge}>
               <Sparkles size={12} color="#a855f7" />
               <Text style={styles.usageText}>
-                {usageInfo.remaining} perguntas restantes hoje
+                {usageInfo.used}/{usageInfo.limit} perguntas hoje
               </Text>
             </LinearGradient>
           </View>

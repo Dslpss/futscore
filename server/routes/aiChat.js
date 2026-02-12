@@ -114,4 +114,35 @@ router.get("/status", (req, res) => {
   });
 });
 
+// Endpoint para consultar uso e limites
+router.get("/usage", async (req, res) => {
+  try {
+    const user = await getUserFromToken(req);
+    if (!user) return res.status(401).json({ success: false, error: "Unauthorized" });
+
+    const isPremium = await user.hasPremiumAccess();
+    const limit = isPremium ? 10 : 5;
+    
+    // Check reset (apenas visualização, não salva no banco no GET para evitar writes desnecessários)
+    const now = new Date();
+    const lastReset = user.aiChatUsage?.lastReset ? new Date(user.aiChatUsage.lastReset) : new Date(0);
+    let used = user.aiChatUsage.count;
+    
+    if (now.getDate() !== lastReset.getDate() || now.getMonth() !== lastReset.getMonth()) {
+       used = 0;
+    }
+
+    res.json({
+      success: true,
+      usage: {
+        used,
+        limit,
+        remaining: limit - used
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 module.exports = router;
