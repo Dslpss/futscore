@@ -134,6 +134,11 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: null,
   },
+  // Uso do Guru IA
+  aiChatUsage: {
+    count: { type: Number, default: 0 },
+    lastReset: { type: Date, default: Date.now },
+  },
 });
 
 // Método para verificar se o trial está ativo

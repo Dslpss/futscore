@@ -33,12 +33,6 @@ import { useSubscriptionContext } from "../context/SubscriptionContext";
 import { MatchCard } from "../components/MatchCard";
 import { NextMatchWidget } from "../components/NextMatchWidget";
 import { UpcomingMatchesSlider } from "../components/UpcomingMatchesSlider";
-import {
-  AIPredictionSlider,
-  AIPrediction,
-} from "../components/AIPredictionSlider";
-import { AIScoutSection } from "../components/AIScoutSection";
-import { StreakSection } from "../components/StreakSection";
 import { PremiumTeaserCard } from "../components/PremiumTeaserCard";
 import { LinearGradient } from "expo-linear-gradient";
 import { WarningCard } from "../components/WarningCard";
@@ -163,13 +157,7 @@ export const HomeScreen = ({ navigation }: any) => {
   >([]);
   const [loadingFavorites, setLoadingFavorites] = useState(false);
 
-  // AI Predictions State
-  const [aiPredictions, setAiPredictions] = useState<AIPrediction[]>([]);
-  const [loadingAIPredictions, setLoadingAIPredictions] = useState(false);
-  const [aiPredictionsError, setAiPredictionsError] = useState(false);
-
-
-  // Ref for league selector ScrollView to maintain position
+ // Ref for league selector ScrollView to maintain position
   const leagueSelectorRef = useRef<ScrollView>(null);
   const leagueScrollPosition = useRef<number>(0);
 
@@ -232,9 +220,6 @@ export const HomeScreen = ({ navigation }: any) => {
         );
       }
 
-      // Clear AI predictions cache
-      await AsyncStorage.removeItem("futscore_cache_ai_predictions");
-
       console.log("[HomeScreen] Cleared all caches, refetching...");
 
       // Refetch calendar with fresh data
@@ -245,8 +230,7 @@ export const HomeScreen = ({ navigation }: any) => {
 
     if (isToday(selectedDate)) {
       await contextRefresh();
-      // Also refresh AI predictions (servidor tem cache diário)
-      fetchAIPredictions();
+
     } else {
       await fetchMatchesForDate(selectedDate);
     }
@@ -260,7 +244,7 @@ export const HomeScreen = ({ navigation }: any) => {
         console.log("[HomeScreen] App returned to foreground, refreshing matches...");
         if (isToday(selectedDate)) {
           contextRefresh();
-          fetchAIPredictions();
+
         } else {
           fetchMatchesForDate(selectedDate);
         }
@@ -674,28 +658,10 @@ export const HomeScreen = ({ navigation }: any) => {
     fetchMatchCalendar();
     fetchLeagueLogos();
     // checkPremiumModal agora é chamado no useEffect dedicado
-    fetchAIPredictions();
     // backendFavorites is loaded automatically by FavoritesContext
   }, []);
 
-  // Fetch AI Predictions (cache diário no servidor, economiza tokens)
-  const fetchAIPredictions = async () => {
-    setLoadingAIPredictions(true);
-    setAiPredictionsError(false);
-    try {
-      console.log("[HomeScreen] Fetching AI predictions...");
-      const predictions = await api.getAIPredictions();
-      console.log(`[HomeScreen] Got ${predictions.length} AI predictions`);
-      setAiPredictions(predictions);
-      // Não seta erro se retornou vazio - significa que não há jogos hoje
-      // O componente AIPredictionSlider vai mostrar mensagem apropriada
-    } catch (error) {
-      console.error("[HomeScreen] Error fetching AI predictions:", error);
-      setAiPredictionsError(true);
-    } finally {
-      setLoadingAIPredictions(false);
-    }
-  };
+
 
   useEffect(() => {
     // Use backend favorites if available (from context, updates automatically)
@@ -1209,58 +1175,7 @@ export const HomeScreen = ({ navigation }: any) => {
         }}
       />
 
-      {/* AI Predictions Slider */}
-      {isToday(selectedDate) && (
-        <AIPredictionSlider
-          predictions={aiPredictions}
-          loading={loadingAIPredictions}
-          error={aiPredictionsError}
-          onRetry={fetchAIPredictions}
-          onPressPrediction={(prediction) => {
-            console.log("AI Prediction clicked:", prediction);
-          }}
-        />
-      )}
 
-      {/* AI Scout Section - Sempre visível, com versão bloqueada para não-premium */}
-      {isToday(selectedDate) && (
-        <>
-          <AIScoutSection
-            isPremium={isPremium}
-            onPremiumPress={() => navigation.navigate("Subscription")}
-            onPressMatch={(matchId) => {
-              const allMatches = [
-                ...liveMatches,
-                ...todaysMatches,
-                ...customMatches,
-              ];
-              const found = allMatches.find(
-                (m) => m.fixture.id.toString() === matchId,
-              );
-              if (found) {
-                navigation.navigate("MatchDetails", { match: found });
-              }
-            }}
-          />
-          {isPremium && (
-            <StreakSection
-              onPressMatch={(matchId) => {
-                const allMatches = [
-                  ...liveMatches,
-                  ...todaysMatches,
-                  ...customMatches,
-                ];
-                const found = allMatches.find(
-                  (m) => m.fixture.id.toString() === matchId,
-                );
-                if (found) {
-                  navigation.navigate("MatchDetails", { match: found });
-                }
-              }}
-            />
-          )}
-        </>
-      )}
 
       {/* ESPN, OndeAssistir, and News Cards - Fully isolated component */}
       <TVCardsSection />

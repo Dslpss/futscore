@@ -43,7 +43,9 @@ app.use("/api/webhooks", require("./routes/webhooks"));
 app.use("/api/subscription", require("./routes/subscription"));
 app.use("/api/predictions", require("./routes/predictions"));
 app.use("/api/announcements", require("./routes/announcements"));
-app.use("/api/ai-predictions", require("./routes/aiPredictions"));
+// Rota de IA (Guru) restaurada apenas para Chat
+app.use("/api/ai-predictions", require("./routes/aiChat"));
+
 
 app.get("/", (req, res) => {
   res.send("FutScore API is running");

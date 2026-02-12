@@ -17,6 +17,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Send, ChevronLeft, Bot, User, Sparkles } from "lucide-react-native";
 import { CONFIG } from "../constants/config";
 import Markdown from "react-native-markdown-display";
+import { useAuth } from "../context/AuthContext";
 
 interface Message {
   id: string;
@@ -25,7 +26,10 @@ interface Message {
   timestamp: Date;
 }
 
+
+
 export const AIGuruScreen = ({ navigation }: any) => {
+  const { token } = useAuth();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
@@ -37,6 +41,11 @@ export const AIGuruScreen = ({ navigation }: any) => {
   ]);
   const [inputText, setInputText] = useState("");
   const [loading, setLoading] = useState(false);
+  const [usageInfo, setUsageInfo] = useState<{
+    used: number;
+    limit: number;
+    remaining: number;
+  } | null>(null);
   const flatListRef = useRef<FlatList>(null);
 
   const sendMessage = async () => {
@@ -67,6 +76,7 @@ export const AIGuruScreen = ({ navigation }: any) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
         },
         body: JSON.stringify({
           message: userMsg.content,
@@ -84,6 +94,10 @@ export const AIGuruScreen = ({ navigation }: any) => {
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, aiMsg]);
+        
+        if (data.usage) {
+          setUsageInfo(data.usage);
+        }
       } else {
         throw new Error(data.error || "Falha na resposta");
       }
@@ -139,9 +153,77 @@ export const AIGuruScreen = ({ navigation }: any) => {
           ) : (
             <Markdown
               style={{
-                body: { color: "#e4e4e7", fontSize: 15 },
+                body: { color: "#e4e4e7", fontSize: 15, lineHeight: 22 },
+                heading1: {
+                  fontSize: 20,
+                  fontWeight: "bold",
+                  color: "#fff",
+                  marginVertical: 10,
+                },
+                heading2: {
+                  fontSize: 18,
+                  fontWeight: "bold",
+                  color: "#fff",
+                  marginVertical: 8,
+                },
+                heading3: {
+                  fontSize: 16,
+                  fontWeight: "bold",
+                  color: "#fff",
+                  marginVertical: 6,
+                },
                 strong: { fontWeight: "bold", color: "#fff" },
-                code_inline: { backgroundColor: "#3f3f46", borderRadius: 4, padding: 2 },
+                em: { fontStyle: "italic", color: "#d4d4d8" },
+                link: { color: "#a855f7", textDecorationLine: "underline" },
+                blockquote: {
+                  borderLeftWidth: 4,
+                  borderLeftColor: "#a855f7",
+                  paddingLeft: 10,
+                  marginVertical: 8,
+                  backgroundColor: "rgba(168, 85, 247, 0.1)",
+                  padding: 8,
+                  borderRadius: 4,
+                },
+                code_inline: {
+                  backgroundColor: "#3f3f46",
+                  borderRadius: 4,
+                  paddingHorizontal: 4,
+                  color: "#e4e4e7",
+                  fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
+                },
+                code_block: {
+                  backgroundColor: "#27272a",
+                  padding: 10,
+                  borderRadius: 8,
+                  marginVertical: 8,
+                  borderWidth: 1,
+                  borderColor: "#3f3f46",
+                },
+                fence: {
+                  backgroundColor: "#27272a",
+                  padding: 10,
+                  borderRadius: 8,
+                  marginVertical: 8,
+                  borderWidth: 1,
+                  borderColor: "#3f3f46",
+                },
+                list_item: { marginVertical: 4 },
+                bullet_list: { marginVertical: 8 },
+                ordered_list: { marginVertical: 8 },
+                hr: {
+                  backgroundColor: "#3f3f46",
+                  height: 1,
+                  marginVertical: 12,
+                },
+                table: { borderWidth: 1, borderColor: "#3f3f46", marginVertical: 8 },
+                tr: { borderBottomWidth: 1, borderColor: "#3f3f46" },
+                th: {
+                  padding: 8,
+                  fontWeight: "bold",
+                  color: "#fff",
+                  backgroundColor: "rgba(255,255,255,0.05)",
+                },
+                td: { padding: 8, color: "#e4e4e7" },
               }}>
               {item.content}
             </Markdown>
@@ -198,20 +280,36 @@ export const AIGuruScreen = ({ navigation }: any) => {
         </View>
       </View>
 
-      {/* Chat Area */}
-      <FlatList
-        ref={flatListRef}
-        data={messages}
-        keyExtractor={(item) => item.id}
-        renderItem={renderMessage}
-        contentContainerStyle={styles.chatContent}
-        keyboardShouldPersistTaps="handled"
-      />
-
-      {/* Input Area */}
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}>
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 20}>
+        
+        {/* Chat Area */}
+        <FlatList
+          ref={flatListRef}
+          data={messages}
+          keyExtractor={(item) => item.id}
+          renderItem={renderMessage}
+          contentContainerStyle={styles.chatContent}
+          keyboardShouldPersistTaps="handled"
+        />
+
+        {/* Usage Info Badge */}
+        {usageInfo && (
+          <View style={styles.usageBadgeContainer}>
+            <LinearGradient
+              colors={["rgba(168, 85, 247, 0.2)", "rgba(168, 85, 247, 0.1)"]}
+              style={styles.usageBadge}>
+              <Sparkles size={12} color="#a855f7" />
+              <Text style={styles.usageText}>
+                {usageInfo.remaining} perguntas restantes hoje
+              </Text>
+            </LinearGradient>
+          </View>
+        )}
+
+        {/* Input Area */}
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
@@ -375,5 +473,25 @@ const styles = StyleSheet.create({
   sendButtonDisabled: {
     backgroundColor: "#3f3f46",
     opacity: 0.5,
+  },
+  usageBadgeContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    alignItems: "center",
+  },
+  usageBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(168, 85, 247, 0.2)",
+    gap: 6,
+  },
+  usageText: {
+    color: "#e9d5ff",
+    fontSize: 12,
+    fontWeight: "500",
   },
 });
