@@ -23,11 +23,16 @@ let predictionsCache = {
 };
 
 /**
- * Retorna a data atual no formato YYYY-MM-DD
+ * Retorna a data atual no formato YYYY-MM-DD (Horário de Brasília)
  */
 function getTodayDateString() {
   const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const brasiliaOffset = -3 * 60; // -3 horas em minutos
+  // Converter para horário de Brasília
+  const brasiliaTime = new Date(
+    now.getTime() + (brasiliaOffset + now.getTimezoneOffset()) * 60000,
+  );
+  return `${brasiliaTime.getFullYear()}-${String(brasiliaTime.getMonth() + 1).padStart(2, "0")}-${String(brasiliaTime.getDate()).padStart(2, "0")}`;
 }
 
 /**
@@ -584,8 +589,14 @@ router.get("/debug", async (req, res) => {
   try {
     console.log("[AIPredictions] Debug: iniciando busca de partidas...");
 
-    // Limpar cache
+    // Limpar caches
     matchesCache = { data: [], timestamp: 0 };
+    predictionsCache = {
+      data: [],
+      date: "",
+      generatedAt: null,
+      isGenerating: false,
+    };
 
     // Buscar partidas diretamente
     const matches = await fetchMSNUpcomingMatches();

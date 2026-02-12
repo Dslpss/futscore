@@ -12,6 +12,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { Match } from "../types";
 import { Clock, Bell } from "lucide-react-native";
+import { TeamLogo } from "./TeamLogo";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width * 0.75; // 75% da largura da tela
@@ -232,8 +233,9 @@ export const UpcomingMatchesSlider: React.FC<UpcomingMatchesSliderProps> = ({
                           { backgroundColor: "rgba(234, 179, 8, 0.3)" },
                         ]}
                       />
-                      <Image
-                        source={{ uri: match.teams.home.logo }}
+                      <TeamLogo
+                        uri={match.teams.home.logo}
+                        size={50}
                         style={styles.teamLogo}
                       />
                     </View>
@@ -270,8 +272,9 @@ export const UpcomingMatchesSlider: React.FC<UpcomingMatchesSliderProps> = ({
                           { backgroundColor: "rgba(234, 179, 8, 0.3)" },
                         ]}
                       />
-                      <Image
-                        source={{ uri: match.teams.away.logo }}
+                      <TeamLogo
+                        uri={match.teams.away.logo}
+                        size={50}
                         style={styles.teamLogo}
                       />
                     </View>

@@ -232,6 +232,9 @@ export const HomeScreen = ({ navigation }: any) => {
         );
       }
 
+      // Clear AI predictions cache
+      await AsyncStorage.removeItem("futscore_cache_ai_predictions");
+
       console.log("[HomeScreen] Cleared all caches, refetching...");
 
       // Refetch calendar with fresh data

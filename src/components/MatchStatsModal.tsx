@@ -21,6 +21,7 @@ import { Match, Team } from "../types";
 import { TeamDetailsModal } from "./TeamDetailsModal";
 import { HeadToHeadSection } from "./HeadToHeadSection";
 import { useMatchDetails } from "../hooks/useMatchDetails";
+import { TeamLogo } from "./TeamLogo";
 
 // Lazy load tabs
 const StatsTab = lazy(() => import("./match/tabs/StatsTab").then(module => ({ default: module.StatsTab })));
@@ -158,8 +159,9 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                               "rgba(255,255,255,0.05)",
                             ]}
                             style={styles.teamLogoGlow}>
-                            <Image
-                              source={{ uri: match.teams.home.logo }}
+                            <TeamLogo
+                              uri={match.teams.home.logo}
+                              size={56}
                               style={styles.teamLogo}
                             />
                           </LinearGradient>
@@ -251,8 +253,9 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                               "rgba(255,255,255,0.05)",
                             ]}
                             style={styles.teamLogoGlow}>
-                            <Image
-                              source={{ uri: match.teams.away.logo }}
+                            <TeamLogo
+                              uri={match.teams.away.logo}
+                              size={56}
                               style={styles.teamLogo}
                             />
                           </LinearGradient>
@@ -464,8 +467,9 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                   {injuries.home.injuredPlayers.length > 0 && (
                     <View style={styles.teamInjuries}>
                       <View style={styles.teamInjuryHeader}>
-                        <Image
-                          source={{ uri: match.teams.home.logo }}
+                        <TeamLogo
+                          uri={match.teams.home.logo}
+                          size={24}
                           style={styles.injuryTeamLogo}
                         />
                         <Text style={styles.teamInjuryName}>{match.teams.home.name}</Text>
@@ -503,8 +507,9 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                   {injuries.away.injuredPlayers.length > 0 && (
                     <View style={styles.teamInjuries}>
                       <View style={styles.teamInjuryHeader}>
-                        <Image
-                          source={{ uri: match.teams.away.logo }}
+                        <TeamLogo
+                          uri={match.teams.away.logo}
+                          size={24}
                           style={styles.injuryTeamLogo}
                         />
                         <Text style={styles.teamInjuryName}>{match.teams.away.name}</Text>
@@ -563,7 +568,7 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                     {/* Home Team Column */}
                     <View style={styles.recentMatchesColumn}>
                       <View style={styles.recentMatchesHeader}>
-                        <Image source={{ uri: match.teams.home.logo }} style={styles.recentTeamLogo} />
+                        <TeamLogo uri={match.teams.home.logo} size={24} style={styles.recentTeamLogo} />
                         <Text style={styles.recentTeamName} numberOfLines={1}>
                           {match.teams.home.name}
                         </Text>
@@ -602,7 +607,7 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                     {/* Away Team Column */}
                     <View style={styles.recentMatchesColumn}>
                       <View style={styles.recentMatchesHeader}>
-                        <Image source={{ uri: match.teams.away.logo }} style={styles.recentTeamLogo} />
+                        <TeamLogo uri={match.teams.away.logo} size={24} style={styles.recentTeamLogo} />
                         <Text style={styles.recentTeamName} numberOfLines={1}>
                           {match.teams.away.name}
                         </Text>
@@ -666,7 +671,7 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                     <View style={styles.pollContainer}>
                       {/* Home Team */}
                       <View style={styles.pollTeamRow}>
-                        <Image source={{ uri: match.teams.home.logo }} style={styles.pollTeamLogo} />
+                        <TeamLogo uri={match.teams.home.logo} size={24} style={styles.pollTeamLogo} />
                         <Text style={styles.pollTeamName} numberOfLines={1}>{match.teams.home.name}</Text>
                         <Text style={styles.pollPercent}>{homePercent}%</Text>
                       </View>
@@ -676,7 +681,7 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
                       
                       {/* Away Team */}
                       <View style={styles.pollTeamRow}>
-                        <Image source={{ uri: match.teams.away.logo }} style={styles.pollTeamLogo} />
+                        <TeamLogo uri={match.teams.away.logo} size={24} style={styles.pollTeamLogo} />
                         <Text style={styles.pollTeamName} numberOfLines={1}>{match.teams.away.name}</Text>
                         <Text style={styles.pollPercent}>{awayPercent}%</Text>
                       </View>

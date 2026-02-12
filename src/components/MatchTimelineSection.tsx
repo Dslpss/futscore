@@ -6,6 +6,7 @@ import {
   Image,
   Animated,
 } from "react-native";
+import { TeamLogo } from "./TeamLogo";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   MatchTimeline,
@@ -449,7 +450,7 @@ export const MatchTimelineSection: React.FC<MatchTimelineSectionProps> = ({
       {/* Team header row */}
       <View style={tlStyles.teamHeaderRow}>
         <View style={tlStyles.teamHeaderSide}>
-          <Image source={{ uri: homeTeam.logo }} style={tlStyles.teamHeaderLogo} />
+          <TeamLogo uri={homeTeam.logo} size={24} style={tlStyles.teamHeaderLogo} />
           <Text style={tlStyles.teamHeaderName} numberOfLines={1}>
             {homeTeam.name}
           </Text>
@@ -461,7 +462,7 @@ export const MatchTimelineSection: React.FC<MatchTimelineSectionProps> = ({
           <Text style={tlStyles.teamHeaderName} numberOfLines={1}>
             {awayTeam.name}
           </Text>
-          <Image source={{ uri: awayTeam.logo }} style={tlStyles.teamHeaderLogo} />
+          <TeamLogo uri={awayTeam.logo} size={24} style={tlStyles.teamHeaderLogo} />
         </View>
       </View>
 

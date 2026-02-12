@@ -7,6 +7,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Swords } from "lucide-react-native";
+import { TeamLogo } from "./TeamLogo";
 
 interface H2HMatch {
   id: string;
@@ -290,7 +291,7 @@ export const HeadToHeadSection: React.FC<HeadToHeadSectionProps> = React.memo(
         >
           <View style={styles.statsRow}>
             <View style={styles.teamStatCol}>
-              <Image source={{ uri: homeLogo }} style={styles.teamLogo} />
+              <TeamLogo uri={homeLogo} size={36} style={styles.teamLogo} />
               <Text style={styles.statNumber}>{stats.homeWins}</Text>
               <Text style={styles.statLabel}>Vitórias</Text>
             </View>
@@ -303,7 +304,7 @@ export const HeadToHeadSection: React.FC<HeadToHeadSectionProps> = React.memo(
             </View>
 
             <View style={styles.teamStatCol}>
-              <Image source={{ uri: awayLogo }} style={styles.teamLogo} />
+              <TeamLogo uri={awayLogo} size={36} style={styles.teamLogo} />
               <Text style={styles.statNumber}>{stats.awayWins}</Text>
               <Text style={styles.statLabel}>Vitórias</Text>
             </View>

@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Check, X, Trophy, Target, Minus, Plus } from "lucide-react-native";
+import { TeamLogo } from "./TeamLogo";
 import {
   createPrediction,
   getMatchPrediction,
@@ -215,8 +216,9 @@ export const PredictionCard: React.FC<PredictionCardProps> = ({
 
         <View style={styles.teamsRow}>
           <View style={styles.teamSection}>
-            <Image
-              source={{ uri: match.homeTeam.logo }}
+            <TeamLogo
+              uri={match.homeTeam.logo}
+              size={48}
               style={styles.teamLogo}
             />
             <Text style={styles.teamName} numberOfLines={1}>
@@ -241,8 +243,9 @@ export const PredictionCard: React.FC<PredictionCardProps> = ({
           </View>
 
           <View style={styles.teamSection}>
-            <Image
-              source={{ uri: match.awayTeam.logo }}
+            <TeamLogo
+              uri={match.awayTeam.logo}
+              size={48}
               style={styles.teamLogo}
             />
             <Text style={styles.teamName} numberOfLines={1}>
@@ -290,8 +293,9 @@ export const PredictionCard: React.FC<PredictionCardProps> = ({
       <View style={styles.mainContent}>
         {/* Home Team */}
         <View style={styles.teamSection}>
-          <Image
-            source={{ uri: match.homeTeam.logo }}
+          <TeamLogo
+            uri={match.homeTeam.logo}
+            size={48}
             style={styles.teamLogo}
           />
           <Text style={styles.teamName} numberOfLines={2}>
@@ -344,8 +348,9 @@ export const PredictionCard: React.FC<PredictionCardProps> = ({
 
         {/* Away Team */}
         <View style={styles.teamSection}>
-          <Image
-            source={{ uri: match.awayTeam.logo }}
+          <TeamLogo
+            uri={match.awayTeam.logo}
+            size={48}
             style={styles.teamLogo}
           />
           <Text style={styles.teamName} numberOfLines={2}>

@@ -11,6 +11,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { Home, Plane, Calendar, ChevronRight } from "lucide-react-native";
 import { Match } from "../types";
+import { TeamLogo } from "./TeamLogo";
 
 const { width } = Dimensions.get('window');
 
@@ -175,10 +176,10 @@ const MatchCard: React.FC<{ match: Match; onPress: () => void; isNext?: boolean 
           <View style={styles.teamColumn}>
             <View style={styles.logoWrapper}>
               <View style={[styles.logoGlow, { backgroundColor: '#22c55e' }]} />
-              <Image
-                source={{ uri: match.teams.home.logo }}
+              <TeamLogo
+                uri={match.teams.home.logo}
+                size={48}
                 style={styles.teamLogo}
-                resizeMode="contain"
               />
             </View>
             <Text style={styles.teamName} numberOfLines={2}>
@@ -198,10 +199,10 @@ const MatchCard: React.FC<{ match: Match; onPress: () => void; isNext?: boolean 
           <View style={styles.teamColumn}>
             <View style={styles.logoWrapper}>
               <View style={[styles.logoGlow, { backgroundColor: '#3b82f6' }]} />
-              <Image
-                source={{ uri: match.teams.away.logo }}
+              <TeamLogo
+                uri={match.teams.away.logo}
+                size={48}
                 style={styles.teamLogo}
-                resizeMode="contain"
               />
             </View>
             <Text style={styles.teamName} numberOfLines={2}>

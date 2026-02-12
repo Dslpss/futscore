@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Heart } from "lucide-react-native";
+import { TeamLogo } from "./TeamLogo";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = (width - 48) / 2;
@@ -58,10 +59,10 @@ export const TeamCard: React.FC<TeamCardProps> = ({
 
         <View style={styles.content}>
           <View style={styles.logoContainer}>
-            <Image
-              source={{ uri: team.logo }}
+            <TeamLogo
+              uri={team.logo}
+              size={48}
               style={styles.logo}
-              resizeMode="contain"
             />
           </View>
           <Text style={styles.teamName} numberOfLines={2}>

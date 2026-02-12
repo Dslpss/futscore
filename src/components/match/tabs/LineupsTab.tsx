@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { User } from 'lucide-react-native';
 import { Match, MatchInjuries } from '../../../types';
 import { SoccerField } from '../SoccerField';
+import { TeamLogo } from "../../TeamLogo";
 
 interface LineupsTabProps {
   lineups?: Match['lineups'];
@@ -46,8 +47,9 @@ export const LineupsTab: React.FC<LineupsTabProps> = ({ lineups, homeTeam, awayT
   const renderTeamList = (lineup: any, team: any, side: 'home' | 'away') => (
     <View style={styles.teamLineup}>
       <View style={styles.lineupHeader}>
-        <Image
-          source={{ uri: team.logo }}
+        <TeamLogo
+          uri={team.logo}
+          size={24}
           style={styles.smallTeamLogo}
         />
         <Text style={styles.lineupTeamName}>

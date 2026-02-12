@@ -17,6 +17,7 @@ import { inferMsnTeamId, addTeamMsnIdMapping } from "../utils/teamIdMapper";
 import { Player, Match } from "../types";
 import { LinearGradient } from "expo-linear-gradient";
 import { TeamMatchHistory } from "./TeamMatchHistory";
+import { TeamLogo } from "./TeamLogo";
 
 interface TeamDetailsModalProps {
   visible: boolean;
@@ -329,7 +330,7 @@ export const TeamDetailsModal: React.FC<TeamDetailsModalProps> = ({
             <LinearGradient
               colors={["#1c1c1e", "#121212"]}
               style={styles.teamHeader}>
-              <Image source={{ uri: team.logo }} style={styles.teamLogo} />
+              <TeamLogo uri={team.logo} size={80} style={styles.teamLogo} />
               <Text style={styles.teamName}>{team.name}</Text>
               <Text style={styles.teamCountry}>{team.country}</Text>
             </LinearGradient>

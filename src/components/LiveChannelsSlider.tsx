@@ -22,6 +22,7 @@ import { useSubscription } from "../hooks/useSubscription";
 import { PremiumTrialModal } from "./PremiumTrialModal";
 import { useNavigation } from "@react-navigation/native";
 import { Lock, Crown, Tv, Play, Radio, Sparkles } from "lucide-react-native";
+import { TeamLogo } from "./TeamLogo";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width * 0.7;
@@ -840,8 +841,9 @@ export const LiveChannelsSlider: React.FC = () => {
                 <View style={styles.teamsContainer}>
                   <View style={styles.teamRow}>
                     {game.homeLogo && (
-                      <Image
-                        source={{ uri: game.homeLogo }}
+                      <TeamLogo
+                        uri={game.homeLogo}
+                        size={24}
                         style={styles.teamLogo}
                       />
                     )}
@@ -854,8 +856,9 @@ export const LiveChannelsSlider: React.FC = () => {
                   </View>
                   <View style={styles.teamRow}>
                     {game.awayLogo && (
-                      <Image
-                        source={{ uri: game.awayLogo }}
+                      <TeamLogo
+                        uri={game.awayLogo}
+                        size={24}
                         style={styles.teamLogo}
                       />
                     )}

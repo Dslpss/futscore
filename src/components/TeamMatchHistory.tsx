@@ -14,6 +14,7 @@ import { Match } from "../types";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { inferMsnTeamId } from "../utils/teamIdMapper";
+import { TeamLogo } from "./TeamLogo";
 interface TeamMatchHistoryProps {
   teamId: number;
   teamName: string;
@@ -261,16 +262,16 @@ export const TeamMatchHistory: React.FC<TeamMatchHistoryProps> = ({
 
                 {/* Matchup: Team A x Team B */}
                 <View style={styles.matchupContainer}>
-                  <Image
-                    source={{ uri: homeTeam.logo }}
+                  <TeamLogo
+                    uri={homeTeam.logo}
+                    size={24}
                     style={styles.teamLogo}
-                    resizeMode="contain"
                   />
                   <Text style={styles.vsText}>x</Text>
-                  <Image
-                    source={{ uri: awayTeam.logo }}
+                  <TeamLogo
+                    uri={awayTeam.logo}
+                    size={24}
                     style={styles.teamLogo}
-                    resizeMode="contain"
                   />
                 </View>
 

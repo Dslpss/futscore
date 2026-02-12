@@ -18,6 +18,7 @@ import { X, MapPin, Calendar, Users, ChevronRight } from "lucide-react-native";
 import { BlurView } from "expo-blur";
 import { espnApi } from "../services/espnApi";
 import { EspnLiveEvent } from "../types";
+import { TeamLogo } from "./TeamLogo";
 
 const { width, height } = Dimensions.get("window");
 
@@ -156,10 +157,10 @@ export const WorldCupModal: React.FC<WorldCupModalProps> = ({
             {/* Home Team */}
             <View style={styles.teamContainer}>
               <View style={styles.teamLogoWrapper}>
-                <Image
-                  source={{ uri: home?.logo || "" }}
+                <TeamLogo
+                  uri={home?.logo || ""}
+                  size={56}
                   style={styles.teamLogo}
-                  resizeMode="contain"
                 />
                 <View style={styles.teamLogoGlow} />
               </View>
@@ -181,10 +182,10 @@ export const WorldCupModal: React.FC<WorldCupModalProps> = ({
             {/* Away Team */}
             <View style={styles.teamContainer}>
               <View style={styles.teamLogoWrapper}>
-                <Image
-                  source={{ uri: away?.logo || "" }}
+                <TeamLogo
+                  uri={away?.logo || ""}
+                  size={56}
                   style={styles.teamLogo}
-                  resizeMode="contain"
                 />
                 <View style={styles.teamLogoGlow} />
               </View>

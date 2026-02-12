@@ -12,6 +12,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { Search, Heart, Plus, Star } from "lucide-react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { TeamLogo } from "./TeamLogo";
 import { useFavorites } from "../context/FavoritesContext";
 import { msnSportsApi } from "../services/msnSportsApi";
 
@@ -245,10 +246,10 @@ export const TeamSearchBar: React.FC<TeamSearchBarProps> = ({ onTeamAdded }) => 
                     activeOpacity={0.7}
                   >
                     <View style={styles.teamLogoWrapper}>
-                      <Image
-                        source={{ uri: team.logo }}
+                      <TeamLogo
+                        uri={team.logo}
+                        size={42}
                         style={styles.teamLogo}
-                        resizeMode="contain"
                       />
                       {isFav && (
                         <View style={styles.favBadge}>

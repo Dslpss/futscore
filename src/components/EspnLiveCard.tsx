@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Tv, Play, RefreshCw, X, Calendar, MapPin, Clock, AlertTriangle } from 'lucide-react-native';
+import { TeamLogo } from './TeamLogo';
 import { BlurView } from 'expo-blur';
 import { espnApi, EspnEvent } from '../services/espnApi';
 import { EspnLiveEvent } from '../types';
@@ -281,7 +282,7 @@ const EspnEventCard: React.FC<EspnEventCardProps> = ({ event, onPress }) => {
           {/* Home Team */}
           <View style={styles.teamRow}>
             {homeTeam?.logo ? (
-              <Image source={{ uri: homeTeam.logo }} style={styles.teamLogo} />
+              <TeamLogo uri={homeTeam.logo} size={24} style={styles.teamLogo} />
             ) : (
               <View style={[styles.teamLogoPlaceholder, { backgroundColor: homeTeam?.color ? `#${homeTeam.color}` : '#333' }]}>
                 <Text style={styles.teamLogoText}>{homeTeam?.abbreviation?.[0] || 'H'}</Text>
@@ -300,7 +301,7 @@ const EspnEventCard: React.FC<EspnEventCardProps> = ({ event, onPress }) => {
           {/* Away Team */}
           <View style={styles.teamRow}>
             {awayTeam?.logo ? (
-              <Image source={{ uri: awayTeam.logo }} style={styles.teamLogo} />
+              <TeamLogo uri={awayTeam.logo} size={24} style={styles.teamLogo} />
             ) : (
               <View style={[styles.teamLogoPlaceholder, { backgroundColor: awayTeam?.color ? `#${awayTeam.color}` : '#333' }]}>
                 <Text style={styles.teamLogoText}>{awayTeam?.abbreviation?.[0] || 'A'}</Text>
@@ -437,7 +438,7 @@ const EspnEventModal: React.FC<EspnEventModalProps> = ({ event, visible, onClose
                 {/* Home Team */}
                 <View style={styles.modalTeamCol}>
                   {homeTeam?.logo ? (
-                    <Image source={{ uri: homeTeam.logo }} style={styles.modalTeamLogo} />
+                    <TeamLogo uri={homeTeam.logo} size={56} style={styles.modalTeamLogo} />
                   ) : (
                     <View style={[styles.modalTeamLogoPlaceholder, { backgroundColor: homeTeam?.color ? `#${homeTeam.color}` : '#333' }]}>
                       <Text style={styles.modalTeamLogoText}>{homeTeam?.abbreviation?.[0] || 'H'}</Text>
@@ -469,7 +470,7 @@ const EspnEventModal: React.FC<EspnEventModalProps> = ({ event, visible, onClose
                 {/* Away Team */}
                 <View style={styles.modalTeamCol}>
                   {awayTeam?.logo ? (
-                    <Image source={{ uri: awayTeam.logo }} style={styles.modalTeamLogo} />
+                    <TeamLogo uri={awayTeam.logo} size={56} style={styles.modalTeamLogo} />
                   ) : (
                     <View style={[styles.modalTeamLogoPlaceholder, { backgroundColor: awayTeam?.color ? `#${awayTeam.color}` : '#333' }]}>
                       <Text style={styles.modalTeamLogoText}>{awayTeam?.abbreviation?.[0] || 'A'}</Text>

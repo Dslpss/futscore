@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { TeamLogo } from "../TeamLogo";
 
 interface Player {
   id?: string | number;
@@ -143,12 +144,12 @@ export const SoccerField: React.FC<SoccerFieldProps> = ({
         
         {/* Team Info Markers - Overlay */}
         <View style={styles.fieldTeamInfoHome}>
-          <Image source={{ uri: homeTeam.logo }} style={styles.fieldTeamLogo} />
+          <TeamLogo uri={homeTeam.logo} size={20} style={styles.fieldTeamLogo} />
           <Text style={styles.fieldTeamNameTitle}>{homeTeam.name}</Text>
         </View>
 
         <View style={styles.fieldTeamInfoAway}>
-          <Image source={{ uri: awayTeam.logo }} style={styles.fieldTeamLogo} />
+          <TeamLogo uri={awayTeam.logo} size={20} style={styles.fieldTeamLogo} />
           <Text style={styles.fieldTeamNameTitle}>{awayTeam.name}</Text>
         </View>
       </LinearGradient>

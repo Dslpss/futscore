@@ -20,6 +20,7 @@ import {
   ChevronRight,
   X,
 } from "lucide-react-native";
+import { TeamLogo } from "./TeamLogo";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width * 0.85;
@@ -359,17 +360,11 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
                 <View style={styles.teamSection}>
                   <View style={styles.teamLogoContainer}>
                     <View style={styles.teamLogoGlow} />
-                    {prediction.homeTeam.logo ? (
-                      <Image
-                        source={{ uri: prediction.homeTeam.logo }}
-                        style={styles.teamLogo}
-                        resizeMode="contain"
-                      />
-                    ) : (
-                      <View style={styles.teamLogoPlaceholder}>
-                        <Text style={styles.teamLogoPlaceholderText}>⚽</Text>
-                      </View>
-                    )}
+                    <TeamLogo
+                      uri={prediction.homeTeam.logo}
+                      size={40}
+                      style={styles.teamLogo}
+                    />
                   </View>
                   <Text style={styles.teamName} numberOfLines={2}>
                     {prediction.homeTeam.name}
@@ -395,17 +390,11 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
                 <View style={styles.teamSection}>
                   <View style={styles.teamLogoContainer}>
                     <View style={styles.teamLogoGlow} />
-                    {prediction.awayTeam.logo ? (
-                      <Image
-                        source={{ uri: prediction.awayTeam.logo }}
-                        style={styles.teamLogo}
-                        resizeMode="contain"
-                      />
-                    ) : (
-                      <View style={styles.teamLogoPlaceholder}>
-                        <Text style={styles.teamLogoPlaceholderText}>⚽</Text>
-                      </View>
-                    )}
+                    <TeamLogo
+                      uri={prediction.awayTeam.logo}
+                      size={40}
+                      style={styles.teamLogo}
+                    />
                   </View>
                   <Text style={styles.teamName} numberOfLines={2}>
                     {prediction.awayTeam.name}
@@ -542,19 +531,11 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
                   {/* Teams */}
                   <View style={styles.modalTeamsContainer}>
                     <View style={styles.modalTeamSection}>
-                      {selectedPrediction.homeTeam.logo ? (
-                        <Image
-                          source={{ uri: selectedPrediction.homeTeam.logo }}
-                          style={styles.modalTeamLogo}
-                          resizeMode="contain"
-                        />
-                      ) : (
-                        <View style={styles.modalTeamLogoPlaceholder}>
-                          <Text style={styles.modalTeamLogoPlaceholderText}>
-                            ⚽
-                          </Text>
-                        </View>
-                      )}
+                      <TeamLogo
+                        uri={selectedPrediction.homeTeam.logo}
+                        size={56}
+                        style={styles.modalTeamLogo}
+                      />
                       <Text style={styles.modalTeamName} numberOfLines={2}>
                         {selectedPrediction.homeTeam.name}
                       </Text>
@@ -576,19 +557,11 @@ export const AIPredictionSlider: React.FC<AIPredictionSliderProps> = ({
                     </View>
 
                     <View style={styles.modalTeamSection}>
-                      {selectedPrediction.awayTeam.logo ? (
-                        <Image
-                          source={{ uri: selectedPrediction.awayTeam.logo }}
-                          style={styles.modalTeamLogo}
-                          resizeMode="contain"
-                        />
-                      ) : (
-                        <View style={styles.modalTeamLogoPlaceholder}>
-                          <Text style={styles.modalTeamLogoPlaceholderText}>
-                            ⚽
-                          </Text>
-                        </View>
-                      )}
+                      <TeamLogo
+                        uri={selectedPrediction.awayTeam.logo}
+                        size={56}
+                        style={styles.modalTeamLogo}
+                      />
                       <Text style={styles.modalTeamName} numberOfLines={2}>
                         {selectedPrediction.awayTeam.name}
                       </Text>

@@ -23,6 +23,7 @@ import {
   X,
   Check,
 } from "lucide-react-native";
+import { TeamLogo } from "./TeamLogo";
 import { BlurView } from "expo-blur";
 import { useFavorites } from "../context/FavoritesContext";
 import { MatchStatsModal } from "./MatchStatsModal";
@@ -283,9 +284,11 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
                     "rgba(255,255,255,0.03)"
                   ]}
                   style={styles.teamLogoGlow}>
-                  <Image
-                    source={{ uri: match.teams.home.logo }}
+                  <TeamLogo
+                    uri={match.teams.home.logo}
+                    size={44}
                     style={styles.teamLogo}
+                    colors={match.teams.home.colors}
                   />
                 </LinearGradient>
               </View>
@@ -467,9 +470,11 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
                     "rgba(255,255,255,0.03)"
                   ]}
                   style={styles.teamLogoGlow}>
-                  <Image
-                    source={{ uri: match.teams.away.logo }}
+                  <TeamLogo
+                    uri={match.teams.away.logo}
+                    size={44}
                     style={styles.teamLogo}
+                    colors={match.teams.away.colors}
                   />
                 </LinearGradient>
               </View>
@@ -639,14 +644,18 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
               {/* Match Info */}
               <View style={styles.notifyMatchInfo}>
                 <View style={styles.notifyTeamsRow}>
-                  <Image
-                    source={{ uri: match.teams.home.logo }}
+                  <TeamLogo
+                    uri={match.teams.home.logo}
+                    size={40}
                     style={styles.notifyTeamLogo}
+                    colors={match.teams.home.colors}
                   />
                   <Text style={styles.notifyVsText}>vs</Text>
-                  <Image
-                    source={{ uri: match.teams.away.logo }}
+                  <TeamLogo
+                    uri={match.teams.away.logo}
+                    size={40}
                     style={styles.notifyTeamLogo}
+                    colors={match.teams.away.colors}
                   />
                 </View>
                 <Text style={styles.notifyMatchText}>
