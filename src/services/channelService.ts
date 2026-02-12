@@ -53,6 +53,7 @@ export const getChannelById = async (id: string): Promise<Channel> => {
  * Increment view count
  */
 export const incrementViewCount = async (id: string): Promise<void> => {
+  if (!id) return;
   try {
     await axios.post(`${CHANNELS_BASE_URL}/${id}/view`);
   } catch (error: any) {

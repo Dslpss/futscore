@@ -97,7 +97,7 @@ export default function TVPlayerModal({
       );
       // Show navigation bar initially
       NavigationBar.setVisibilityAsync("visible");
-      NavigationBar.setBehaviorAsync("overlay-swipe");
+      // setBehaviorAsync removed due to edge-to-edge warning
       // Hide status bar initially (player should always be immersive)
       StatusBar.setHidden(true, "fade");
       // Reset reconnect attempts
@@ -115,7 +115,6 @@ export default function TVPlayerModal({
         ScreenOrientation.OrientationLock.PORTRAIT_UP,
       );
       NavigationBar.setVisibilityAsync("visible");
-      NavigationBar.setBehaviorAsync("inset-touch");
       StatusBar.setHidden(false, "fade");
       setIsFullscreen(false);
       setShowAspectMenu(false);
@@ -139,7 +138,6 @@ export default function TVPlayerModal({
         ScreenOrientation.OrientationLock.PORTRAIT_UP,
       );
       await NavigationBar.setVisibilityAsync("visible");
-      await NavigationBar.setBehaviorAsync("overlay-swipe");
       StatusBar.setHidden(true, "fade"); // Keep hidden in portrait player mode too
       setIsFullscreen(false);
       setAspectRatioMode("16:9"); // Reset to 16:9 when exiting fullscreen
@@ -148,7 +146,6 @@ export default function TVPlayerModal({
       await ScreenOrientation.lockAsync(
         ScreenOrientation.OrientationLock.LANDSCAPE,
       );
-      await NavigationBar.setBehaviorAsync("overlay-swipe");
       await NavigationBar.setVisibilityAsync("hidden");
       StatusBar.setHidden(true, "fade");
       setIsFullscreen(true);
@@ -358,7 +355,14 @@ export default function TVPlayerModal({
       if (status.error) {
         console.error("Video error:", status.error);
         setIsLoading(false);
-        // Auto-reload on error instead of showing error immediately
+        
+        // Handle 403 Forbidden specifically
+        if (status.error.includes("403")) {
+          setError("Acesso negado (403). Este canal pode estar temporariamente indisponível ou requer uma conexão diferente.");
+          return;
+        }
+
+        // Auto-reload on other errors instead of showing error immediately
         if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS && !isReconnecting) {
           autoReload();
         } else {
@@ -618,7 +622,12 @@ export default function TVPlayerModal({
           onPress={toggleControls}>
           <Video
             ref={videoRef}
-            source={{ uri: channel.url }}
+            source={{ 
+              uri: channel.url,
+              headers: {
+                "User-Agent": "VLC/3.0.11 LibVLC/3.0.11",
+              }
+            }}
             style={[styles.video, getVideoStyle()]}
             resizeMode={getResizeMode()}
             shouldPlay

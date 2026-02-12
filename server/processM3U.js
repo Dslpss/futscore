@@ -28,10 +28,11 @@ const sportsGroupKeywords = [
 
 // Keywords de canais de esporte conhecidos (no nome do canal)
 const sportsChannelNames = [
-  'espn', 'fox sport', 'sportv', 'band sport', 'premiere', 'combate',
-  'tnt sport', 'bein', 'sky sport', 'dazn', 'star+', 'paramount sport',
+  'espn', 'fox sport', 'sportv', 'band sport', 'bandsports', 'premiere', 'pfc', 'combate',
+  'tnt sport', 'estadio tnt', 'nosso futebol', 'bein', 'sky sport', 'dazn', 'star+', 'paramount sport',
   'eurosport', 'eleven sport', 'supersport', 'tsn', 'nbcsn', 'fs1', 'fs2',
-  'canal+ sport', 'movistar sport', 'directv sport', 'espn+', 'tve deporte'
+  'canal+ sport', 'movistar sport', 'directv sport', 'espn+', 'tve deporte',
+  'prime video', 'hbo max', 'amazon prime'
 ];
 
 // Keywords que EXCLUEM (filmes, séries, etc)
