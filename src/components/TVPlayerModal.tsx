@@ -20,6 +20,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import * as ScreenOrientation from "expo-screen-orientation";
 import * as NavigationBar from "expo-navigation-bar";
+import { BlurView } from "expo-blur";
 import { Channel } from "../types/Channel";
 import { incrementViewCount } from "../services/channelService";
 
@@ -604,6 +605,8 @@ export default function TVPlayerModal({
     <Modal
       visible={visible}
       animationType="fade"
+      transparent={true}
+      statusBarTranslucent={true}
       onRequestClose={handleClose}
       supportedOrientations={["portrait", "landscape"]}>
       <StatusBar hidden />
@@ -646,32 +649,48 @@ export default function TVPlayerModal({
 
           {/* Error State */}
           {error && (
-            <View style={styles.errorOverlay}>
+            <BlurView intensity={20} tint="dark" style={styles.errorOverlay}>
               <LinearGradient
-                colors={["rgba(15, 23, 42, 0.95)", "rgba(15, 23, 42, 0.9)"]}
+                colors={["rgba(9, 9, 11, 0.9)", "rgba(15, 23, 42, 0.8)"]}
                 style={styles.errorGradient}>
-                <Ionicons
-                  name="alert-circle-outline"
-                  size={64}
-                  color="#ef4444"
-                />
+                <View style={styles.errorIconWrapper}>
+                  <Ionicons
+                    name="alert-circle-outline"
+                    size={64}
+                    color="#ef4444"
+                  />
+                  <View style={styles.errorIconShadow} />
+                </View>
+                
                 <Text style={styles.errorTitle}>Erro ao reproduzir</Text>
-                <Text style={styles.errorMessage}>{error}</Text>
+                <Text style={styles.errorMessage}>
+                  {error.includes("CLEARTEXT") 
+                    ? "O sistema de segurança bloqueou este canal. Tente novamente após a atualização ou escolha outro canal." 
+                    : error.length > 100 ? error.substring(0, 100) + "..." : error}
+                </Text>
 
                 <TouchableOpacity
                   style={styles.retryButton}
                   onPress={handleReload}>
-                  <Ionicons name="reload" size={20} color="#fff" />
-                  <Text style={styles.retryText}>Tentar novamente</Text>
+                  <LinearGradient
+                    colors={["#6366f1", "#4f46e5"]}
+                    style={styles.retryGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}>
+                    <Ionicons name="reload" size={20} color="#fff" />
+                    <Text style={styles.retryText}>Tentar novamente</Text>
+                  </LinearGradient>
                 </TouchableOpacity>
 
                 {/* Warning about third-party channels */}
                 <View style={styles.errorWarningBanner}>
-                  <Ionicons
-                    name="information-circle"
-                    size={16}
-                    color="#eab308"
-                  />
+                  <View style={styles.warningIconWrapper}>
+                    <Ionicons
+                      name="information-circle"
+                      size={18}
+                      color="#eab308"
+                    />
+                  </View>
                   <Text style={styles.errorWarningText}>
                     Os canais são de fontes externas e podem ficar
                     indisponíveis. O desenvolvedor não controla a
@@ -679,7 +698,7 @@ export default function TVPlayerModal({
                   </Text>
                 </View>
               </LinearGradient>
-            </View>
+            </BlurView>
           )}
 
           {/* Controls Overlay */}
@@ -773,7 +792,7 @@ export default function TVPlayerModal({
 
               {/* Aspect Ratio Menu */}
               {showAspectMenu && (
-                <View style={styles.aspectMenu}>
+                <BlurView intensity={80} tint="dark" style={styles.aspectMenu}>
                   <Text style={styles.aspectMenuTitle}>Formato de Tela</Text>
                   <View style={styles.aspectOptions}>
                     {ASPECT_RATIO_OPTIONS.map((option) => (
@@ -800,12 +819,12 @@ export default function TVPlayerModal({
                       </TouchableOpacity>
                     ))}
                   </View>
-                </View>
+                </BlurView>
               )}
 
               {/* Cast Menu */}
               {showCastMenu && (
-                <View style={styles.castMenu}>
+                <BlurView intensity={90} tint="dark" style={styles.castMenu}>
                   {/* Premium Header */}
                   <View style={styles.castMenuHeader}>
                     <View style={styles.castMenuIconWrapper}>
@@ -825,11 +844,13 @@ export default function TVPlayerModal({
                   <TouchableOpacity
                     style={styles.castOption}
                     onPress={handleOpenVLC}>
-                    <Ionicons
-                      name="play-circle-outline"
-                      size={20}
-                      color="#f97316"
-                    />
+                    <View style={[styles.castOptionIcon, { backgroundColor: 'rgba(249, 115, 22, 0.15)' }]}>
+                      <Ionicons
+                        name="play-circle-outline"
+                        size={20}
+                        color="#f97316"
+                      />
+                    </View>
                     <View style={styles.castOptionInfo}>
                       <Text style={styles.castOptionText}>VLC Player</Text>
                       <Text style={styles.castOptionSubtext}>
@@ -841,11 +862,13 @@ export default function TVPlayerModal({
                   <TouchableOpacity
                     style={styles.castOption}
                     onPress={handleOpenMXPlayer}>
-                    <Ionicons
-                      name="videocam-outline"
-                      size={20}
-                      color="#8b5cf6"
-                    />
+                    <View style={[styles.castOptionIcon, { backgroundColor: 'rgba(139, 92, 246, 0.15)' }]}>
+                      <Ionicons
+                        name="videocam-outline"
+                        size={20}
+                        color="#8b5cf6"
+                      />
+                    </View>
                     <View style={styles.castOptionInfo}>
                       <Text style={styles.castOptionText}>MX Player</Text>
                       <Text style={styles.castOptionSubtext}>
@@ -859,7 +882,9 @@ export default function TVPlayerModal({
                   <TouchableOpacity
                     style={styles.castOption}
                     onPress={handleShareUrl}>
-                    <Ionicons name="share-outline" size={20} color="#3b82f6" />
+                    <View style={[styles.castOptionIcon, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
+                      <Ionicons name="share-outline" size={20} color="#3b82f6" />
+                    </View>
                     <View style={styles.castOptionInfo}>
                       <Text style={styles.castOptionText}>Compartilhar</Text>
                       <Text style={styles.castOptionSubtext}>
@@ -871,7 +896,9 @@ export default function TVPlayerModal({
                   <TouchableOpacity
                     style={styles.castOption}
                     onPress={handleCopyUrl}>
-                    <Ionicons name="copy-outline" size={20} color="#94a3b8" />
+                    <View style={[styles.castOptionIcon, { backgroundColor: 'rgba(148, 163, 184, 0.15)' }]}>
+                      <Ionicons name="copy-outline" size={20} color="#94a3b8" />
+                    </View>
                     <View style={styles.castOptionInfo}>
                       <Text style={styles.castOptionText}>Copiar URL</Text>
                       <Text style={styles.castOptionSubtext}>
@@ -900,16 +927,16 @@ export default function TVPlayerModal({
                       </Text>
                       <Text style={styles.castTipText}>
                         Baixe o Web Video Caster para transmitir via Chromecast,
-                        Smart TV, Fire TV e mais!
+                        Smart TV e mais!
                       </Text>
                     </View>
                     <Ionicons
-                      name="download-outline"
-                      size={20}
+                      name="chevron-forward"
+                      size={18}
                       color="#22c55e"
                     />
                   </TouchableOpacity>
-                </View>
+                </BlurView>
               )}
             </LinearGradient>
           )}
@@ -958,6 +985,7 @@ const styles = StyleSheet.create({
   },
   errorOverlay: {
     ...StyleSheet.absoluteFillObject,
+    overflow: 'hidden',
   },
   errorGradient: {
     flex: 1,
@@ -965,33 +993,55 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 32,
   },
+  errorIconWrapper: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  errorIconShadow: {
+    position: 'absolute',
+    width: 40,
+    height: 40,
+    backgroundColor: '#ef4444',
+    borderRadius: 20,
+    opacity: 0.3,
+    transform: [{ scale: 2 }],
+  },
   errorTitle: {
     fontSize: 24,
-    fontWeight: "bold",
+    fontWeight: "800",
     color: "#fff",
-    marginTop: 16,
+    marginTop: 8,
     marginBottom: 8,
+    letterSpacing: -0.5,
   },
   errorMessage: {
-    fontSize: 14,
+    fontSize: 15,
     color: "#cbd5e1",
     textAlign: "center",
-    marginBottom: 24,
-    lineHeight: 20,
+    marginBottom: 32,
+    lineHeight: 22,
+    maxWidth: '85%',
   },
   retryButton: {
+    shadowColor: "#6366f1",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  retryGradient: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    backgroundColor: "#6366f1",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
+    gap: 10,
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 16,
   },
   retryText: {
     color: "#fff",
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   controlsOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -1001,8 +1051,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    padding: 20,
-    paddingTop: 48,
+    padding: 24,
+    paddingTop: 60,
   },
   channelInfo: {
     flex: 1,
@@ -1011,12 +1061,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "rgba(239, 68, 68, 0.9)",
+    backgroundColor: "rgba(239, 68, 68, 0.95)",
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 5,
     borderRadius: 6,
     alignSelf: "flex-start",
     marginBottom: 8,
+    shadowColor: "#ef4444",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
   liveIndicator: {
     width: 8,
@@ -1026,52 +1080,65 @@ const styles = StyleSheet.create({
   },
   liveText: {
     color: "#fff",
-    fontSize: 12,
-    fontWeight: "bold",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.5,
   },
   channelName: {
-    fontSize: 18,
-    fontWeight: "600",
+    fontSize: 20,
+    fontWeight: "700",
     color: "#fff",
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   closeButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
     justifyContent: "center",
     alignItems: "center",
     marginLeft: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   centerControls: {
     justifyContent: "center",
     alignItems: "center",
   },
   playButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 84,
+    height: 84,
+    borderRadius: 42,
     backgroundColor: "rgba(99, 102, 241, 0.9)",
     justifyContent: "center",
     alignItems: "center",
+    shadowColor: "#6366f1",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 12,
   },
   bottomBar: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 20,
-    paddingBottom: 32,
+    padding: 24,
+    paddingBottom: 40,
   },
   categoryBadge: {
-    backgroundColor: "rgba(99, 102, 241, 0.8)",
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   categoryText: {
     color: "#fff",
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   bottomActions: {
     flexDirection: "row",
@@ -1080,173 +1147,200 @@ const styles = StyleSheet.create({
     marginLeft: "auto",
   },
   actionButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   aspectMenu: {
     position: "absolute",
-    bottom: 80,
-    right: 20,
-    backgroundColor: "rgba(0, 0, 0, 0.9)",
-    borderRadius: 12,
-    padding: 12,
-    minWidth: 150,
+    bottom: 90,
+    right: 24,
+    borderRadius: 20,
+    padding: 16,
+    minWidth: 160,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   aspectMenuTitle: {
     color: "#fff",
     fontSize: 12,
-    fontWeight: "600",
-    marginBottom: 8,
+    fontWeight: "800",
+    marginBottom: 12,
     textAlign: "center",
-    opacity: 0.7,
+    opacity: 0.5,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   aspectOptions: {
-    gap: 4,
+    gap: 8,
   },
   aspectOption: {
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    borderRadius: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
   },
   aspectOptionActive: {
-    backgroundColor: "#22c55e",
+    backgroundColor: "rgba(34, 197, 94, 0.25)",
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.4)',
   },
   aspectOptionText: {
     color: "#fff",
     fontSize: 14,
     textAlign: "center",
+    fontWeight: '500',
   },
   aspectOptionTextActive: {
-    fontWeight: "700",
+    fontWeight: "800",
+    color: '#4ade80',
   },
   // Cast Menu Styles
   actionButtonActive: {
-    backgroundColor: "rgba(34, 197, 94, 0.5)",
+    backgroundColor: "rgba(34, 197, 94, 0.3)",
+    borderColor: 'rgba(34, 197, 94, 0.4)',
   },
   castMenu: {
     position: "absolute",
-    bottom: 80,
-    left: 20,
-    right: 20,
-    backgroundColor: "rgba(15, 23, 42, 0.95)",
-    borderRadius: 16,
-    padding: 16,
+    bottom: 90,
+    left: 24,
+    right: 24,
+    borderRadius: 24,
+    padding: 20,
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
+    borderColor: "rgba(255, 255, 255, 0.15)",
   },
   castMenuHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: 16,
   },
   castMenuIconWrapper: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: 48,
+    height: 48,
+    borderRadius: 14,
     backgroundColor: "rgba(34, 197, 94, 0.15)",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
+    marginRight: 16,
   },
   castMenuTitleWrapper: {
     flex: 1,
   },
   castMenuTitle: {
     color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
+    fontSize: 18,
+    fontWeight: "800",
+    letterSpacing: -0.5,
   },
   castMenuSubtitle: {
-    color: "#71717a",
-    fontSize: 12,
+    color: "rgba(255, 255, 255, 0.5)",
+    fontSize: 13,
     marginTop: 2,
   },
   castOption: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 12,
-    borderRadius: 10,
+    padding: 14,
+    borderRadius: 16,
     backgroundColor: "rgba(255, 255, 255, 0.05)",
-    marginBottom: 8,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  castOptionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   castOptionInfo: {
-    marginLeft: 14,
+    marginLeft: 16,
     flex: 1,
   },
   castOptionText: {
     color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 15,
+    fontWeight: "700",
   },
   castOptionSubtext: {
-    color: "#94a3b8",
-    fontSize: 11,
+    color: "rgba(255, 255, 255, 0.4)",
+    fontSize: 12,
     marginTop: 2,
   },
   castDivider: {
     height: 1,
     backgroundColor: "rgba(255, 255, 255, 0.1)",
-    marginVertical: 8,
+    marginVertical: 12,
   },
   // Web Video Caster Tip Styles
   castTip: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 12,
-    borderRadius: 10,
-    backgroundColor: "rgba(34, 197, 94, 0.1)",
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: "rgba(34, 197, 94, 0.08)",
     borderWidth: 1,
-    borderColor: "rgba(34, 197, 94, 0.3)",
-    borderStyle: "dashed",
+    borderColor: "rgba(34, 197, 94, 0.2)",
   },
   castTipIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "rgba(34, 197, 94, 0.2)",
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: "rgba(34, 197, 94, 0.15)",
     justifyContent: "center",
     alignItems: "center",
   },
   castTipEmoji: {
-    fontSize: 16,
+    fontSize: 18,
   },
   castTipContent: {
     flex: 1,
-    marginLeft: 12,
+    marginLeft: 16,
     marginRight: 8,
   },
   castTipTitle: {
-    color: "#22c55e",
-    fontSize: 13,
-    fontWeight: "700",
+    color: "#4ade80",
+    fontSize: 14,
+    fontWeight: "800",
   },
   castTipText: {
-    color: "#94a3b8",
+    color: "rgba(255, 255, 255, 0.4)",
     fontSize: 11,
-    marginTop: 2,
+    marginTop: 4,
     lineHeight: 14,
   },
   errorWarningBanner: {
     flexDirection: "row",
     alignItems: "flex-start",
-    backgroundColor: "rgba(234, 179, 8, 0.15)",
+    backgroundColor: "rgba(234, 179, 8, 0.1)",
     borderWidth: 1,
-    borderColor: "rgba(234, 179, 8, 0.3)",
-    borderRadius: 10,
-    padding: 12,
-    marginTop: 20,
-    maxWidth: 300,
-    gap: 10,
+    borderColor: "rgba(234, 179, 8, 0.2)",
+    borderRadius: 14,
+    padding: 14,
+    marginTop: 24,
+    maxWidth: 320,
+    gap: 12,
+  },
+  warningIconWrapper: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   errorWarningText: {
     flex: 1,
-    fontSize: 11,
+    fontSize: 12,
     color: "#eab308",
-    lineHeight: 16,
+    lineHeight: 18,
+    opacity: 0.9,
   },
 });
