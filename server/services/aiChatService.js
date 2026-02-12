@@ -2,9 +2,8 @@ const axios = require("axios");
 
 // Perplexity API Configuration
 const PERPLEXITY_API_BASE = "https://api.perplexity.ai";
-// "llama-3.1-sonar-small-128k-online" é o modelo mais econômico ($0.20/1M input, $0.20/1M output aprox para small ou similar)
-// Preços variam, mas o small/online é o mais barato com acesso à internet.
-const MODEL_NAME = "llama-3.1-sonar-small-128k-online"; 
+// "sonar" é o modelo mais econômico e atual (baseado no Llama 3.3 70B com acesso à internet)
+const MODEL_NAME = "sonar"; 
 
 /**
  * Gera resposta do chat focada APENAS em futebol
