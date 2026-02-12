@@ -171,6 +171,9 @@ userSchema.methods.getTrialEndDate = function () {
 
 // Método para verificar se o usuário tem acesso premium ativo
 userSchema.methods.hasPremiumAccess = async function () {
+  // Admin sempre tem acesso total
+  if (this.isAdmin) return true;
+
   // Primeiro, verificar trial
   if (this.hasActiveTrial()) {
     return true;
@@ -178,6 +181,11 @@ userSchema.methods.hasPremiumAccess = async function () {
   
   // Verificar gift premium ativo
   if (this.hasActiveGift()) {
+    return true;
+  }
+  
+  // Se user for Premium mas não tiver assinatura (ex: setado manualmente no banco/admin), libera acesso
+  if (this.isPremium && !this.subscriptionId) {
     return true;
   }
   
