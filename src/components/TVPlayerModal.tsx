@@ -1175,6 +1175,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(15, 23, 42, 0.95)', // Fundo escuro sólido para garantir legibilidade
   },
   aspectMenuTitle: {
     color: "#fff",
@@ -1225,6 +1226,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.15)",
+    backgroundColor: 'rgba(15, 23, 42, 0.95)', // Fundo escuro sólido para garantir legibilidade
   },
   castMenuHeader: {
     flexDirection: "row",

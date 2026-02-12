@@ -1149,6 +1149,75 @@ export const HomeScreen = ({ navigation }: any) => {
         </View>
       </View>
 
+      {/* TV Hero Banner - Destaque Principal */}
+      <TouchableOpacity
+        style={styles.tvHeroCard}
+        onPress={() => {
+          if (isPremium) {
+            navigation.navigate("TVChannels");
+          } else {
+            navigation.navigate("Subscription");
+          }
+        }}
+        activeOpacity={0.9}
+      >
+        <LinearGradient
+          colors={['#1a1a2e', '#0f0f1a']}
+          style={styles.tvHeroGradient}
+        >
+          {/* Background Glow Effects */}
+          <View style={styles.tvHeroGlowLeft} />
+          <View style={styles.tvHeroGlowRight} />
+          
+          <View style={styles.tvHeroContent}>
+            <View style={styles.tvHeroInfo}>
+              <View style={styles.tvHeroBadgeRow}>
+                <LinearGradient
+                  colors={isPremium ? ['#ef4444', '#b91c1c'] : ['#27272a', '#18181b']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.tvHeroLiveBadge}
+                >
+                  {isPremium ? (
+                    <>
+                      <View style={styles.tvHeroLiveDot} />
+                      <Text style={styles.tvHeroLiveText}>AO VIVO</Text>
+                    </>
+                  ) : (
+                    <>
+                      <Ionicons name="lock-closed" size={10} color="#fbbf24" style={{marginRight: 4}} />
+                      <Text style={[styles.tvHeroLiveText, { color: '#fbbf24' }]}>PREMIUM</Text>
+                    </>
+                  )}
+                </LinearGradient>
+                <View style={styles.tvHeroChannelBadge}>
+                  <Text style={styles.tvHeroChannelText}>+200 Canais</Text>
+                </View>
+              </View>
+              
+              <Text style={styles.tvHeroTitle}>TV Esportes</Text>
+              <Text style={styles.tvHeroSubtitle}>
+                Assista jogos ao vivo em HD
+              </Text>
+            </View>
+
+            <View style={styles.tvHeroIconContainer}>
+               <LinearGradient
+                  colors={isPremium ? ['#22c55e', '#15803d'] : ['#eab308', '#ca8a04']}
+                  style={styles.tvHeroPlayButton}
+                >
+                  <Ionicons 
+                    name={isPremium ? "play" : "lock-closed"} 
+                    size={24} 
+                    color="#fff" 
+                    style={{ marginLeft: isPremium ? 2 : 0 }} 
+                  />
+               </LinearGradient>
+            </View>
+          </View>
+        </LinearGradient>
+      </TouchableOpacity>
+
       {/* Team Search Bar */}
       <TeamSearchBar />
 
@@ -2171,6 +2240,124 @@ const styles = StyleSheet.create({
     paddingTop:
       Platform.OS === "android" ? (StatusBar.currentHeight || 0) + 20 : 10,
     position: "relative",
+  },
+  tvHeroCard: {
+    marginHorizontal: 20,
+    marginBottom: 24,
+    borderRadius: 24,
+    height: 140, // Altura fixa para destaque
+    shadowColor: "#22c55e",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  tvHeroGradient: {
+    flex: 1,
+    borderRadius: 24,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.3)', // Borda verde sutil
+  },
+  tvHeroGlowLeft: {
+    position: 'absolute',
+    top: -50,
+    left: -50,
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    filter: 'blur(40px)', // Note: blur might not work on all native versions without expo-blur, opacity handles visuals
+  },
+  tvHeroGlowRight: {
+    position: 'absolute',
+    bottom: -30,
+    right: -20,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+  },
+  tvHeroContent: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  tvHeroInfo: {
+    flex: 1,
+  },
+  tvHeroBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  tvHeroLiveBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 6,
+  },
+  tvHeroLiveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#fff',
+  },
+  tvHeroLiveText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  tvHeroChannelBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  tvHeroChannelText: {
+    color: '#d4d4d8',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  tvHeroTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#fff',
+    marginBottom: 4,
+    letterSpacing: -0.5,
+  },
+  tvHeroSubtitle: {
+    fontSize: 13,
+    color: '#a1a1aa',
+    fontWeight: '500',
+  },
+  tvHeroIconContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingLeft: 16,
+  },
+  tvHeroPlayButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: "#22c55e",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   tvCardsContainer: {
     minHeight: 420,

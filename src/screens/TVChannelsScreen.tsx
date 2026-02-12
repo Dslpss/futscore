@@ -200,7 +200,7 @@ export default function TVChannelsScreen({ navigation }: any) {
               </View>
             )}
             
-            <TouchableOpacity style={styles.playButton}>
+            <TouchableOpacity style={styles.playButton} onPress={() => handleChannelPress(item)}>
               <LinearGradient
                 colors={['#22c55e', '#16a34a']}
                 style={styles.playGradient}
@@ -220,16 +220,22 @@ export default function TVChannelsScreen({ navigation }: any) {
         colors={['#22c55e20', '#22c55e05']}
         style={styles.emptyIconContainer}
       >
-        <Ionicons name="tv-outline" size={64} color="#22c55e" />
+        <Ionicons name={searchQuery ? "search-outline" : "wifi-outline"} size={48} color="#22c55e" />
       </LinearGradient>
       <Text style={styles.emptyTitle}>
-        {searchQuery ? 'Nenhum canal encontrado' : 'Carregando canais...'}
+        {searchQuery ? 'Nenhum canal encontrado' : 'Lista vazia ou sem conexão'}
       </Text>
       <Text style={styles.emptySubtitle}>
         {searchQuery
-          ? 'Tente outra pesquisa'
-          : 'Aguarde enquanto carregamos os canais de esporte'}
+          ? 'Tente buscar por outro termo'
+          : 'Verifique sua conexão e puxe para baixo para recarregar.'}
       </Text>
+      {!searchQuery && (
+        <TouchableOpacity style={styles.reloadButton} onPress={handleRefresh}>
+          <Text style={styles.reloadButtonText}>Recarregar Canais</Text>
+          <Ionicons name="refresh" size={16} color="#09090b" />
+        </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -249,15 +255,16 @@ export default function TVChannelsScreen({ navigation }: any) {
           </TouchableOpacity>
 
           <View style={styles.headerTitleContainer}>
-            <View style={styles.headerIconBadge}>
-              <Ionicons name="tv" size={20} color="#22c55e" />
-            </View>
-            <View>
+            <View style={styles.headerTitleWrapper}>
               <Text style={styles.headerTitle}>TV ao Vivo</Text>
-              <Text style={styles.headerSubtitle}>
-                {filteredChannels.length} canais de esporte
-              </Text>
+              <View style={styles.liveIndicator}>
+                <View style={styles.liveDot} />
+                <Text style={styles.liveCount}>{filteredChannels.length}</Text>
+              </View>
             </View>
+            <Text style={styles.headerSubtitle}>
+              Canais de esporte em alta definição
+            </Text>
           </View>
         </View>
 
@@ -470,30 +477,46 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   headerTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
     flex: 1,
   },
-  headerIconBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#22c55e15',
-    justifyContent: 'center',
+  headerTitleWrapper: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 12,
-    borderWidth: 1,
-    borderColor: '#22c55e30',
+    gap: 8,
   },
   headerTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
+    fontSize: 28,
+    fontWeight: '800',
     color: '#fff',
+    letterSpacing: -0.5,
+  },
+  liveIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#ef4444',
+  },
+  liveCount: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#ef4444',
   },
   headerSubtitle: {
-    fontSize: 13,
-    color: '#71717a',
+    fontSize: 14,
+    color: '#a1a1aa',
     marginTop: 2,
+    fontWeight: '500',
   },
   searchContainer: {
     flexDirection: 'row',
@@ -504,7 +527,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 10,
     borderWidth: 1,
-    borderColor: '#27272a',
+    borderColor: '#3f3f46',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
   },
   searchInput: {
     flex: 1,
@@ -562,7 +590,13 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#27272a',
+    borderColor: '#3f3f46',
+    backgroundColor: '#18181b', // Fallback color
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    elevation: 8,
   },
   channelGradient: {
     padding: 12,
@@ -609,6 +643,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#00000040',
   },
   channelInfo: {
     flex: 1,
@@ -683,6 +718,21 @@ const styles = StyleSheet.create({
     color: '#71717a',
     textAlign: 'center',
     paddingHorizontal: 32,
+  },
+  reloadButton: {
+    marginTop: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#22c55e',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  reloadButtonText: {
+    color: '#09090b',
+    fontSize: 14,
+    fontWeight: '700',
   },
   backButtonBlocked: {
     marginTop: 16,
