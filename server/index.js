@@ -8,10 +8,6 @@ const {
   getMonitorStatus,
   checkAndNotify,
 } = require("./services/matchMonitor");
-const {
-  startPredictionProcessor,
-  checkPendingPredictions,
-} = require("./services/predictionProcessor");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -28,8 +24,6 @@ mongoose
     console.log("Connected to MongoDB");
     // Iniciar monitoramento de partidas após conectar ao banco
     startMatchMonitor();
-    // Iniciar processador de palpites pendentes
-    startPredictionProcessor();
   })
   .catch((err) => console.error("MongoDB connection error:", err));
 
@@ -41,7 +35,6 @@ app.use("/api/channels", require("./routes/channels"));
 app.use("/download", require("./routes/download"));
 app.use("/api/webhooks", require("./routes/webhooks"));
 app.use("/api/subscription", require("./routes/subscription"));
-app.use("/api/predictions", require("./routes/predictions"));
 app.use("/api/announcements", require("./routes/announcements"));
 // Rota de IA (Guru) restaurada apenas para Chat
 app.use("/api/ai-predictions", require("./routes/aiChat"));
@@ -147,20 +140,7 @@ app.get("/debug/force-check", async (req, res) => {
   }
 });
 
-// Endpoint para forçar processamento de palpites pendentes
-app.get("/debug/process-predictions", async (req, res) => {
-  try {
-    console.log("[Debug] Forçando processamento de palpites pendentes...");
-    const result = await checkPendingPredictions();
-    res.json({
-      success: true,
-      message: `Processamento executado! ${result.processed} processados, ${result.failed} falharam.`,
-      ...result,
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+
 
 // Endpoint para enviar notificação de teste (debug)
 app.get("/debug/test-push", async (req, res) => {

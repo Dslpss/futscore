@@ -21,7 +21,7 @@ import { NewsScreen } from "./src/screens/NewsScreen";
 import { RadiosScreen } from "./src/screens/RadiosScreen";
 import TVChannelsScreen from "./src/screens/TVChannelsScreen";
 import { SubscriptionScreen } from "./src/screens/SubscriptionScreen";
-import { PredictionsScreen } from "./src/screens/PredictionsScreen";
+
 import { SecondScreenMode } from "./src/screens/SecondScreenMode";
 import { AIGuruScreen } from "./src/screens/AIGuruScreen";
 import { StatusBar } from "expo-status-bar";
@@ -100,7 +100,7 @@ function AppNavigation() {
               <Stack.Screen name="Radios" component={RadiosScreen} />
               <Stack.Screen name="TVChannels" component={TVChannelsScreen} />
               <Stack.Screen name="Subscription" component={SubscriptionScreen} />
-              <Stack.Screen name="Predictions" component={PredictionsScreen} />
+
               <Stack.Screen name="SecondScreen" component={SecondScreenMode} />
               <Stack.Screen name="AIGuru" component={AIGuruScreen} />
             </Stack.Navigator>

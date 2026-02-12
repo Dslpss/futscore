@@ -10,7 +10,7 @@ const {
   notifySecondHalfStarted,
   notifyMatchEnded,
 } = require("./pushNotifications");
-const { processPredictions } = require("./predictionService");
+
 
 // Cache de scores e status para detectar mudanças
 let lastKnownScores = {};
@@ -799,27 +799,7 @@ async function checkAndNotify() {
           );
         }
 
-        // SEMPRE processar palpites para jogos finalizados recentemente
-        // Isso garante que palpites sejam processados mesmo se o servidor reiniciou
-        if (recentlyFinished) {
-          try {
-            const completedMatch = {
-              id: matchId,
-              homeScore: match.homeScore,
-              awayScore: match.awayScore,
-              homeTeam: match.homeTeam,
-              awayTeam: match.awayTeam,
-            };
-            const result = await processPredictions([completedMatch]);
-            if (result.processed > 0) {
-              console.log(
-                `[Monitor] 🎯 Palpites processados: ${result.processed} palpites, ${result.pointsAwarded} pontos`
-              );
-            }
-          } catch (predError) {
-            console.error("[Monitor] Erro ao processar palpites:", predError.message);
-          }
-        }
+
         
         notifiedMatchEnds.add(matchId);
       }
