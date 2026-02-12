@@ -71,17 +71,34 @@ router.post("/chat", async (req, res) => {
       });
     }
 
-    if (!process.env.NVIDIA_API_KEY) {
+    if (!process.env.PERPLEXITY_API_KEY) {
       return res.status(503).json({
         success: false,
         message: "O Guru está treinando... (Chave de API não configurada)"
       });
     }
 
-    // 3. Processar resposta
-    const response = await getFootballChatResponse(message, history || []);
+    // 3. Processar resposta com tratamento de erro específico da IA
+    let response;
+    try {
+      response = await getFootballChatResponse(message, history || []);
+    } catch (aiError) {
+      // Se for erro conhecido da IA, retorna mensagem amigável SEM descontar uso
+      if (aiError.userMessage) {
+        return res.json({
+          success: true,
+          message: aiError.userMessage,
+          usage: {
+            used: user.aiChatUsage.count,
+            limit: limit,
+            remaining: limit - user.aiChatUsage.count
+          }
+        });
+      }
+      throw aiError; // Erro desconhecido, passa para o catch geral
+    }
 
-    // 4. Incrementar uso
+    // 4. Incrementar uso (apenas se sucesso)
     user.aiChatUsage.count += 1;
     await user.save();
 
@@ -110,7 +127,7 @@ router.get("/status", (req, res) => {
   res.json({
     status: "online",
     service: "AI Chat Guru",
-    apiKeyConfigured: !!process.env.NVIDIA_API_KEY
+    apiKeyConfigured: !!process.env.PERPLEXITY_API_KEY
   });
 });
 

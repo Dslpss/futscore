@@ -1,9 +1,10 @@
 const axios = require("axios");
 
-// NVIDIA NIM API Configuration
-// Usando Llama 3.1 70B que é um modelo robusto disponível no NVIDIA NIM
-const NVIDIA_API_BASE = "https://integrate.api.nvidia.com/v1";
-const MODEL_NAME = "meta/llama-3.1-70b-instruct"; 
+// Perplexity API Configuration
+const PERPLEXITY_API_BASE = "https://api.perplexity.ai";
+// "llama-3.1-sonar-small-128k-online" é o modelo mais econômico ($0.20/1M input, $0.20/1M output aprox para small ou similar)
+// Preços variam, mas o small/online é o mais barato com acesso à internet.
+const MODEL_NAME = "llama-3.1-sonar-small-128k-online"; 
 
 /**
  * Gera resposta do chat focada APENAS em futebol
@@ -43,18 +44,18 @@ async function getFootballChatResponse(message, history = []) {
     console.log(`[AIChat] Enviando mensagem para ${MODEL_NAME}...`);
 
     const response = await axios.post(
-      `${NVIDIA_API_BASE}/chat/completions`,
+      `${PERPLEXITY_API_BASE}/chat/completions`,
       {
         model: MODEL_NAME,
         messages: messages,
         temperature: 0.7, // Criatividade moderada
-        top_p: 1,
-        max_tokens: 1024,
+        // top_p: 1, // Perplexity often handles this
+        // max_tokens: 1024,
       },
       {
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.NVIDIA_API_KEY}`
+          "Authorization": `Bearer ${process.env.PERPLEXITY_API_KEY}`
         }
       }
     );
@@ -67,15 +68,19 @@ async function getFootballChatResponse(message, history = []) {
   } catch (error) {
     console.error("[AIChat] Erro:", error.response?.data || error.message);
     
-    // Tratamento de erro amigável
+    const err = new Error("AI Service Error");
+    
+    // Tratamento de erro amigável para ser usado no Controller
     if (error.response?.status === 401) {
-      return "Estou com problemas para acessar meus dados táticos (Erro de Autenticação). Verifique a chave da API.";
-    }
-    if (error.response?.status === 429) {
-      return "Muitas requisições! A torcida está agitada. Tente novamente em alguns segundos.";
+      err.userMessage = "Estou com problemas para acessar meus dados táticos (Erro de Autenticação). Verifique a chave da API.";
+    } else if (error.response?.status === 429) {
+      err.userMessage = "Muitas requisições! A torcida está agitada. Tente novamente em alguns segundos.";
+    } else {
+      err.userMessage = "O árbitro parou o jogo! Tive um problema técnico. Tente perguntar novamente.";
     }
     
-    return "O árbitro parou o jogo! Tive um problema técnico. Tente perguntar novamente.";
+    // Relançar erro para que o Controller saiba que falhou e NÃO conte a requisição
+    throw err;
   }
 }
 

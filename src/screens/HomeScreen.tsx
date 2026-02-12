@@ -60,6 +60,7 @@ import {
   Crown,
   Sparkles,
   Lock,
+  Bot,
 } from "lucide-react-native";
 import { Ionicons } from "@expo/vector-icons";
 import AdBanner from "../components/AdBanner";
@@ -1207,37 +1208,23 @@ export const HomeScreen = ({ navigation }: any) => {
             {/* AI Guru Chat Button */}
             <TouchableOpacity
               style={styles.actionButton}
-              onPress={() => {
-                if (isPremium) {
-                  navigation.navigate("AIGuru");
-                } else {
-                  navigation.navigate("Subscription");
-                }
-              }}
+              onPress={() => navigation.navigate("AIGuru")}
               activeOpacity={0.85}>
               <LinearGradient
                 colors={["#4c1d95", "#1a1a2e"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.actionButtonGradient}>
-                {/* Badge de cadeado para não-premium */}
-                {!isPremium && (
-                  <View style={styles.actionLockBadge}>
-                    <Lock size={10} color="#fbbf24" />
-                  </View>
-                )}
                 <View style={styles.actionButtonIconWrapper}>
                   <LinearGradient
                     colors={["#a855f7", "#7c3aed"]}
                     style={styles.actionIconGradient}>
-                    <Text style={styles.actionButtonIcon}>🤖</Text>
+                    <Bot size={24} color="#fff" />
                   </LinearGradient>
                 </View>
                 <View style={styles.actionButtonTextContainer}>
                   <Text style={styles.actionButtonText}>Guru IA</Text>
-                  <Text style={styles.actionButtonSubtext}>
-                    {isPremium ? "Chatbot" : "Premium"}
-                  </Text>
+                  <Text style={styles.actionButtonSubtext}>Chatbot</Text>
                 </View>
               </LinearGradient>
             </TouchableOpacity>
