@@ -22,6 +22,7 @@ async function getFootballChatResponse(message, history = []) {
     - Use emojis de futebol (⚽, 🥅, 🏆, 🧤, 🏟️) mas sem exagerar.
     - Respostas formatadas em Markdown (negrito para times/nomes importantes, listas para estatísticas).
     - Seja conciso. Evite textos muito longos a menos que pedido.
+    - NÃO inclua citações ou referências bibliográficas (como [1], [2], etc) na resposta.
 
     CONTEXTO ATUAL:
     O usuário está no app FutScore.
@@ -62,7 +63,10 @@ async function getFootballChatResponse(message, history = []) {
     const reply = response.data?.choices?.[0]?.message?.content;
     if (!reply) throw new Error("Resposta vazia da IA");
 
-    return reply;
+    // Limpar citações no formato [1], [2], [1, 2], [1][2] etc que o Perplexity costuma enviar
+    const cleanReply = reply.replace(/\[\d+(?:\s*,\s*\d+)*\]/g, "").trim();
+
+    return cleanReply;
 
   } catch (error) {
     console.error("[AIChat] Erro:", error.response?.data || error.message);
