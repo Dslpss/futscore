@@ -171,8 +171,8 @@ async function sendPushToAll(title, body, data = {}, filter = {}) {
       if (data.type === "match_start" && settings.matchStart === false)
         continue;
 
-      // Verificar se quer apenas favoritos
-      if (settings.favoritesOnly && !settings.allMatches) {
+      // Verificar se deve filtrar (Se allMatches for true, envia para todos, exceto filtros de tipo)
+      if (!settings.allMatches) {
         // 1. Verificar se a partida está na lista de favoriteMatchIds (sino 🔔)
         const matchIdStr = String(data.matchId);
         const msnGameIdStr = data.msnGameId ? String(data.msnGameId) : null;
@@ -180,20 +180,23 @@ async function sendPushToAll(title, body, data = {}, filter = {}) {
           id === matchIdStr || (msnGameIdStr && id === msnGameIdStr)
         );
         
-        // 2. Verificar se é time favorito (estrela ⭐)
-        const isFavoriteTeamMatch = user.favoriteTeams.some((team) => {
-          const teamId = team.id;
-          const teamMsnId = team.msnId;
-          
-          return (
-            teamId === homeTeamNumericId || 
-            teamId === awayTeamNumericId ||
-            teamMsnId === data.homeTeamId || 
-            teamMsnId === data.awayTeamId ||
-            teamId === data.homeTeamId ||
-            teamId === data.awayTeamId
-          );
-        });
+        // 2. Verificar se é time favorito (estrela ⭐) - APENAS se favoritesOnly estiver ativado
+        let isFavoriteTeamMatch = false;
+        if (settings.favoritesOnly) {
+          isFavoriteTeamMatch = user.favoriteTeams.some((team) => {
+            const teamId = team.id;
+            const teamMsnId = team.msnId;
+            
+            return (
+              teamId === homeTeamNumericId || 
+              teamId === awayTeamNumericId ||
+              teamMsnId === data.homeTeamId || 
+              teamMsnId === data.awayTeamId ||
+              teamId === data.homeTeamId ||
+              teamId === data.awayTeamId
+            );
+          });
+        }
         
         // 3. Verificar ligas favoritas (apenas se for premium E tiver a configuração ativada) 🏆
         let isFavoriteLeagueMatch = false;
@@ -204,7 +207,10 @@ async function sendPushToAll(title, body, data = {}, filter = {}) {
           }
         }
         
-        // Permitir se for partida marcada OU time favorito OU liga favorita (premium + config)
+        // Permitir APENAS se:
+        // - É partida marcada (Bell)
+        // - É time favorito E favoritesOnly=true
+        // - É liga favorita E favoriteLeaguesNotify=true
         if (!isMarkedMatch && !isFavoriteTeamMatch && !isFavoriteLeagueMatch) continue;
         
         if (isMarkedMatch) {

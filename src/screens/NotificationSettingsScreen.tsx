@@ -29,6 +29,7 @@ import { PremiumTrialModal } from "../components/PremiumTrialModal";
 import { useFavorites } from "../context/FavoritesContext";
 
 const NOTIFICATION_SETTINGS_KEY = "futscore_notification_settings";
+const LAST_ACTIVE_SETTINGS_KEY = "futscore_last_active_notification_settings";
 
 interface NotificationSettings {
   allMatches: boolean;
@@ -141,13 +142,13 @@ export function NotificationSettingsScreen({ navigation }: any) {
       if (key === "allMatches" && value) {
         newSettings.favoritesOnly = false;
       }
-      // Se desativar ambos, ativar favoritos por padrão
-      if (
-        (key === "allMatches" && !value && !settings.favoritesOnly) ||
-        (key === "favoritesOnly" && !value && !settings.allMatches)
-      ) {
-        newSettings.favoritesOnly = true;
-      }
+      // Se desativar ambos, NÃO ativar favoritos por padrão (permitir desligar tudo)
+      // if (
+      //   (key === "allMatches" && !value && !settings.favoritesOnly) ||
+      //   (key === "favoritesOnly" && !value && !settings.allMatches)
+      // ) {
+      //   newSettings.favoritesOnly = true;
+      // }
 
       setSettings(newSettings);
 
@@ -165,6 +166,68 @@ export function NotificationSettingsScreen({ navigation }: any) {
       Alert.alert("Erro", "Não foi possível salvar a configuração");
       // Reverter em caso de erro
       loadSettings();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const areNotificationsEnabled = () => {
+    return settings.allMatches || settings.favoritesOnly || settings.favoriteLeaguesNotify;
+  };
+
+  const toggleMasterSwitch = async () => {
+    if (saving) return;
+
+    const isEnabled = areNotificationsEnabled();
+
+    setSaving(true);
+    try {
+      let newSettings: NotificationSettings;
+
+      if (isEnabled) {
+        // Desativar tudo -> Salvar estado atual para restaurar depois
+        await AsyncStorage.setItem(LAST_ACTIVE_SETTINGS_KEY, JSON.stringify(settings));
+        
+        newSettings = {
+          ...settings,
+          allMatches: false,
+          favoritesOnly: false,
+          favoriteLeaguesNotify: false,
+        };
+      } else {
+        // Ativar -> Restaurar último estado ou padrão
+        try {
+          const lastSettingsStr = await AsyncStorage.getItem(LAST_ACTIVE_SETTINGS_KEY);
+          if (lastSettingsStr) {
+            const lastSettings = JSON.parse(lastSettingsStr);
+            // Garantir que pelo menos algo seja ativado se o lastSettings estava tudo false (o que seria estranho)
+            if (!lastSettings.allMatches && !lastSettings.favoritesOnly && !lastSettings.favoriteLeaguesNotify) {
+              newSettings = { ...settings, favoritesOnly: true };
+            } else {
+              newSettings = { ...settings, ...lastSettings };
+            }
+          } else {
+            // Padrão: Apenas favoritos
+            newSettings = { ...settings, favoritesOnly: true };
+          }
+        } catch {
+           newSettings = { ...settings, favoritesOnly: true };
+        }
+      }
+
+      setSettings(newSettings);
+      
+      // Salvar localmente
+      await AsyncStorage.setItem(
+        NOTIFICATION_SETTINGS_KEY,
+        JSON.stringify(newSettings)
+      );
+
+      // Sincronizar com servidor
+      await authApi.updateNotificationSettings(newSettings);
+      
+    } catch (error) {
+       Alert.alert("Erro", "Não foi possível atualizar as configurações");
     } finally {
       setSaving(false);
     }
@@ -191,24 +254,43 @@ export function NotificationSettingsScreen({ navigation }: any) {
             onPress={() => navigation.goBack()}>
             <ChevronLeft size={24} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Configurações de Notificação</Text>
-          <View style={styles.headerRight} />
+          <Text style={styles.headerTitle}>Notificações</Text>
+          <View style={styles.headerRight}>
+             <Switch
+                value={areNotificationsEnabled()}
+                onValueChange={toggleMasterSwitch}
+                trackColor={{ false: "#3f3f46", true: "#22c55e50" }}
+                thumbColor={areNotificationsEnabled() ? "#22c55e" : "#f4f4f5"}
+                disabled={saving || loading}
+             />
+          </View>
         </View>
 
         <ScrollView
           style={styles.scrollView}
           showsVerticalScrollIndicator={false}>
-          {/* Info Card */}
-          <View style={styles.infoCard}>
-            <Info size={20} color="#60a5fa" />
-            <Text style={styles.infoText}>
-              Configure como você quer receber notificações sobre as partidas.
-              Você pode escolher receber alertas de todos os jogos ou apenas dos
-              seus times favoritos.
-            </Text>
-          </View>
+          {/* Info Card - Changes based on state */}
+          {!areNotificationsEnabled() ? (
+            <View style={[styles.infoCard, { borderColor: 'rgba(239, 68, 68, 0.2)', backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
+              <BellOff size={20} color="#ef4444" />
+              <Text style={styles.infoText}>
+                As notificações estão desativadas. Ative no topo para receber alertas de gols e jogos.
+              </Text>
+            </View>
+          ) : (
+             <View style={styles.infoCard}>
+              <Info size={20} color="#60a5fa" />
+              <Text style={styles.infoText}>
+                Configure como você quer receber notificações sobre as partidas.
+                Você pode escolher receber alertas de todos os jogos ou apenas dos
+                seus times favoritos.
+              </Text>
+            </View>
+          )}
 
-          {/* Seção: Quais jogos notificar */}
+          {/* Opacidade geral se desativado */}
+          <View style={{ opacity: areNotificationsEnabled() ? 1 : 0.5, pointerEvents: areNotificationsEnabled() ? 'auto' : 'none' }}>
+            {/* Seção: Quais jogos notificar */}
           <Text style={styles.sectionTitle}>Quais jogos notificar</Text>
 
           <View style={styles.settingCard}>
@@ -434,6 +516,9 @@ export function NotificationSettingsScreen({ navigation }: any) {
           )}
 
           <View style={styles.bottomSpacing} />
+          </View> {/* Fim da view de opacidade */}
+
+          <View style={styles.bottomSpacing} />
         </ScrollView>
       </LinearGradient>
 
@@ -493,7 +578,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   headerRight: {
-    width: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   scrollView: {
     flex: 1,
