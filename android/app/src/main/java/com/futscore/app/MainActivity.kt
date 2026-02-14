@@ -5,6 +5,7 @@ import android.os.Bundle
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
+import com.facebook.react.ReactApplication
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
 import com.facebook.react.defaults.DefaultReactActivityDelegate
 
@@ -57,5 +58,30 @@ class MainActivity : ReactActivity() {
       // Use the default back button implementation on Android S
       // because it's doing more than [Activity.moveTaskToBack] in fact.
       super.invokeDefaultOnBackPressed()
+  }
+
+  override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: android.content.res.Configuration) {
+      super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+      
+      // Emit event to React Native
+      try {
+          val reactContext = (application as ReactApplication).reactNativeHost.reactInstanceManager.currentReactContext
+          if (reactContext != null) {
+              val params = com.facebook.react.bridge.Arguments.createMap()
+              params.putBoolean("isInPipMode", isInPictureInPictureMode)
+              
+              reactContext
+                  .getJSModule(com.facebook.react.modules.core.DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+                  .emit("PipModeChanged", params)
+          }
+      } catch (e: Exception) {
+          // Context might not be ready
+      }
+  }
+
+  override fun onUserLeaveHint() {
+      super.onUserLeaveHint()
+      // Optional: Auto enter PiP on Home press if specific conditions are met
+      // This is usually handled in JS but can be reinforced here
   }
 }

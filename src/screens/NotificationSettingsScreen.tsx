@@ -32,6 +32,7 @@ const NOTIFICATION_SETTINGS_KEY = "futscore_notification_settings";
 const LAST_ACTIVE_SETTINGS_KEY = "futscore_last_active_notification_settings";
 
 interface NotificationSettings {
+  enabled: boolean; // Chave mestre
   allMatches: boolean;
   favoritesOnly: boolean;
   favoriteLeaguesNotify: boolean; // Notificações de ligas favoritas
@@ -41,6 +42,7 @@ interface NotificationSettings {
 
 export function NotificationSettingsScreen({ navigation }: any) {
   const [settings, setSettings] = useState<NotificationSettings>({
+    enabled: true,
     allMatches: true,
     favoritesOnly: false,
     favoriteLeaguesNotify: false,
@@ -63,6 +65,7 @@ export function NotificationSettingsScreen({ navigation }: any) {
       const data: any = await authApi.getNotificationSettings();
       // Garantir que todos os campos existam (para compatibilidade com dados antigos)
       const loadedSettings = {
+        enabled: data.enabled ?? true,
         allMatches: data.allMatches ?? false,
         favoritesOnly: data.favoritesOnly ?? true,
         favoriteLeaguesNotify: data.favoriteLeaguesNotify ?? false,
@@ -87,6 +90,7 @@ export function NotificationSettingsScreen({ navigation }: any) {
           const parsed = JSON.parse(localSettings);
           setSettings({
             ...parsed,
+            enabled: parsed.enabled ?? true,
             favoriteLeaguesNotify: parsed.favoriteLeaguesNotify ?? false,
           });
         }
@@ -134,6 +138,11 @@ export function NotificationSettingsScreen({ navigation }: any) {
 
       let newSettings = { ...settings, [key]: value };
 
+      // Se qualquer uma das chaves de escopo for ativada, garantir que a mestre também esteja ativada
+      if (value === true && ["allMatches", "favoritesOnly", "favoriteLeaguesNotify"].includes(key)) {
+        newSettings.enabled = true;
+      }
+
       // Lógica: se ativar "apenas favoritos", desativar "todos os jogos"
       if (key === "favoritesOnly" && value) {
         newSettings.allMatches = false;
@@ -142,13 +151,6 @@ export function NotificationSettingsScreen({ navigation }: any) {
       if (key === "allMatches" && value) {
         newSettings.favoritesOnly = false;
       }
-      // Se desativar ambos, NÃO ativar favoritos por padrão (permitir desligar tudo)
-      // if (
-      //   (key === "allMatches" && !value && !settings.favoritesOnly) ||
-      //   (key === "favoritesOnly" && !value && !settings.allMatches)
-      // ) {
-      //   newSettings.favoritesOnly = true;
-      // }
 
       setSettings(newSettings);
 
@@ -172,24 +174,25 @@ export function NotificationSettingsScreen({ navigation }: any) {
   };
 
   const areNotificationsEnabled = () => {
-    return settings.allMatches || settings.favoritesOnly || settings.favoriteLeaguesNotify;
+    return settings.enabled;
   };
 
   const toggleMasterSwitch = async () => {
     if (saving) return;
 
-    const isEnabled = areNotificationsEnabled();
+    const newEnabledState = !settings.enabled;
 
     setSaving(true);
     try {
       let newSettings: NotificationSettings;
 
-      if (isEnabled) {
+      if (!newEnabledState) {
         // Desativar tudo -> Salvar estado atual para restaurar depois
         await AsyncStorage.setItem(LAST_ACTIVE_SETTINGS_KEY, JSON.stringify(settings));
         
         newSettings = {
           ...settings,
+          enabled: false,
           allMatches: false,
           favoritesOnly: false,
           favoriteLeaguesNotify: false,
@@ -200,18 +203,18 @@ export function NotificationSettingsScreen({ navigation }: any) {
           const lastSettingsStr = await AsyncStorage.getItem(LAST_ACTIVE_SETTINGS_KEY);
           if (lastSettingsStr) {
             const lastSettings = JSON.parse(lastSettingsStr);
-            // Garantir que pelo menos algo seja ativado se o lastSettings estava tudo false (o que seria estranho)
+            // Garantir que pelo menos algo seja ativado
             if (!lastSettings.allMatches && !lastSettings.favoritesOnly && !lastSettings.favoriteLeaguesNotify) {
-              newSettings = { ...settings, favoritesOnly: true };
+              newSettings = { ...settings, enabled: true, favoritesOnly: true };
             } else {
-              newSettings = { ...settings, ...lastSettings };
+              newSettings = { ...settings, ...lastSettings, enabled: true };
             }
           } else {
             // Padrão: Apenas favoritos
-            newSettings = { ...settings, favoritesOnly: true };
+            newSettings = { ...settings, enabled: true, favoritesOnly: true };
           }
         } catch {
-           newSettings = { ...settings, favoritesOnly: true };
+           newSettings = { ...settings, enabled: true, favoritesOnly: true };
         }
       }
 
@@ -231,6 +234,17 @@ export function NotificationSettingsScreen({ navigation }: any) {
     } finally {
       setSaving(false);
     }
+  };
+
+  const getNotificationSummary = () => {
+    const types = [];
+    if (settings.goals) types.push("gols");
+    if (settings.matchStart) types.push("início de partida");
+
+    if (types.length === 0) return " (nenhum tipo selecionado).";
+    if (types.length === 1) return ` (apenas ${types[0]}).`;
+    if (types.length === 2) return ` (${types[0]} e ${types[1]}).`;
+    return ` (${types.slice(0, -1).join(", ")} e ${types[types.length - 1]}).`;
   };
 
   if (loading) {
@@ -496,18 +510,7 @@ export function NotificationSettingsScreen({ navigation }: any) {
               {settings.favoritesOnly
                 ? "Você receberá notificações apenas dos seus times favoritos"
                 : "Você receberá notificações de todos os jogos"}
-              {(() => {
-                const types = [];
-                if (settings.goals) types.push("gols");
-                if (settings.matchStart) types.push("início de partida");
-
-                if (types.length === 0) return " (nenhum tipo selecionado).";
-                if (types.length === 1) return ` (apenas ${types[0]}).`;
-                if (types.length === 2) return ` (${types[0]} e ${types[1]}).`;
-                return ` (${types.slice(0, -1).join(", ")} e ${
-                  types[types.length - 1]
-                }).`;
-              })()}
+              {getNotificationSummary()}
             </Text>
           </View>
 
@@ -519,9 +522,7 @@ export function NotificationSettingsScreen({ navigation }: any) {
           )}
 
           <View style={styles.bottomSpacing} />
-          </View> {/* Fim da view de opacidade */}
-
-          <View style={styles.bottomSpacing} />
+          </View>
         </ScrollView>
       </LinearGradient>
 

@@ -172,8 +172,10 @@ export const authApi = {
 
   // Atualizar configurações de notificação
   updateNotificationSettings: async (settings: {
+    enabled?: boolean;
     allMatches?: boolean;
     favoritesOnly?: boolean;
+    favoriteLeaguesNotify?: boolean;
     goals?: boolean;
     matchStart?: boolean;
   }): Promise<void> => {
@@ -187,22 +189,34 @@ export const authApi = {
       );
     }
   },
-
+  
   // Buscar configurações de notificação
   getNotificationSettings: async (): Promise<{
+    enabled: boolean;
     allMatches: boolean;
     favoritesOnly: boolean;
+    favoriteLeaguesNotify: boolean;
     goals: boolean;
     matchStart: boolean;
   }> => {
     try {
       const response = await authClient.get("/user/notification-settings");
-      return response.data.notificationSettings;
+      const s = response.data.notificationSettings;
+      return {
+        enabled: s.enabled !== undefined ? s.enabled : true,
+        allMatches: s.allMatches !== undefined ? s.allMatches : true,
+        favoritesOnly: s.favoritesOnly !== undefined ? s.favoritesOnly : false,
+        favoriteLeaguesNotify: s.favoriteLeaguesNotify !== undefined ? s.favoriteLeaguesNotify : false,
+        goals: s.goals !== undefined ? s.goals : true,
+        matchStart: s.matchStart !== undefined ? s.matchStart : true,
+      };
     } catch (error: any) {
       console.error("Error fetching notification settings:", error);
       return {
+        enabled: true,
         allMatches: true,
         favoritesOnly: false,
+        favoriteLeaguesNotify: false,
         goals: true,
         matchStart: true,
       };

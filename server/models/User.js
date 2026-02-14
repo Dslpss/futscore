@@ -35,6 +35,7 @@ const userSchema = new mongoose.Schema({
   },
   // Configurações de notificação
   notificationSettings: {
+    enabled: { type: Boolean, default: true }, // Chave mestre de notificações
     allMatches: { type: Boolean, default: true }, // Notificar todos os jogos
     favoritesOnly: { type: Boolean, default: false }, // Apenas favoritos
     favoriteLeaguesNotify: { type: Boolean, default: false }, // Notificar ligas favoritas (premium)
