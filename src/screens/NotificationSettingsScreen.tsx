@@ -233,6 +233,17 @@ export function NotificationSettingsScreen({ navigation }: any) {
     }
   };
 
+  const getNotificationSummary = () => {
+    const types = [];
+    if (settings.goals) types.push("gols");
+    if (settings.matchStart) types.push("início de partida");
+
+    if (types.length === 0) return " (nenhum tipo selecionado).";
+    if (types.length === 1) return ` (apenas ${types[0]}).`;
+    if (types.length === 2) return ` (${types[0]} e ${types[1]}).`;
+    return ` (${types.slice(0, -1).join(", ")} e ${types[types.length - 1]}).`;
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -496,18 +507,7 @@ export function NotificationSettingsScreen({ navigation }: any) {
               {settings.favoritesOnly
                 ? "Você receberá notificações apenas dos seus times favoritos"
                 : "Você receberá notificações de todos os jogos"}
-              {(() => {
-                const types = [];
-                if (settings.goals) types.push("gols");
-                if (settings.matchStart) types.push("início de partida");
-
-                if (types.length === 0) return " (nenhum tipo selecionado).";
-                if (types.length === 1) return ` (apenas ${types[0]}).`;
-                if (types.length === 2) return ` (${types[0]} e ${types[1]}).`;
-                return ` (${types.slice(0, -1).join(", ")} e ${
-                  types[types.length - 1]
-                }).`;
-              })()}
+              {getNotificationSummary()}
             </Text>
           </View>
 
@@ -519,9 +519,7 @@ export function NotificationSettingsScreen({ navigation }: any) {
           )}
 
           <View style={styles.bottomSpacing} />
-          </View> {/* Fim da view de opacidade */}
-
-          <View style={styles.bottomSpacing} />
+          </View>
         </ScrollView>
       </LinearGradient>
 

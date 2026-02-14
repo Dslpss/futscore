@@ -11,10 +11,12 @@ import {
   Platform,
   Linking,
   Share,
+  AppState,
+  NativeModules,
 } from "react-native";
 import { StatusBar, setStatusBarHidden } from "expo-status-bar";
 import * as Clipboard from "expo-clipboard";
-import { Video, ResizeMode, AVPlaybackStatus } from "expo-av";
+import { Video, ResizeMode, AVPlaybackStatus, Audio } from "expo-av";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -133,6 +135,45 @@ export default function TVPlayerModal({
       }
     };
   }, [visible, channel]);
+
+  // Configure Audio and PiP
+  useEffect(() => {
+    async function configureAudio() {
+      try {
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: false,
+          staysActiveInBackground: true,
+          playsInSilentModeIOS: true,
+          shouldDuckAndroid: true,
+          playThroughEarpieceAndroid: false,
+        });
+      } catch (e) {
+        console.error("Audio mode error", e);
+      }
+    }
+    
+    if (visible) {
+      configureAudio();
+    }
+
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (nextAppState === 'background' && isPlaying && !error && visible && Platform.OS === 'android') {
+        // Auto-enter PiP on minimize
+        enterPipMode();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [visible, isPlaying, error]);
+
+  const enterPipMode = () => {
+    if (Platform.OS === 'android' && NativeModules.PipModule) {
+      // 16:9 aspect ratio
+      NativeModules.PipModule.enterPipMode(16, 9);
+    }
+  };
 
   const toggleFullscreen = async () => {
     if (isFullscreen) {
@@ -792,6 +833,15 @@ export default function TVPlayerModal({
                     }}>
                     <Ionicons name="tv-outline" size={22} color="#fff" />
                   </TouchableOpacity>
+
+                  {/* PiP Button */}
+                  {Platform.OS === 'android' && (
+                    <TouchableOpacity
+                      style={styles.actionButton}
+                      onPress={enterPipMode}>
+                      <Ionicons name="browsers-outline" size={22} color="#fff" />
+                    </TouchableOpacity>
+                  )}
 
                   {/* Aspect Ratio Button */}
                   <TouchableOpacity
