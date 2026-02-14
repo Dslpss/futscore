@@ -7,12 +7,12 @@ import {
   Text,
   ActivityIndicator,
   Dimensions,
-  StatusBar,
-  Linking,
-  Share,
   Alert,
   Platform,
+  Linking,
+  Share,
 } from "react-native";
+import { StatusBar, setStatusBarHidden } from "expo-status-bar";
 import * as Clipboard from "expo-clipboard";
 import { Video, ResizeMode, AVPlaybackStatus } from "expo-av";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
@@ -21,6 +21,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import * as ScreenOrientation from "expo-screen-orientation";
 import * as NavigationBar from "expo-navigation-bar";
 import { BlurView } from "expo-blur";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Channel } from "../types/Channel";
 import { incrementViewCount } from "../services/channelService";
 
@@ -50,6 +51,7 @@ export default function TVPlayerModal({
   channel,
   onClose,
 }: TVPlayerModalProps) {
+  const insets = useSafeAreaInsets();
   const videoRef = useRef<Video>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(true);
@@ -99,7 +101,8 @@ export default function TVPlayerModal({
       NavigationBar.setVisibilityAsync("visible");
       // setBehaviorAsync removed due to edge-to-edge warning
       // Hide status bar initially (player should always be immersive)
-      StatusBar.setHidden(true, "fade");
+      setStatusBarHidden(true, "fade");
+      NavigationBar.setBehaviorAsync("overlay-swipe");
       // Reset reconnect attempts
       setReconnectAttempts(0);
       setIsReconnecting(false);
@@ -115,7 +118,7 @@ export default function TVPlayerModal({
         ScreenOrientation.OrientationLock.PORTRAIT_UP,
       );
       NavigationBar.setVisibilityAsync("visible");
-      StatusBar.setHidden(false, "fade");
+      setStatusBarHidden(false, "fade");
       setIsFullscreen(false);
       setShowAspectMenu(false);
       setShowCastMenu(false);
@@ -138,7 +141,7 @@ export default function TVPlayerModal({
         ScreenOrientation.OrientationLock.PORTRAIT_UP,
       );
       await NavigationBar.setVisibilityAsync("visible");
-      StatusBar.setHidden(true, "fade"); // Keep hidden in portrait player mode too
+      setStatusBarHidden(true, "fade"); // Keep hidden in portrait player mode too
       setIsFullscreen(false);
       setAspectRatioMode("16:9"); // Reset to 16:9 when exiting fullscreen
     } else {
@@ -147,7 +150,8 @@ export default function TVPlayerModal({
         ScreenOrientation.OrientationLock.LANDSCAPE,
       );
       await NavigationBar.setVisibilityAsync("hidden");
-      StatusBar.setHidden(true, "fade");
+      await NavigationBar.setBehaviorAsync("overlay-swipe");
+      setStatusBarHidden(true, "fade");
       setIsFullscreen(true);
       setAspectRatioMode("stretch"); // Switch to stretch when entering fullscreen
     }
@@ -427,7 +431,7 @@ export default function TVPlayerModal({
     // Show navigation bar and status bar
     await NavigationBar.setVisibilityAsync("visible");
     await NavigationBar.setBehaviorAsync("inset-touch");
-    StatusBar.setHidden(false, "fade");
+    setStatusBarHidden(false, "fade");
 
     // Reset states
     setError(null);
@@ -613,7 +617,7 @@ export default function TVPlayerModal({
       statusBarTranslucent={true}
       onRequestClose={handleClose}
       supportedOrientations={["portrait", "landscape"]}>
-      <StatusBar hidden />
+      <StatusBar hidden={true} />
       <View style={styles.container}>
         {/* Video Player */}
         <TouchableOpacity
@@ -716,7 +720,16 @@ export default function TVPlayerModal({
               colors={["rgba(0,0,0,0.7)", "transparent", "rgba(0,0,0,0.7)"]}
               style={styles.controlsOverlay}>
               {/* Top Bar */}
-              <View style={styles.topBar}>
+              <View 
+                style={[
+                  styles.topBar, 
+                  { 
+                    marginTop: insets.top,
+                    paddingLeft: Math.max(insets.left + 16, 24),
+                    paddingRight: Math.max(insets.right + 16, 24),
+                  }
+                ]}
+              >
                 <View style={styles.channelInfo}>
                   <View style={styles.liveBadge}>
                     <View style={styles.liveIndicator} />
@@ -748,10 +761,19 @@ export default function TVPlayerModal({
               </View>
 
               {/* Bottom Bar */}
-              <View style={styles.bottomBar}>
+              <View 
+                style={[
+                  styles.bottomBar,
+                  { 
+                    marginBottom: Math.max(insets.bottom, 10),
+                    paddingLeft: Math.max(insets.left + 16, 24),
+                    paddingRight: Math.max(insets.right + 16, 24),
+                  }
+                ]}
+              >
                 {channel.groupTitle && (
                   <View style={styles.categoryBadge}>
-                    <Text style={styles.categoryText}>
+                    <Text style={styles.categoryText} numberOfLines={1}>
                       {channel.groupTitle}
                     </Text>
                   </View>
@@ -801,7 +823,17 @@ export default function TVPlayerModal({
 
               {/* Aspect Ratio Menu */}
               {showAspectMenu && (
-                <BlurView intensity={80} tint="dark" style={styles.aspectMenu}>
+                <BlurView 
+                  intensity={80} 
+                  tint="dark" 
+                  style={[
+                    styles.aspectMenu,
+                    { 
+                      bottom: 90 + Math.max(insets.bottom, 0),
+                      right: 24 + Math.max(insets.right, 0),
+                    }
+                  ]}
+                >
                   <Text style={styles.aspectMenuTitle}>Formato de Tela</Text>
                   <View style={styles.aspectOptions}>
                     {ASPECT_RATIO_OPTIONS.map((option) => (
@@ -833,7 +865,18 @@ export default function TVPlayerModal({
 
               {/* Cast Menu */}
               {showCastMenu && (
-                <BlurView intensity={90} tint="dark" style={styles.castMenu}>
+                <BlurView 
+                  intensity={90} 
+                  tint="dark" 
+                  style={[
+                    styles.castMenu,
+                    { 
+                      bottom: 90 + Math.max(insets.bottom, 0),
+                      left: 24 + Math.max(insets.left, 0),
+                      right: 24 + Math.max(insets.right, 0),
+                    }
+                  ]}
+                >
                   {/* Premium Header */}
                   <View style={styles.castMenuHeader}>
                     <View style={styles.castMenuIconWrapper}>
@@ -1060,8 +1103,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    padding: 24,
-    paddingTop: 60,
+    paddingVertical: 20,
   },
   channelInfo: {
     flex: 1,
@@ -1133,8 +1175,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 24,
-    paddingBottom: 40,
+    paddingVertical: 20,
   },
   categoryBadge: {
     backgroundColor: "rgba(255, 255, 255, 0.15)",
@@ -1143,6 +1184,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 0.5,
     borderColor: 'rgba(255, 255, 255, 0.2)',
+    flexShrink: 1,
+    marginRight: 12,
+    maxWidth: '45%',
   },
   categoryText: {
     color: "#fff",
@@ -1154,6 +1198,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     marginLeft: "auto",
+    flexShrink: 0,
   },
   actionButton: {
     width: 48,

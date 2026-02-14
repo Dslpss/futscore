@@ -51,7 +51,7 @@ const LiveBadge = () => {
 
   return (
     <View style={styles.liveBadge}>
-      <Animated.View style={[styles.liveDot, { opacity: pulseAnim }]} />
+      <Animated.View style={[styles.badgeLiveDot, { opacity: pulseAnim }]} />
       <Text style={styles.liveText}>AO VIVO</Text>
     </View>
   );
@@ -616,7 +616,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     gap: 4,
   },
-  liveDot: {
+  badgeLiveDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
