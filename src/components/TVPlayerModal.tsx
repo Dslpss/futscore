@@ -13,6 +13,7 @@ import {
   Share,
   AppState,
   NativeModules,
+  NativeEventEmitter,
 } from "react-native";
 import { StatusBar, setStatusBarHidden } from "expo-status-bar";
 import * as Clipboard from "expo-clipboard";
@@ -64,6 +65,7 @@ export default function TVPlayerModal({
     useState<AspectRatioMode>("16:9");
   const [showAspectMenu, setShowAspectMenu] = useState(false);
   const [showCastMenu, setShowCastMenu] = useState(false);
+  const [isInPip, setIsInPip] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -156,22 +158,53 @@ export default function TVPlayerModal({
       configureAudio();
     }
 
-    const subscription = AppState.addEventListener('change', nextAppState => {
+    const appStateSub = AppState.addEventListener('change', nextAppState => {
       if (nextAppState === 'background' && isPlaying && !error && visible && Platform.OS === 'android') {
         // Auto-enter PiP on minimize
         enterPipMode();
       }
     });
 
+    // Native event listener for PiP mode changes
+    let pipSub: any = null;
+    if (Platform.OS === 'android' && NativeModules.PipModule) {
+      const eventEmitter = new NativeEventEmitter(NativeModules.PipModule);
+      pipSub = eventEmitter.addListener('PipModeChanged', (event) => {
+        console.log("[PiP] State changed:", event.isInPipMode);
+        setIsInPip(event.isInPipMode);
+        
+        if (event.isInPipMode) {
+          setShowControls(false);
+          setShowAspectMenu(false);
+          setShowCastMenu(false);
+        } else {
+          // If PiP was turned off while in background, it means the user closed the PiP window
+          if (AppState.currentState === 'background' || AppState.currentState === 'inactive') {
+            console.log("[PiP] Closed by user while in background");
+            handleClose();
+          }
+        }
+      });
+    }
+
     return () => {
-      subscription.remove();
+      appStateSub.remove();
+      if (pipSub) pipSub.remove();
     };
   }, [visible, isPlaying, error]);
 
-  const enterPipMode = () => {
-    if (Platform.OS === 'android' && NativeModules.PipModule) {
-      // 16:9 aspect ratio
-      NativeModules.PipModule.enterPipMode(16, 9);
+  const enterPipMode = async () => {
+    if (Platform.OS === 'android') {
+      if (NativeModules.PipModule) {
+        // If we are in fullscreen, exit it first to ensure clean state and correct scaling
+        if (isFullscreen) {
+          await toggleFullscreen();
+        }
+        // 16:9 aspect ratio
+        NativeModules.PipModule.enterPipMode(16, 9);
+      } else {
+        console.warn("[PiP] PipModule não encontrado. O app foi reconstruído (npx expo run:android)?");
+      }
     }
   };
 
@@ -200,6 +233,10 @@ export default function TVPlayerModal({
   };
 
   const getVideoStyle = () => {
+    if (isInPip) {
+      return { width: "100%" as const, height: "100%" as const };
+    }
+
     const option = ASPECT_RATIO_OPTIONS.find((o) => o.key === aspectRatioMode);
 
     if (aspectRatioMode === "stretch") {
@@ -215,6 +252,7 @@ export default function TVPlayerModal({
   };
 
   const getResizeMode = () => {
+    if (isInPip) return ResizeMode.CONTAIN; // Better to contain in PiP window
     if (aspectRatioMode === "stretch") return ResizeMode.STRETCH;
     if (aspectRatioMode === "auto") return ResizeMode.CONTAIN;
     return ResizeMode.CONTAIN;
@@ -673,7 +711,11 @@ export default function TVPlayerModal({
                 "User-Agent": "VLC/3.0.11 LibVLC/3.0.11",
               }
             }}
-            style={[styles.video, getVideoStyle()]}
+            style={[
+              styles.video, 
+              getVideoStyle(),
+              isInPip && { aspectRatio: undefined }
+            ]}
             resizeMode={getResizeMode()}
             shouldPlay
             isLooping={false}
@@ -683,7 +725,7 @@ export default function TVPlayerModal({
           />
 
           {/* Loading Indicator */}
-          {isLoading && !error && !isReconnecting && (
+          {isLoading && !error && !isReconnecting && !isInPip && (
             <View style={styles.loadingOverlay}>
               <ActivityIndicator size="large" color="#fff" />
               <Text style={styles.loadingText}>Carregando stream...</Text>
@@ -691,7 +733,7 @@ export default function TVPlayerModal({
           )}
 
           {/* Reconnecting Indicator */}
-          {isReconnecting && !error && (
+          {isReconnecting && !error && !isInPip && (
             <View style={styles.loadingOverlay}>
               <ActivityIndicator size="large" color="#22c55e" />
               <Text style={styles.reconnectingText}>Reconectando...</Text>
@@ -702,7 +744,7 @@ export default function TVPlayerModal({
           )}
 
           {/* Error State */}
-          {error && (
+          {error && !isInPip && (
             <BlurView intensity={20} tint="dark" style={styles.errorOverlay}>
               <LinearGradient
                 colors={["rgba(9, 9, 11, 0.9)", "rgba(15, 23, 42, 0.8)"]}
@@ -756,7 +798,7 @@ export default function TVPlayerModal({
           )}
 
           {/* Controls Overlay */}
-          {showControls && !error && (
+          {showControls && !error && !isInPip && (
             <LinearGradient
               colors={["rgba(0,0,0,0.7)", "transparent", "rgba(0,0,0,0.7)"]}
               style={styles.controlsOverlay}>

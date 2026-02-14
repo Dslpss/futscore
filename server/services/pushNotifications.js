@@ -165,28 +165,51 @@ async function sendPushToAll(title, body, data = {}, filter = {}) {
       if (!Expo.isExpoPushToken(user.pushToken)) continue;
 
       const settings = user.notificationSettings || {};
+      
+      // Defaults matching the model
+      const masterEnabled = settings.enabled !== undefined ? settings.enabled : true;
+      const allMatches = settings.allMatches !== undefined ? settings.allMatches : true;
+      const favoritesOnly = settings.favoritesOnly !== undefined ? settings.favoritesOnly : false;
+      const favoriteLeaguesNotify = settings.favoriteLeaguesNotify !== undefined ? settings.favoriteLeaguesNotify : false;
+      const goals = settings.goals !== undefined ? settings.goals : true;
+      const matchStart = settings.matchStart !== undefined ? settings.matchStart : true;
 
-      // Verificar se o usuário quer receber esse tipo de notificação
-      if (data.type === "goal" && settings.goals === false) continue;
-      if (data.type === "match_start" && settings.matchStart === false)
+      // 1. MASTER SWITCH CHECK (EXPLICIT)
+      // Se a chave mestre 'enabled' for falsa, não envia NADA.
+      if (!masterEnabled) {
+        // console.log(`[Push] Skipping user ${user.email} - Master Switch is OFF`);
         continue;
+      }
 
-      // Verificar se deve filtrar (Se allMatches for true, envia para todos, exceto filtros de tipo)
-      if (!settings.allMatches) {
-        // 1. Verificar se a partida está na lista de favoriteMatchIds (sino 🔔)
+      // Fallback: se por algum motivo as outras chaves de escopo também estiverem todas falsas
+      const isNotificationsScopeEnabled = allMatches || favoritesOnly || favoriteLeaguesNotify;
+      if (!isNotificationsScopeEnabled) continue;
+
+      // 2. TYPE-SPECIFIC CHECKS
+      const isEvent = ["goal", "yellow_card", "red_card", "penalty", "var", "substitution", "half_time", "second_half_start", "match_end"].includes(data.type);
+      if (isEvent && goals === false) continue;
+      if (data.type === "match_start" && matchStart === false) continue;
+
+      // 3. SCOPE / FILTER CHECKS
+      let reason = "";
+      if (allMatches) {
+        reason = "allMatches is ON";
+      } else {
+        // A. Check if the match is explicitly marked (Bell icon)
         const matchIdStr = String(data.matchId);
         const msnGameIdStr = data.msnGameId ? String(data.msnGameId) : null;
         const isMarkedMatch = (user.favoriteMatchIds || []).some(id => 
           id === matchIdStr || (msnGameIdStr && id === msnGameIdStr)
         );
         
-        // 2. Verificar se é time favorito (estrela ⭐) - APENAS se favoritesOnly estiver ativado
+        if (isMarkedMatch) reason = "match is MARKED (bell)";
+
+        // B. Check if it's a favorite team match (Only if favoritesOnly is enabled)
         let isFavoriteTeamMatch = false;
-        if (settings.favoritesOnly) {
+        if (!reason && favoritesOnly) {
           isFavoriteTeamMatch = user.favoriteTeams.some((team) => {
             const teamId = team.id;
             const teamMsnId = team.msnId;
-            
             return (
               teamId === homeTeamNumericId || 
               teamId === awayTeamNumericId ||
@@ -196,27 +219,21 @@ async function sendPushToAll(title, body, data = {}, filter = {}) {
               teamId === data.awayTeamId
             );
           });
+          if (isFavoriteTeamMatch) reason = "FAVORITE TEAM match";
         }
         
-        // 3. Verificar ligas favoritas (apenas se for premium E tiver a configuração ativada) 🏆
+        // C. Check if it's a favorite league match (Premium + setting enabled)
         let isFavoriteLeagueMatch = false;
-        if (data.leagueId && hasPremiumAccess(user) && settings.favoriteLeaguesNotify) {
+        if (!reason && data.leagueId && hasPremiumAccess(user) && favoriteLeaguesNotify) {
           isFavoriteLeagueMatch = matchesFavoriteLeague(user, data.leagueId);
-          if (isFavoriteLeagueMatch) {
-            console.log(`[Push] ✓ Match is from user's favorite league (premium + setting enabled) - league: ${data.leagueId}`);
-          }
+          if (isFavoriteLeagueMatch) reason = "FAVORITE LEAGUE match (premium)";
         }
         
-        // Permitir APENAS se:
-        // - É partida marcada (Bell)
-        // - É time favorito E favoritesOnly=true
-        // - É liga favorita E favoriteLeaguesNotify=true
-        if (!isMarkedMatch && !isFavoriteTeamMatch && !isFavoriteLeagueMatch) continue;
-        
-        if (isMarkedMatch) {
-          console.log(`[Push] ✓ Match ${matchIdStr}/${msnGameIdStr || 'no-msn'} is in user's favoriteMatchIds (bell icon) - user: ${user.pushToken?.substring(0, 30)}...`);
-        }
+        // If it doesn't match any of the above, skip
+        if (!reason) continue;
       }
+
+      console.log(`[Push] User ${user.email} selected for ${data.type} because: ${reason}`);
 
       // Adicionar emoji de favorito se for time do usuário
       const isFavorite = user.favoriteTeams.some((team) => {
@@ -232,8 +249,7 @@ async function sendPushToAll(title, body, data = {}, filter = {}) {
         );
       });
       
-      // Adicionar emoji de liga se for liga favorita (premium + configuração ativada)
-      const isFavoriteLeague = data.leagueId && hasPremiumAccess(user) && settings.favoriteLeaguesNotify && matchesFavoriteLeague(user, data.leagueId);
+      const isFavoriteLeague = data.leagueId && hasPremiumAccess(user) && favoriteLeaguesNotify && matchesFavoriteLeague(user, data.leagueId);
       
       let finalTitle = title;
       if (isFavorite) {

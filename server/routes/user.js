@@ -306,6 +306,13 @@ router.post("/push-token", authMiddleware, async (req, res) => {
 
     console.log(`[Push] Token recebido: ${pushToken.substring(0, 40)}...`);
 
+    // === UNIQUE TOKEN FIX: Remover este token de qualquer outro usuário ===
+    // Isso evita que o mesmo celular receba notificações de múltiplas contas
+    await User.updateMany(
+      { pushToken, _id: { $ne: req.userId } },
+      { $set: { pushToken: null } }
+    );
+
     const user = await User.findByIdAndUpdate(
       req.userId,
       { pushToken },
@@ -317,8 +324,8 @@ router.post("/push-token", authMiddleware, async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    console.log(`[Push] ✅ Token registrado para ${user.email}`);
-    res.json({ success: true, message: "Push token registered" });
+    console.log(`[Push] ✅ Token registrado e exclusivado para ${user.email}`);
+    res.json({ success: true, message: "Push token registered uniquely" });
   } catch (error) {
     console.error(`[Push] ❌ Erro:`, error);
     res.status(500).json({ message: "Server error" });
@@ -339,12 +346,13 @@ router.delete("/push-token", authMiddleware, async (req, res) => {
 // Atualizar configurações de notificação
 router.put("/notification-settings", authMiddleware, async (req, res) => {
   try {
-    const { allMatches, favoritesOnly, favoriteLeaguesNotify, goals, matchStart } = req.body;
+    const { enabled, allMatches, favoritesOnly, favoriteLeaguesNotify, goals, matchStart } = req.body;
 
     const user = await User.findByIdAndUpdate(
       req.userId,
       {
         notificationSettings: {
+          enabled: enabled !== undefined ? enabled : true,
           allMatches: allMatches !== undefined ? allMatches : true,
           favoritesOnly: favoritesOnly !== undefined ? favoritesOnly : false,
           favoriteLeaguesNotify: favoriteLeaguesNotify !== undefined ? favoriteLeaguesNotify : false,
