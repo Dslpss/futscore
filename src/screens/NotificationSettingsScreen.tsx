@@ -289,7 +289,10 @@ export function NotificationSettingsScreen({ navigation }: any) {
           )}
 
           {/* Opacidade geral se desativado */}
-          <View style={{ opacity: areNotificationsEnabled() ? 1 : 0.5, pointerEvents: areNotificationsEnabled() ? 'auto' : 'none' }}>
+          <View 
+            style={{ opacity: areNotificationsEnabled() ? 1 : 0.5 }} 
+            pointerEvents={areNotificationsEnabled() ? 'auto' : 'none'}
+          >
             {/* Seção: Quais jogos notificar */}
           <Text style={styles.sectionTitle}>Quais jogos notificar</Text>
 

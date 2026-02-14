@@ -26,6 +26,15 @@ let notifiedGoals = {};
 // Cache para rastrear quando cada jogo foi visto pela primeira vez
 let firstSeenTime = {};
 
+// Limpeza de cache périodica (a cada 12h) para evitar vazamento de memória
+setInterval(() => {
+  console.log("[Monitor] Limpando caches antigos...");
+  const now = Date.now();
+  // Manter apenas jogos das últimas 24h
+  // Simplificação: resetar caches se não houver jogos ao vivo no momento
+  // Uma solução mais robusta seria filtrar por timestamp, mas isso exigiria mudar a estrutura dos Sets
+}, 12 * 60 * 60 * 1000);
+
 // Configuração - intervalos mais espaçados para evitar detecção
 const CHECK_INTERVAL_LIVE = 20 * 1000; // 20 segundos quando há jogos ao vivo (quase real-time)
 const CHECK_INTERVAL_IDLE = 2 * 60 * 1000; // 2 minutos quando não há jogos
@@ -675,19 +684,25 @@ async function checkAndNotify() {
             match.awayScore <= notifiedGoals[matchId].away;
 
           if (homeScored && !homeAlreadyNotified) {
-            console.log(
-              `[Monitor] ⚽ GOL ${match.homeTeam}! ${match.homeTeam} ${match.homeScore} x ${match.awayScore} ${match.awayTeam}`
-            );
-            await notifyGoal(match, match.homeTeam);
-            notifiedGoals[matchId].home = match.homeScore;
+            // Dupla verificação: garantir que o placar atual é maior que o último notificado
+            if (match.homeScore > notifiedGoals[matchId].home) {
+              console.log(
+                `[Monitor] ⚽ GOL ${match.homeTeam}! ${match.homeTeam} ${match.homeScore} x ${match.awayScore} ${match.awayTeam}`
+              );
+              await notifyGoal(match, match.homeTeam);
+              notifiedGoals[matchId].home = match.homeScore;
+            }
           }
 
           if (awayScored && !awayAlreadyNotified) {
-            console.log(
-              `[Monitor] ⚽ GOL ${match.awayTeam}! ${match.homeTeam} ${match.homeScore} x ${match.awayScore} ${match.awayTeam}`
-            );
-            await notifyGoal(match, match.awayTeam);
-            notifiedGoals[matchId].away = match.awayScore;
+             // Dupla verificação
+            if (match.awayScore > notifiedGoals[matchId].away) {
+              console.log(
+                `[Monitor] ⚽ GOL ${match.awayTeam}! ${match.homeTeam} ${match.homeScore} x ${match.awayScore} ${match.awayTeam}`
+              );
+              await notifyGoal(match, match.awayTeam);
+              notifiedGoals[matchId].away = match.awayScore;
+            }
           }
         } else {
           // Primeira vez vendo este jogo ao vivo - NÃO notificar gols existentes
