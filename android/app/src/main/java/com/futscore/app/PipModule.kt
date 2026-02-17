@@ -29,7 +29,8 @@ class PipModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
                         activity.enterPictureInPictureMode(params)
                     }
                 } catch (e: Exception) {
-                    // Ignore errors
+                    // Log error but don't crash
+                    android.util.Log.e("PipModule", "Error entering PiP mode", e)
                 }
             }
         }

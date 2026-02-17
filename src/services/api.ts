@@ -7,6 +7,9 @@ import { Country } from "../types/country";
 // Backend API client (proxies to football-data.org)
 const apiClient = axios.create({
   baseURL: `${CONFIG.BACKEND_URL}/api/football`,
+  headers: {
+    "X-App-Signature": "FutScore-Mobile-v1-Secured",
+  },
 });
 
 const CACHE_PREFIX = "futscore_cache_";

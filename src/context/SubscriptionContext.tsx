@@ -119,18 +119,7 @@ export const SubscriptionProvider: React.FC<{ children: ReactNode }> = ({
         },
       );
 
-      console.log(
-        "[SubscriptionContext] API Response FULL:",
-        JSON.stringify(response.data, null, 2),
-      );
-      console.log(
-        "[SubscriptionContext] API Response isPremium:",
-        response.data.isPremium,
-      );
-      console.log(
-        "[SubscriptionContext] API Response isAdmin:",
-        response.data.isAdmin,
-      );
+      console.log("[SubscriptionContext] API Response received");
 
       setSubscriptionStatus(response.data);
     } catch (error) {

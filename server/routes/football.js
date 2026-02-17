@@ -14,6 +14,28 @@ const footballClient = axios.create({
   },
 });
 
+// Middleware de segurança simples para rotas públicas
+const requireAppSignature = (req, res, next) => {
+  const signature = req.header('X-App-Signature');
+  const validSignature = 'FutScore-Mobile-v1-Secured';
+  
+  // Opcional: Permitir bypass se for admin (verificar token) - mas por enquanto manter simples
+  if (signature === validSignature) {
+    return next();
+  }
+  
+  // Fail-safe: Se não tiver assinatura, verificar se tem token de usuário (caso o app mude a estratégia)
+  const authHeader = req.header('Authorization');
+  if (authHeader) {
+     return next();
+  }
+
+  return res.status(403).json({ error: 'Access Denied: Invalid App Signature' });
+};
+
+// Aplicar proteção em todas as rotas
+router.use(requireAppSignature);
+
 // GET /api/football/competitions/:code/matches
 // Proxy for fetching fixtures of a competition
 router.get('/competitions/:code/matches', async (req, res) => {
