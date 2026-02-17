@@ -392,117 +392,149 @@ export const LiveChannelsSlider: React.FC = () => {
     fetchData();
   }, []);
 
-  // Find a channel that matches the broadcast name - PRIORIZA CORRESPONDÊNCIA EXATA
+  // Helper para normalizar strings para comparação
+  const normalizeChannelName = (name: string): string => {
+    return name
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "") // Remove acentos
+      .replace(/[^a-z0-9]/g, "") // Remove caracteres especiais e espaços
+      .replace("hd", "")
+      .replace("fhd", "")
+      .replace("4k", "")
+      .trim();
+  };
+
+  // Find a channel that matches the broadcast name - Lógica aprimorada
   const findMatchingChannel = useCallback(
     (broadcastChannel: string): Channel | null => {
-      const searchTerm = broadcastChannel.toLowerCase().trim();
+      if (!broadcastChannel) return null;
 
-      // 1. PRIMEIRO: Tentar correspondência EXATA do nome
+      const searchTerm = broadcastChannel.toLowerCase().trim();
+      const normalizedSearch = normalizeChannelName(searchTerm);
+
+      // 1. PRIMEIRO: Tentar correspondência EXATA do nome (case insensitive)
       const exactMatch = channels.find((ch) => {
         const chName = ch.name.toLowerCase().trim();
-        return (
-          chName === searchTerm ||
-          chName === searchTerm.replace("+", " +") ||
-          chName === searchTerm.replace(" +", "+")
-        );
+        return chName === searchTerm;
       });
       if (exactMatch) return exactMatch;
 
-      // 2. Caso especial para Disney+/Star+ - procurar canal Disney+ específico
-      if (searchTerm.includes("disney") || searchTerm.includes("star+")) {
-        // Priorizar o canal que tem número se especificado
-        const disneyExact = channels.find((ch) => {
-          const chName = ch.name.toLowerCase();
-          if (searchTerm.includes("1"))
-            return chName.includes("disney + 1") || chName.includes("disney+1");
-          if (searchTerm.includes("2"))
-            return chName.includes("disney + 2") || chName.includes("disney+2");
-          // Se não tem número, pegar o primeiro
-          return chName.includes("disney +") || chName.includes("disney+");
-        });
-        if (disneyExact) return disneyExact;
-      }
-
-      // 3. Para canais com número (ESPN 2, SporTV 3, etc), procurar o exato
-      const hasNumber = /\d/.test(searchTerm);
-      if (hasNumber) {
-        const numberMatch = channels.find((ch) => {
-          const chName = ch.name.toLowerCase();
-          // Verificar se ambos têm o mesmo número
-          const searchNum = searchTerm.match(/\d+/)?.[0];
-          const chNum = chName.match(/\d+/)?.[0];
-          if (searchNum && chNum && searchNum === chNum) {
-            // Verificar se é o mesmo tipo de canal (ESPN, SporTV, etc)
-            const searchBase = searchTerm.replace(/\d+/g, "").trim();
-            const chBase = chName.replace(/\d+/g, "").trim();
-            return chBase.includes(searchBase) || searchBase.includes(chBase);
-          }
-          return false;
-        });
-        if (numberMatch) return numberMatch;
-      }
-
-      // 4. Para canais sem número, encontrar o canal BASE (ESPN sem número, não ESPN 2)
-      if (!hasNumber) {
-        for (const [key, keywords] of Object.entries(CHANNEL_KEYWORDS)) {
-          if (searchTerm === key || searchTerm.includes(key)) {
-            // Procurar canal que NÃO tem número
-            const baseMatch = channels.find((ch) => {
-              const chName = ch.name.toLowerCase();
-              const hasNum = /\d/.test(chName);
-              return !hasNum && keywords.some((kw) => chName.includes(kw));
-            });
-            if (baseMatch) return baseMatch;
-
-            // Se não encontrou sem número, pegar o primeiro disponível
-            const anyMatch = channels.find((ch) => {
-              const chName = ch.name.toLowerCase();
-              return keywords.some((kw) => chName.includes(kw));
-            });
-            if (anyMatch) return anyMatch;
-          }
-        }
-      }
-
-      // 5. Fallback: busca direta com keywords
-      for (const [key, keywords] of Object.entries(CHANNEL_KEYWORDS)) {
-        if (
-          searchTerm.includes(key) ||
-          keywords.some((kw) => searchTerm.includes(kw))
-        ) {
-          const match = channels.find((ch) => {
-            const chName = ch.name.toLowerCase();
-            return keywords.some((kw) => chName.includes(kw));
-          });
-          if (match) return match;
-        }
-      }
-
-      // 6. Último recurso: busca direta
-      const directMatch = channels.find((ch) => {
-        const chName = ch.name.toLowerCase();
-        return (
-          chName.includes(searchTerm) ||
-          searchTerm.includes(chName.split(" ")[0])
-        );
+      // 2. Tentar correspondência normalizada (sem espaços, acentos, "HD", etc)
+      const normalizedMatch = channels.find((ch) => {
+        return normalizeChannelName(ch.name) === normalizedSearch;
       });
+      if (normalizedMatch) return normalizedMatch;
 
-      return directMatch || null;
+      // 3. Casos especiais e mapeamentos manuais
+      // Disney+ / Star+
+      if (searchTerm.includes("disney") || searchTerm.includes("star+")) {
+        // Priorizar ESPN se for um evento ESPN no Star+ (muito comum)
+        if (searchTerm.includes("espn")) {
+           // Deixar cair na lógica de ESPN abaixo
+        } else {
+             const disneyMatch = channels.find((ch) => {
+                const chNorm = normalizeChannelName(ch.name);
+                // Tenta achar Disney+ específico ou genérico
+                if (searchTerm.includes("2")) return chNorm.includes("disney+2");
+                return chNorm.includes("disney+");
+             });
+             if (disneyMatch) return disneyMatch;
+        }
+      }
+
+      // Premiere
+      if (normalizedSearch.includes("premiere")) {
+         // Tentar achar o número específico
+         const numberMatch = searchTerm.match(/\d+/);
+         if (numberMatch) {
+             const num = numberMatch[0];
+             const pMatch = channels.find(ch => {
+                const chNorm = normalizeChannelName(ch.name);
+                return chNorm.includes("premiere") && chNorm.includes(num);
+             });
+             if (pMatch) return pMatch;
+         }
+         // Se não achar número ou não tiver número, pegar qualquer Premiere (Clubes geralmente)
+         const pGeneral = channels.find(ch => normalizeChannelName(ch.name).includes("premiereclubes"));
+         if (pGeneral) return pGeneral;
+      }
+
+      // 4. Busca baseada em Keywords (CHANNEL_KEYWORDS)
+      for (const [key, keywords] of Object.entries(CHANNEL_KEYWORDS)) {
+        // Se o canal de transmissão contém a chave ou alguma keyword
+        if (searchTerm.includes(key) || keywords.some(kw => searchTerm.includes(kw))) {
+           
+           // Se tiver número na busca (ex: "ESPN 2"), tentar encontrar canal com mesmo número
+           const searchNumber = searchTerm.match(/\d+/)?.[0];
+           
+           if (searchNumber) {
+               const matchWithNumber = channels.find(ch => {
+                   const chName = ch.name.toLowerCase();
+                   // Verifica se é o mesmo "grupo" (ex: ESPN) E tem o mesmo número
+                   return keywords.some(kw => chName.includes(kw)) && chName.includes(searchNumber);
+               });
+               if (matchWithNumber) return matchWithNumber;
+           }
+
+           // Se não tem número ou não achou com número, tenta encontrar o canal "principal" (sem número)
+           // Ex: "ESPN" deve matchar "ESPN" e não "ESPN 2" se possível
+           const mainChannel = channels.find(ch => {
+               const chName = ch.name.toLowerCase();
+               const chNumber = chName.match(/\d+/);
+               // É match se conter a keyword E NÃO tiver número (assumindo que buscamos o principal)
+               return keywords.some(kw => chName.includes(kw)) && !chNumber;
+           });
+           if (mainChannel && !searchNumber) return mainChannel;
+
+           // Fallback: Pega qualquer um que combine com as keywords
+           const anyMatch = channels.find(ch => {
+               const chName = ch.name.toLowerCase();
+               return keywords.some(kw => chName.includes(kw));
+           });
+           if (anyMatch) return anyMatch;
+        }
+      }
+
+      // 5. Último recurso: Busca "fuzzy" simples (contém parte do nome)
+      // Só faz se a string for grande o suficiente para evitar falsos positivos
+      if (normalizedSearch.length > 3) {
+          const directMatch = channels.find((ch) => {
+            const chNorm = normalizeChannelName(ch.name);
+            return chNorm.includes(normalizedSearch) || normalizedSearch.includes(chNorm);
+          });
+          if (directMatch) return directMatch;
+      }
+
+      console.log(`[LiveChannelsSlider] No match found for: ${broadcastChannel}`);
+      return null;
     },
     [channels],
   );
 
-  // Memoize channel matching to avoid heavy regex on every render (e.g. when opening modals)
+  // Memoize channel matching
   const gameChannelsMap = useMemo(() => {
     const map = new Map<string, Channel | null>();
     if (games.length === 0 || channels.length === 0) return map;
 
     console.log("[LiveChannelsSlider] Computing channel matches...");
     games.forEach((game) => {
-      const primaryChannel = game.channels[0] || "";
-      // Only compute if not already computed (though games are unique by ID usually)
-      if (!map.has(game.id)) {
-        map.set(game.id, findMatchingChannel(primaryChannel));
+      // Tentar encontrar match para QUALQUER canal da lista do jogo, não só o primeiro
+      let bestMatch: Channel | null = null;
+      
+      for (const channelName of game.channels) {
+          const match = findMatchingChannel(channelName);
+          if (match) {
+              bestMatch = match;
+              break; // Achou um, para
+          }
+      }
+      
+      if (bestMatch) {
+        map.set(game.id, bestMatch);
+      } else {
+         // Debug: ver por que não achou
+         console.log(`[LiveChannelsSlider] Dropped game due to no channel: ${game.homeTeam} vs ${game.awayTeam} (${game.channels.join(", ")})`);
       }
     });
     return map;
