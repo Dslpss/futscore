@@ -3,23 +3,19 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
-  RefreshControl,
-  SafeAreaView,
-  StatusBar,
-  ScrollView,
   ActivityIndicator,
+  StatusBar,
   Dimensions,
   TouchableOpacity,
+  Animated,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Newspaper, X } from "lucide-react-native";
+import { ArrowLeft } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
-import { NewsCard } from "../components/NewsCard";
+import { EditorialNewsCard } from "../components/EditorialNewsCard";
 import { msnSportsApi } from "../services/msnSportsApi";
-import AdBanner from "../components/AdBanner";
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
 
 interface NewsArticle {
   id: string;
@@ -50,45 +46,34 @@ export const NewsScreen = () => {
   const navigation = useNavigation();
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
+  const scrollY = React.useRef(new Animated.Value(0)).current;
 
-  const fetchNews = async (skip: number = 0, isRefresh: boolean = false) => {
+  // Header Animation
+  const headerOpacity = scrollY.interpolate({
+    inputRange: [0, 200],
+    outputRange: [0, 1],
+    extrapolate: "clamp",
+  });
+
+  const backButtonBackground = scrollY.interpolate({
+    inputRange: [0, 200],
+    outputRange: ["rgba(0,0,0,0.3)", "transparent"],
+    extrapolate: "clamp",
+  });
+
+  const fetchNews = async (skip: number = 0) => {
     try {
-      if (skip === 0) {
-        if (isRefresh) {
-          setRefreshing(true);
-        } else {
-          setLoading(true);
-        }
-      } else {
-        setLoadingMore(true);
-      }
+      if (skip === 0) setLoading(true);
+      else setLoadingMore(true);
 
-      const news = await msnSportsApi.getSportsNews(10, skip);
-
-      if (news.length < 10) {
-        setHasMore(false);
-      }
-
-      if (skip === 0) {
-        setArticles(news);
-      } else {
-        // Deduplicate articles by ID
-        setArticles((prev) => {
-          const existingIds = new Set(prev.map((a) => a.id));
-          const newArticles = news.filter(
-            (a: NewsArticle) => !existingIds.has(a.id),
-          );
-          return [...prev, ...newArticles];
-        });
-      }
+      const news = await msnSportsApi.getSportsNews(15, skip);
+      
+      setArticles(prev => skip === 0 ? news : [...prev, ...news]);
     } catch (error) {
       console.error("Error fetching news:", error);
     } finally {
       setLoading(false);
-      setRefreshing(false);
       setLoadingMore(false);
     }
   };
@@ -97,164 +82,91 @@ export const NewsScreen = () => {
     fetchNews();
   }, []);
 
-  const onRefresh = useCallback(async () => {
-    setHasMore(true);
-    await msnSportsApi.clearCache();
-    await fetchNews(0, true);
-  }, []);
-
-  const loadMore = () => {
-    if (!loadingMore && hasMore && articles.length > 0) {
-      fetchNews(articles.length);
-    }
-  };
-
-  const renderHeader = () => (
-    <View>
-      {/* Header */}
-      <View style={styles.header}>
-        <LinearGradient
-          colors={["rgba(34, 197, 94, 0.1)", "transparent"]}
-          style={styles.headerGradient}
+  const renderItem = ({ item, index }: { item: NewsArticle; index: number }) => {
+    // 1. HERO ITEM (First article) - Full Screen Impact
+    if (index === 0) {
+      return (
+        <EditorialNewsCard
+          article={item}
+          variant="hero"
+          index={index}
         />
-        <View style={styles.headerRow}>
-          <View style={styles.headerContent}>
-            <View style={styles.headerIconWrapper}>
-              <LinearGradient
-                colors={["#22c55e", "#16a34a"]}
-                style={styles.headerIconGradient}>
-                <Newspaper size={20} color="#fff" />
-              </LinearGradient>
-            </View>
-            <View>
-              <Text style={styles.headerTitle}>Notícias</Text>
-              <Text style={styles.headerSubtitle}>Esportes em destaque</Text>
-            </View>
-          </View>
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={() => navigation.goBack()}
-            activeOpacity={0.7}>
-            <LinearGradient
-              colors={["#27272a", "#18181b"]}
-              style={styles.closeButtonGradient}>
-              <X size={20} color="#a1a1aa" />
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
-      </View>
+      );
+    }
 
-      {/* Featured News Carousel */}
-      {articles.length > 0 && (
-        <View style={styles.featuredSection}>
-          <Text style={styles.sectionTitle}>🔥 Destaques</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.featuredScroll}>
-            {articles.slice(0, 3).map((article) => (
-              <NewsCard
-                key={`featured_${article.id}`}
-                article={article}
-                variant="featured"
-              />
-            ))}
-          </ScrollView>
-        </View>
-      )}
+    // 2. FEATURED ITEM (Every 5th item) - Visual Breaker
+    if (index % 5 === 0) {
+      return (
+        <EditorialNewsCard
+          article={item}
+          variant="featured"
+          index={index}
+        />
+      );
+    }
 
-      {/* Section Title for list */}
-      {articles.length > 3 && (
-        <View style={styles.listHeader}>
-          <Text style={styles.sectionTitle}>📰 Últimas Notícias</Text>
-        </View>
-      )}
-    </View>
-  );
-
-  const renderItem = ({
-    item,
-    index,
-  }: {
-    item: NewsArticle;
-    index: number;
-  }) => {
-    // Skip first 3 items as they are in the featured carousel
-    if (index < 3) return null;
-    return <NewsCard article={item} variant="compact" />;
-  };
-
-  const renderFooter = () => {
-    if (!loadingMore) return null;
+    // 3. STANDARD ITEMS - Minimalist List
     return (
-      <View style={styles.loadingMore}>
-        <ActivityIndicator color="#22c55e" />
-        <Text style={styles.loadingText}>Carregando mais...</Text>
-      </View>
+      <EditorialNewsCard
+        article={item}
+        variant="standard"
+        index={index}
+      />
     );
   };
 
-  const renderEmpty = () => {
-    if (loading) return null;
+  const renderFooter = () => {
+    if (!loadingMore) return <View style={{ height: 100 }} />; // Padding bottom
     return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyIcon}>📰</Text>
-        <Text style={styles.emptyText}>Nenhuma notícia encontrada</Text>
-        <Text style={styles.emptySubtext}>Puxe para baixo para atualizar</Text>
+      <View style={styles.loadingMore}>
+        <ActivityIndicator color="#22c55e" />
       </View>
     );
   };
 
   if (loading && articles.length === 0) {
     return (
-      <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#09090b" />
-        <LinearGradient
-          colors={["#09090b", "#18181b"]}
-          style={styles.background}
-        />
-        <SafeAreaView style={styles.safeArea}>
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#22c55e" />
-            <Text style={styles.loadingText}>Carregando notícias...</Text>
-          </View>
-        </SafeAreaView>
+      <View style={styles.loadingContainer}>
+        <StatusBar barStyle="light-content" backgroundColor="#000" />
+        <ActivityIndicator size="large" color="#22c55e" />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#09090b" />
-      <LinearGradient
-        colors={["#09090b", "#18181b"]}
-        style={styles.background}
-      />
-      <SafeAreaView style={styles.safeArea}>
-        <FlatList
-          data={articles}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id}
-          ListHeaderComponent={renderHeader}
-          ListFooterComponent={renderFooter}
-          ListEmptyComponent={renderEmpty}
-          contentContainerStyle={styles.listContent}
-          onEndReached={loadMore}
-          onEndReachedThreshold={0.5}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor="#22c55e"
-              colors={["#22c55e"]}
-              progressBackgroundColor="#18181b"
-            />
-          }
-        />
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+      
+      {/* Animated Sticky Header */}
+      <Animated.View style={[styles.header, { opacity: headerOpacity }]}>
+        <View style={styles.headerBackground} />
+        <Text style={styles.headerTitle}>MANCHETES</Text>
+      </Animated.View>
 
-        {/* Banner de Anúncio */}
-        <AdBanner />
-      </SafeAreaView>
+      {/* Floating Back Button */}
+      <Animated.View style={[styles.backButtonWrapper, { backgroundColor: backButtonBackground }]}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}>
+          <ArrowLeft size={24} color="#fff" />
+        </TouchableOpacity>
+      </Animated.View>
+
+      <Animated.FlatList
+        data={articles}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        onEndReached={() => fetchNews(articles.length)}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={renderFooter}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 40 }}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false }
+        )}
+        scrollEventThrottle={16}
+      />
     </View>
   );
 };
@@ -262,138 +174,61 @@ export const NewsScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#09090b",
+    backgroundColor: "#09090b", // Zinc 950
   },
-  background: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-  },
-  safeArea: {
-    flex: 1,
-  },
-  listContent: {
-    padding: 16,
-    paddingBottom: 100,
-  },
-
-  // Header styles
-  header: {
-    marginBottom: 24,
-    position: "relative",
-  },
-  headerGradient: {
-    position: "absolute",
-    left: -16,
-    right: -16,
-    top: -50,
-    height: 150,
-  },
-  headerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 24,
-  },
-  headerContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  closeButton: {
-    marginLeft: 16,
-  },
-  closeButtonGradient: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-  },
-  headerIconWrapper: {
-    marginRight: 16,
-  },
-  headerIconGradient: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: "#fff",
-    letterSpacing: -0.5,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: "#71717a",
-    marginTop: 2,
-  },
-
-  // Featured section
-  featuredSection: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#e4e4e7",
-    marginBottom: 12,
-  },
-  featuredScroll: {
-    paddingRight: 16,
-  },
-
-  // List section
-  listHeader: {
-    marginBottom: 8,
-  },
-
-  // Loading states
   loadingContainer: {
     flex: 1,
+    backgroundColor: "#09090b",
     justifyContent: "center",
     alignItems: "center",
   },
-  loadingText: {
-    color: "#71717a",
-    fontSize: 14,
-    marginTop: 12,
+  
+  // Header
+  header: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 90,
+    zIndex: 10,
+    justifyContent: "flex-end",
+    paddingBottom: 16,
+    alignItems: "center",
   },
-  loadingMore: {
-    flexDirection: "row",
+  headerBackground: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(9, 9, 11, 0.9)", // Semi-transparent black
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.1)",
+  },
+  headerTitle: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "900",
+    letterSpacing: 2,
+    textTransform: "uppercase",
+  },
+  
+  // Back Button
+  backButtonWrapper: {
+    position: "absolute",
+    top: 48,
+    left: 16,
+    zIndex: 20,
+    borderRadius: 20,
+    width: 40,
+    height: 40,
     justifyContent: "center",
     alignItems: "center",
-    paddingVertical: 20,
-    gap: 10,
+  },
+  backButton: {
+    padding: 8,
   },
 
-  // Empty state
-  emptyContainer: {
-    flex: 1,
+  loadingMore: {
+    padding: 24,
     justifyContent: "center",
     alignItems: "center",
-    paddingVertical: 60,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  emptyText: {
-    color: "#e4e4e7",
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 8,
-  },
-  emptySubtext: {
-    color: "#71717a",
-    fontSize: 14,
   },
 });
 
