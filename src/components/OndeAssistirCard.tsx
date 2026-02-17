@@ -158,30 +158,7 @@ const OndeAssistirCardContent: React.FC = () => {
 
   // Show empty state only when we've loaded and there's no data
   if (!loading && games.length === 0) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <View style={styles.headerContent}>
-            <View style={styles.headerTitleRow}>
-              <View style={styles.headerIcon}>
-                <Tv size={18} color="#3b82f6" />
-              </View>
-              <View>
-                <View style={styles.sectionBadge}>
-                  <Text style={styles.sectionBadgeText}>PROGRAMAÇÃO</Text>
-                </View>
-                <Text style={styles.title}>Onde Assistir</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-        <View style={styles.scrollWrapper}>
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>Nenhum jogo com transmissão hoje</Text>
-          </View>
-        </View>
-      </View>
-    );
+    return null;
   }
 
   return (

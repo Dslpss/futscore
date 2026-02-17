@@ -59,6 +59,20 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
   const [lineupView, setLineupView] = useState<"list" | "field">("field");
   const [selectedTeam, setSelectedTeam] = useState<{ id: number; name: string; logo: string; country: string; msnId?: string } | null>(null);
 
+  const getLeagueColor = (leagueId: number | string): readonly [string, string, ...string[]] => {
+    // Colors based on popular leagues or generic fallback
+    const colors: Record<string, readonly [string, string]> = {
+      '39': ["#3f3f46", "#27272a"], // Premier League (Purple/Dark)
+      '140': ["#f59e0b", "#d97706"], // La Liga (Orange/Red)
+      '135': ["#22c55e", "#15803d"], // Serie A (Italy)
+      '78': ["#ef4444", "#991b1b"], // Bundesliga
+      '61': ["#3b82f6", "#1d4ed8"], // Ligue 1
+      '71': ["#22c55e", "#16a34a"], // Brasileirão
+      '2': ["#1e3a8a", "#172554"], // Champions League
+    };
+    return colors[String(leagueId)] || ["#27272a", "#09090b"];
+  };
+
   if (!visible) return null;
 
   // Helper function to check if a player is injured
@@ -122,171 +136,103 @@ export const MatchStatsModal: React.FC<MatchStatsModalProps> = ({
             <ScrollView
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.content}>
-              {/* Scoreboard - Modern Design */}
-              <View style={styles.scoreCardWrapper}>
+              {/* Immersive Header - New Match Day Experience */}
+              <View style={styles.immersiveHeader}>
                 <LinearGradient
-                  colors={["#1a1a2e", "#16213e", "#0f0f1a"]}
+                   colors={[
+                    // Dynamic colors based on teams would be ideal, falling back to league/default
+                    match.teams.home.colors?.primary || getLeagueColor(match.league.id)[0],
+                    "#0f0f1a"
+                  ]}
                   start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.scoreCard}>
-                  {/* League Badge */}
-                  <View style={styles.leagueBadge}>
-                    <Image
-                      source={{ uri: match.league.logo }}
-                      style={styles.leagueLogo}
-                    />
-                    <Text style={styles.leagueName}>{match.league.name}</Text>
+                  end={{ x: 0, y: 1 }}
+                  style={styles.headerGradient}
+                />
+                
+                {/* League Badge - Floating */}
+                <View style={styles.floatingLeagueBadge}>
+                  <Image source={{ uri: match.league.logo }} style={styles.leagueLogoSmall} />
+                  <Text style={styles.leagueNameText}>{match.league.name}</Text>
+                  {match.fixture.venue?.city && (
+                    <>
+                      <View style={styles.dotSeparator} />
+                      <Text style={styles.venueNameText}>{match.fixture.venue.city}</Text>
+                    </>
+                  )}
+                </View>
+
+                {/* Scoreboard - Big & Open */}
+                <View style={styles.matchupContainer}>
+                  {/* Home Team */}
+                  <View style={styles.teamColumn}>
+                    <TouchableOpacity 
+                      onPress={() => setSelectedTeam({
+                        id: match.teams.home.id,
+                        name: match.teams.home.name,
+                        logo: match.teams.home.logo,
+                        country: match.league.country || '',
+                        msnId: (match.teams.home as any).msnId,
+                      })}
+                      style={styles.teamLogoWrapper}
+                    >
+                      <TeamLogo uri={match.teams.home.logo} size={64} style={styles.bigTeamLogo} />
+                    </TouchableOpacity>
+                    <Text style={styles.bigTeamName} numberOfLines={2}>{match.teams.home.name}</Text>
                   </View>
 
-                  {/* Teams and Score Section */}
-                  <View style={styles.matchupSection}>
-                    {/* Home Team */}
-                    <View style={styles.teamSection}>
-                      <View style={styles.teamLogoContainer}>
-                        <TouchableOpacity
-                          activeOpacity={0.7}
-                          onPress={() => setSelectedTeam({
-                            id: match.teams.home.id,
-                            name: match.teams.home.name,
-                            logo: match.teams.home.logo,
-                            country: match.league.country || '',
-                            msnId: (match.teams.home as any).msnId,
-                          })}
-                        >
-                          <LinearGradient
-                            colors={[
-                              "rgba(255,255,255,0.1)",
-                              "rgba(255,255,255,0.05)",
-                            ]}
-                            style={styles.teamLogoGlow}>
-                            <TeamLogo
-                              uri={match.teams.home.logo}
-                              size={56}
-                              style={styles.teamLogo}
-                            />
-                          </LinearGradient>
-                        </TouchableOpacity>
-                      </View>
-                      <Text style={styles.teamName} numberOfLines={2}>
-                        {match.teams.home.name}
-                      </Text>
-                      {teamPositions.home && (
-                        <View style={styles.positionBadge}>
-                          <Text style={styles.positionText}>{teamPositions.home}º</Text>
-                        </View>
-                      )}
+                  {/* Score */}
+                  <View style={styles.scoreColumn}>
+                    <View style={styles.scoreRow}>
+                      <Text style={styles.bigScore}>{match.goals.home ?? 0}</Text>
+                      <Text style={styles.scoreSeparator}>:</Text>
+                      <Text style={styles.bigScore}>{match.goals.away ?? 0}</Text>
                     </View>
-
-                    {/* Score Display */}
-                    <View style={styles.scoreSection}>
-                      <View style={styles.scoreBox}>
-                        <View style={styles.scoreWithPenalty}>
-                          <Text style={styles.scoreNumber}>
-                            {match.goals.home ?? 0}
-                          </Text>
-                          {match.score?.penalties && match.score.penalties.home !== null && (
-                            <Text style={styles.penaltyScoreModal}>
-                              ({match.score.penalties.home})
-                            </Text>
-                          )}
-                        </View>
-                        <View style={styles.scoreDivider} />
-                        <View style={styles.scoreWithPenalty}>
-                          {match.score?.penalties && match.score.penalties.away !== null && (
-                            <Text style={styles.penaltyScoreModal}>
-                              ({match.score.penalties.away})
-                            </Text>
-                          )}
-                          <Text style={styles.scoreNumber}>
-                            {match.goals.away ?? 0}
-                          </Text>
-                        </View>
-                      </View>
-                      <View style={styles.statusBadge}>
-                        <View
+                    
+                    {/* Status / Time */}
+                    <View style={styles.matchStatusPill}>
+                       <View
                           style={[
                             styles.statusDot,
                             match.fixture.status.short === "LIVE" ||
                             match.fixture.status.short === "1H" ||
                             match.fixture.status.short === "2H" ||
-                            match.fixture.status.short === "HT" ||
-                            match.fixture.status.short === "Q1" ||
-                            match.fixture.status.short === "Q2" ||
-                            match.fixture.status.short === "Q3" ||
-                            match.fixture.status.short === "Q4" ||
-                            match.fixture.status.short.startsWith("OT")
+                            match.fixture.status.short === "HT"
                               ? styles.statusDotLive
                               : styles.statusDotFinished,
                           ]}
                         />
-                        <Text style={styles.statusText}>
-                          {match.fixture.status.short === "FT"
-                            ? "Encerrado"
-                            : match.fixture.status.short === "PEN"
-                            ? "Pênaltis"
-                            : match.fixture.status.long}
-                        </Text>
-                      </View>
-                      {match.fixture.status.elapsed && (
-                        <Text style={styles.elapsedTime}>
-                          {match.fixture.status.elapsed}'
-                        </Text>
-                      )}
-                    </View>
-
-                    {/* Away Team */}
-                    <View style={styles.teamSection}>
-                      <View style={styles.teamLogoContainer}>
-                        <TouchableOpacity
-                          activeOpacity={0.7}
-                          onPress={() => setSelectedTeam({
-                            id: match.teams.away.id,
-                            name: match.teams.away.name,
-                            logo: match.teams.away.logo,
-                            country: match.league.country || '',
-                            msnId: (match.teams.away as any).msnId,
-                          })}
-                        >
-                          <LinearGradient
-                            colors={[
-                              "rgba(255,255,255,0.1)",
-                              "rgba(255,255,255,0.05)",
-                            ]}
-                            style={styles.teamLogoGlow}>
-                            <TeamLogo
-                              uri={match.teams.away.logo}
-                              size={56}
-                              style={styles.teamLogo}
-                            />
-                          </LinearGradient>
-                        </TouchableOpacity>
-                      </View>
-                      <Text style={styles.teamName} numberOfLines={2}>
-                        {match.teams.away.name}
+                      <Text style={styles.matchStatusText}>
+                        {match.fixture.status.short === "FT" ? "FIM" : 
+                         match.fixture.status.elapsed ? `${match.fixture.status.elapsed}'` : 
+                         match.fixture.status.long}
                       </Text>
-                      {teamPositions.away && (
-                        <View style={styles.positionBadge}>
-                          <Text style={styles.positionText}>{teamPositions.away}º</Text>
-                        </View>
-                      )}
                     </View>
+                    
+                     {/* Penalties if exist */}
+                     {match.score?.penalties && match.score.penalties.home !== null && (
+                        <Text style={styles.penaltiesText}>
+                          (Pên: {match.score.penalties.home} - {match.score.penalties.away})
+                        </Text>
+                      )}
                   </View>
 
-                  {/* Venue Info */}
-                  {match.fixture.venue &&
-                    match.fixture.venue.name &&
-                    match.fixture.venue.name !== "Estádio não informado" && (
-                      <View style={styles.venueContainer}>
-                        <MapPin color="#71717a" size={12} />
-                        <Text style={styles.venueText}>
-                          {match.fixture.venue.name}
-                          {match.fixture.venue.city
-                            ? `, ${match.fixture.venue.city}`
-                            : ""}
-                        </Text>
-                      </View>
-                    )}
-                </LinearGradient>
+                  {/* Away Team */}
+                  <View style={styles.teamColumn}>
+                    <TouchableOpacity 
+                       onPress={() => setSelectedTeam({
+                        id: match.teams.away.id,
+                        name: match.teams.away.name,
+                        logo: match.teams.away.logo,
+                        country: match.league.country || '',
+                        msnId: (match.teams.away as any).msnId,
+                      })}
+                      style={styles.teamLogoWrapper}
+                    >
+                      <TeamLogo uri={match.teams.away.logo} size={64} style={styles.bigTeamLogo} />
+                    </TouchableOpacity>
+                    <Text style={styles.bigTeamName} numberOfLines={2}>{match.teams.away.name}</Text>
+                  </View>
+                </View>
               </View>
 
               {/* Game Details Card (Venue, Channels, Weather) */}
@@ -1592,10 +1538,145 @@ const styles = StyleSheet.create({
     color: "#ef4444",
     opacity: 0.8,
   },
-  playerInjuryBadge: {
-    fontSize: 10,
-    marginLeft: 4,
-    marginRight: 4,
+  // Immersive Header Styles
+  immersiveHeader: {
+    height: 380, // Taller header for immersive feel
+    width: '100%',
+    position: 'relative',
+    marginBottom: -40, // Pull content up slightly
+  },
+  headerGradient: {
+    ...StyleSheet.absoluteFillObject,
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
+  },
+  floatingLeagueBadge: {
+    position: 'absolute',
+    top: 60,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  leagueLogoSmall: {
+    width: 20,
+    height: 20,
+    resizeMode: 'contain',
+    marginRight: 8,
+  },
+  leagueNameText: {
+    color: '#e4e4e7',
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  dotSeparator: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    marginHorizontal: 8,
+  },
+  venueNameText: {
+    color: '#a1a1aa',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  
+  matchupContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    marginTop: 120, // Push down below league badge
+  },
+  teamColumn: {
+    alignItems: 'center',
+    width: 100,
+  },
+  teamLogoWrapper: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  bigTeamLogo: {
+    width: 64,
+    height: 64,
+  },
+  bigTeamName: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  
+  scoreColumn: {
+    alignItems: 'center',
+    marginHorizontal: 12,
+  },
+  scoreRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  bigScore: {
+    color: '#fff',
+    fontSize: 56,
+    fontWeight: '900',
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 4 },
+    textShadowRadius: 8,
+    fontVariant: ['tabular-nums'],
+  },
+  scoreSeparator: {
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 40,
+    fontWeight: '300',
+    marginHorizontal: 12,
+    marginTop: -8,
+  },
+  matchStatusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  matchStatusText: {
+    color: '#e4e4e7',
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  penaltiesText: {
+    color: '#fbbf24',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 6,
   },
 
   // Injury Legend Styles

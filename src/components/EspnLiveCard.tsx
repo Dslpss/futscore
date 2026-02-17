@@ -159,25 +159,7 @@ const EspnLiveCardContent: React.FC = () => {
 
   // Show empty state only when we've loaded and there's no data
   if (!loading && events.length === 0) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <View style={styles.headerIcon}>
-              <View style={styles.espnBadge}>
-                <Text style={styles.espnText}>ESPN</Text>
-              </View>
-            </View>
-            <Text style={styles.headerTitle}>Na ESPN</Text>
-          </View>
-        </View>
-        <View style={styles.scrollWrapper}>
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>Nenhum jogo na ESPN agora</Text>
-          </View>
-        </View>
-      </View>
-    );
+    return null;
   }
 
   return (

@@ -43,6 +43,7 @@ import { PremiumFeaturesModal } from "../components/PremiumFeaturesModal";
 import { WorldCupModal } from "../components/WorldCupModal";
 import { TeamSearchBar } from "../components/TeamSearchBar";
 import { TVCardsSection } from "../components/TVCardsSection";
+import { LeagueSelector } from "../components/LeagueSelector";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   Bell,
@@ -1542,107 +1543,17 @@ export const HomeScreen = ({ navigation }: any) => {
         </View>
       </View>
 
-      {/* League Selector - Premium Chips */}
+      {/* League Selector - New Stream Line Design */}
       <View style={styles.leagueSelectorWrapper}>
-        <View style={styles.leagueSelectorCard}>
-          {/* Background Glow */}
-          <View style={styles.leagueSelectorGlow} />
-
-          {/* Header */}
-          <View style={styles.leagueSelectorHeader}>
-            <View style={styles.leagueTitleRow}>
-              <View style={styles.leagueTitleIcon}>
-                <Text style={{ fontSize: 12 }}>⚽</Text>
-              </View>
-              <Text style={styles.leagueSelectorTitle}>Competições</Text>
-            </View>
-            <View style={styles.filterBadge}>
-              <Text style={styles.filterBadgeText}>{leagues.length} ligas</Text>
-            </View>
-          </View>
-
-          {/* Chips ScrollView */}
-          <ScrollView
-            ref={leagueSelectorRef}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.leagueSelectorContainer}
-            onScroll={(e) => {
-              leagueScrollPosition.current = e.nativeEvent.contentOffset.x;
-            }}
-            scrollEventThrottle={16}
-            onContentSizeChange={() => {
-              if (
-                leagueSelectorRef.current &&
-                leagueScrollPosition.current > 0
-              ) {
-                leagueSelectorRef.current.scrollTo({
-                  x: leagueScrollPosition.current,
-                  animated: false,
-                });
-              }
-            }}>
-            {leagues.map((league, index) => {
-              const isSelected = selectedLeague === league.code;
-              const isFirst = index === 0;
-              const isLast = index === leagues.length - 1;
-
-              return (
-                <TouchableOpacity
-                  key={league.code}
-                  style={[
-                    styles.leagueChip,
-                    isFirst && styles.leagueChipFirst,
-                    isLast && styles.leagueChipLast,
-                    isSelected && styles.leagueChipActive,
-                  ]}
-                  onPress={() => setSelectedLeague(league.code)}
-                  activeOpacity={0.8}>
-                  {isSelected && (
-                    <LinearGradient
-                      colors={["#22c55e", "#15803d"]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={[
-                        StyleSheet.absoluteFillObject,
-                        { borderRadius: 14 },
-                      ]}
-                    />
-                  )}
-
-                  <View style={styles.leagueChipContent}>
-                    {/* Icon Container */}
-                    <View
-                      style={[
-                        styles.leagueIconContainer,
-                        isSelected && styles.leagueIconContainerActive,
-                      ]}>
-                      <Text
-                        style={[
-                          styles.leagueChipIcon,
-                          isSelected && styles.leagueChipIconActive,
-                        ]}>
-                        {league.icon}
-                      </Text>
-                    </View>
-
-                    {/* Text */}
-                    <Text
-                      style={[
-                        styles.leagueChipText,
-                        isSelected && styles.leagueChipTextActive,
-                      ]}>
-                      {league.name}
-                    </Text>
-                  </View>
-
-                  {/* Selection Indicator Dot */}
-                  {isSelected && <View style={styles.leagueSelectedDot} />}
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+        <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
+            <Text style={styles.sectionTitle}>Competições</Text>
         </View>
+        <LeagueSelector
+          leagues={leagues}
+          selectedLeague={selectedLeague}
+          onSelect={setSelectedLeague}
+          leagueLogos={leagueLogos}
+        />
       </View>
 
       {/* System Warnings */}
