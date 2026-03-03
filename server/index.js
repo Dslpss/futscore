@@ -197,8 +197,8 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 
   // Keep-alive: Previne que o Railway hiberne o servidor
-  // Faz um ping a cada 4 minutos para manter o servidor ativo
-  const KEEP_ALIVE_INTERVAL = 4 * 60 * 1000; // 4 minutos
+  // Ping a cada 10 minutos (otimizado para reduzir custos)
+  const KEEP_ALIVE_INTERVAL = 10 * 60 * 1000; // 10 minutos
 
   setInterval(() => {
     const url = process.env.RAILWAY_PUBLIC_DOMAIN

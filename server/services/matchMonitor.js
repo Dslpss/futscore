@@ -35,9 +35,10 @@ setInterval(() => {
   // Uma solução mais robusta seria filtrar por timestamp, mas isso exigiria mudar a estrutura dos Sets
 }, 12 * 60 * 60 * 1000);
 
-// Configuração - intervalos mais espaçados para evitar detecção
-const CHECK_INTERVAL_LIVE = 20 * 1000; // 20 segundos quando há jogos ao vivo (quase real-time)
-const CHECK_INTERVAL_IDLE = 2 * 60 * 1000; // 2 minutos quando não há jogos
+// Configuração - intervalos otimizados para reduzir custos Railway
+const CHECK_INTERVAL_LIVE = 45 * 1000; // 45 segundos quando há jogos ao vivo
+const CHECK_INTERVAL_IDLE = 5 * 60 * 1000; // 5 minutos quando não há jogos
+const CHECK_INTERVAL_NIGHT = 15 * 60 * 1000; // 15 minutos durante madrugada (2h-7h)
 let currentInterval = CHECK_INTERVAL_IDLE;
 let intervalId = null;
 
@@ -590,6 +591,25 @@ async function checkAndNotify() {
     lastCheckTime = new Date();
     checkCount++;
 
+    // Pausa noturna: entre 2h-7h (UTC-3 / BRT) reduz drasticamente o polling
+    const nowHour = new Date().getUTCHours() - 3; // BRT = UTC-3
+    const normalizedHour = nowHour < 0 ? nowHour + 24 : nowHour;
+    const isNightTime = normalizedHour >= 2 && normalizedHour < 7;
+
+    if (isNightTime) {
+      // Durante a madrugada, usar intervalo longo e pular verificação
+      if (currentInterval !== CHECK_INTERVAL_NIGHT) {
+        currentInterval = CHECK_INTERVAL_NIGHT;
+        if (intervalId) {
+          clearInterval(intervalId);
+          intervalId = setInterval(checkAndNotify, currentInterval);
+        }
+        console.log(`[Monitor] 🌙 Modo noturno ativado (${normalizedHour}h) - intervalo: ${currentInterval / 1000}s`);
+      }
+      console.log(`[Monitor] 🌙 Madrugada (${normalizedHour}h) - check #${checkCount} (reduzido)`);
+      return; // Pula a verificação completa
+    }
+
     console.log(`[Monitor] Verificando jogos... (check #${checkCount})`);
     const matches = await fetchLiveMatches();
 
@@ -908,7 +928,7 @@ function startMatchMonitor() {
   console.log(
     `[Monitor] Intervalo inicial: ${currentInterval / 1000}s (modo economia)`
   );
-  console.log("[Monitor] Intervalo com jogos ao vivo: 60s | Sem jogos: 5min");
+  console.log("[Monitor] Intervalo com jogos ao vivo: 45s | Sem jogos: 5min | Madrugada: 15min");
 
   monitorStartTime = new Date();
 

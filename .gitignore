@@ -48,4 +48,4 @@ ios/.xcode.env.local
 *.dSYM.zip
 
 iptv_info.json
-.agent
+canais.m3u
